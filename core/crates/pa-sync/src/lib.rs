@@ -22,6 +22,8 @@
 //!   heartbeat TTLs, the newest resume point by HLC.
 //! - [`input`]: typing on a TV from a phone (UI-027): the `input`
 //!   message, its text sealed with the family key.
+//! - [`music`]: music continues on another device (MUS-015): the `music`
+//!   message, the queue sealed with the family key.
 //! - [`matching`]: the keys of one item across devices (SYNC-004): the
 //!   `key` and `aliases` of ops and `pb.*` messages, when a position
 //!   carries over to another version.
@@ -66,6 +68,7 @@ pub mod input;
 pub mod lan;
 pub mod library;
 pub mod matching;
+pub mod music;
 pub mod op;
 pub mod outbox;
 pub mod profiles;

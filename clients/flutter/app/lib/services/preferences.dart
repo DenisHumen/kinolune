@@ -200,6 +200,10 @@ abstract class Preferences {
   /// JSON of pa_player `AudioProcessing`.
   static String audioProcessing(String syncId) =>
       syncId == 'default' ? 'audio_processing' : 'audio_processing_$syncId';
+
+  /// Music equalizer of a profile (MUS-015); JSON of pa_player
+  /// `Equalizer`.
+  static String musicEqualizer(String syncId) => 'music_equalizer_$syncId';
 }
 
 /// JSON file in the application support directory.

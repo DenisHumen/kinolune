@@ -64,6 +64,8 @@ void main() {
         'replaygain-clip': 'no',
         'replaygain-fallback': '0.00',
         'audio-exclusive': 'no',
+        // MUS-015: no equalizer by default, so no filter.
+        'af': '',
       });
     });
 

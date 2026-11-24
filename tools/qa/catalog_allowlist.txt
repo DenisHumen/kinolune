@@ -60,6 +60,7 @@ settings-section-about  # settings section container
 settings-section-devices  # settings section container
 settings-section-trakt  # settings section container
 settings-section-diagnostics  # settings section container
+settings-section-scrobble  # settings section container (MUS-015)
 settings-section-downloads  # settings section container
 settings-section-language  # settings section container
 settings-section-library  # settings section container

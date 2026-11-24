@@ -30,6 +30,7 @@ pub mod profiles;
 pub mod recognition;
 pub mod remote_config;
 pub mod review;
+pub mod scrobble;
 pub mod secrets;
 pub mod skip;
 pub mod sources;

@@ -209,6 +209,10 @@ jobs:
           CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
           CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
           CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
+          # Last.fm API key and secret (MUS-015) for scrobbling; without them
+          # users enter their own in Settings. Owner decision: ADR-0156.
+          CARGO_PA_LASTFM_API_KEY: ${{ secrets.PA_LASTFM_API_KEY }}
+          CARGO_PA_LASTFM_SECRET: ${{ secrets.PA_LASTFM_SECRET }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -356,6 +360,10 @@ jobs:
           CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
           CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
           CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
+          # Last.fm API key and secret (MUS-015) for scrobbling; without them
+          # users enter their own in Settings. Owner decision: ADR-0156.
+          CARGO_PA_LASTFM_API_KEY: ${{ secrets.PA_LASTFM_API_KEY }}
+          CARGO_PA_LASTFM_SECRET: ${{ secrets.PA_LASTFM_SECRET }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -502,6 +510,10 @@ jobs:
           CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
           CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
           CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
+          # Last.fm API key and secret (MUS-015) for scrobbling; without them
+          # users enter their own in Settings. Owner decision: ADR-0156.
+          CARGO_PA_LASTFM_API_KEY: ${{ secrets.PA_LASTFM_API_KEY }}
+          CARGO_PA_LASTFM_SECRET: ${{ secrets.PA_LASTFM_SECRET }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}
@@ -668,6 +680,10 @@ jobs:
           CARGO_PA_ONEDRIVE_CLIENT_ID: ${{ secrets.PA_ONEDRIVE_CLIENT_ID }}
           CARGO_PA_DROPBOX_CLIENT_ID: ${{ secrets.PA_DROPBOX_CLIENT_ID }}
           CARGO_PA_MEGA_APP_KEY: ${{ secrets.PA_MEGA_APP_KEY }}
+          # Last.fm API key and secret (MUS-015) for scrobbling; without them
+          # users enter their own in Settings. Owner decision: ADR-0156.
+          CARGO_PA_LASTFM_API_KEY: ${{ secrets.PA_LASTFM_API_KEY }}
+          CARGO_PA_LASTFM_SECRET: ${{ secrets.PA_LASTFM_SECRET }}
           # Public Twitch client id (TWI-013), owner-registered app; a secret
           # only so it stays out of git (DEC-006).
           KINOLUNE_TWITCH_CLIENT_ID: ${{ secrets.KINOLUNE_TWITCH_CLIENT_ID }}

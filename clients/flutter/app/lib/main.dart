@@ -14,6 +14,7 @@ import 'build_info.dart';
 import 'config.dart';
 import 'diagnostics/core_diagnostics.dart';
 import 'diagnostics/diagnostics.dart';
+import 'features/music/scrobbling.dart';
 import 'features/updates/update_setup.dart';
 import 'fakes/fake_device_sync.dart';
 import 'fakes/fake_library.dart';
@@ -352,6 +353,10 @@ Future<void> main(List<String> args) async {
     // META-016: the demo's review inbox.
     reviewInbox: AppConfig.demo ? FakeReviewInbox.demo() : null,
     liveSources: liveSources,
+    // MUS-015: Last.fm / ListenBrainz scrobbling, queues in the data folder.
+    scrobbleBackend: AppConfig.demo || buildInfo.coreVersion == null
+        ? null
+        : CoreScrobbleBackend.open('${dir.path}/scrobble'),
     liveNotifier: PluginLiveNotifier(
       l10n: () => lookupAppLocalizations(
         services.locale.value ?? services.systemLocale(),

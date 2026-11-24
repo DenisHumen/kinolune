@@ -37,6 +37,7 @@ use pa_catalog::pa_sync::lan::service::{
     SyncLibrary, SyncService,
 };
 use pa_catalog::pa_sync::matching::ItemKeys;
+use pa_catalog::pa_sync::music::MusicAction;
 use pa_catalog::pa_sync::proto::{PlayState, PlaybackUpdate};
 use pa_catalog::pa_sync::seal::SealKey;
 use pa_catalog::pa_sync::{Op, OpId};
@@ -323,6 +324,11 @@ pub enum CoreSyncEventKind {
     Takeover,
     /// A frame of a remote input session (UI-027): `input`.
     Input,
+    /// Music continues here (MUS-015): `device_id` and `name` of the
+    /// sender, `message` = `push` (with `payload`: the queue JSON) or
+    /// `pull` (the sender asks for this device's queue), `item_id` = the
+    /// handoff session (answer a pull with it).
+    Music,
 }
 
 /// What a text field is for (UI-027): the phone picks its keyboard by it.
@@ -558,6 +564,21 @@ impl From<ServiceEvent> for CoreSyncEvent {
                 device_id: Some(i.device_id.clone()),
                 input: CoreRemoteInput::of(i),
                 ..Self::of(K::Input)
+            },
+            ServiceEvent::Music(m) => Self {
+                device_id: Some(m.device_id),
+                name: m.device_name,
+                message: Some(
+                    match m.action {
+                        MusicAction::Push => "push",
+                        MusicAction::Pull => "pull",
+                        MusicAction::Other => "other",
+                    }
+                    .to_owned(),
+                ),
+                payload: m.queue.map(|q| q.as_str().to_owned()),
+                item_id: Some(m.session),
+                ..Self::of(K::Music)
             },
         }
     }
@@ -969,10 +990,10 @@ impl CoreSync {
                         Some((_, key, aliases)) => app_item_id(&catalog, key, aliases),
                         None => None,
                     };
-                    let event = CoreSyncEvent {
-                        item_id,
-                        ..event.into()
-                    };
+                    let mut event: CoreSyncEvent = event.into();
+                    if event.kind != CoreSyncEventKind::Music {
+                        event.item_id = item_id;
+                    }
                     if event.kind == CoreSyncEventKind::Input && event.input.is_none() {
                         continue;
                     }
@@ -1023,6 +1044,27 @@ impl CoreSync {
             text.as_deref(),
             secret,
         )?)
+    }
+
+    /// Hands music to the device `to` (MUS-015): with `queue` (the app's
+    /// queue JSON, sealed with the family key) a push — `to` plays it and
+    /// this device pauses; without, a pull — `to` answers with its queue.
+    /// `session` answers a pull with its id. Returns the session id, or
+    /// `None` while sync does not run.
+    pub fn music_send(
+        &self,
+        to: String,
+        queue: Option<String>,
+        session: Option<String>,
+    ) -> SyncResult<Option<String>> {
+        let action = if queue.is_some() {
+            MusicAction::Push
+        } else {
+            MusicAction::Pull
+        };
+        Ok(self
+            .service
+            .music_send(&to, action, queue.as_deref(), session.as_deref())?)
     }
 
     /// Heartbeat of the playback session (SYNC-003): every second while

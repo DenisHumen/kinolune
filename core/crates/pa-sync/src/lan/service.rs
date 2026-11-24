@@ -36,6 +36,7 @@ use crate::handoff;
 use crate::hlc::HlcClock;
 use crate::input::{self, InputAction, InputField, InputFrame};
 use crate::matching::ItemKeys;
+use crate::music::{self, MusicAction, MusicFrame};
 use crate::proto::{PlayState, PlaybackUpdate, Takeover};
 use crate::seal::SealKey;
 use crate::setup::{self as setup_proto, SetupRequest, TXT_SETUP};
@@ -204,6 +205,33 @@ pub enum ServiceEvent {
     Takeover(Takeover),
     /// A frame of a remote input session (UI-027) for this device.
     Input(RemoteInput),
+    /// A music handoff (MUS-015) for this device.
+    Music(RemoteMusic),
+}
+
+/// A music handoff frame (MUS-015) for this device, its queue opened.
+/// `Debug` never prints the queue (file names and paths).
+#[derive(Clone, PartialEq, Eq)]
+pub struct RemoteMusic {
+    pub session: String,
+    pub action: MusicAction,
+    /// The sender.
+    pub device_id: String,
+    /// Its name in the family, if known.
+    pub device_name: Option<String>,
+    /// A push: the queue JSON of the sender's app.
+    pub queue: Option<zeroize::Zeroizing<String>>,
+}
+
+impl std::fmt::Debug for RemoteMusic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RemoteMusic")
+            .field("session", &self.session)
+            .field("action", &self.action)
+            .field("device_id", &self.device_id)
+            .field("queue_len", &self.queue.as_ref().map(|q| q.len()))
+            .finish_non_exhaustive()
+    }
 }
 
 /// A frame of a remote input session (UI-027) as the app sees it: from a
@@ -800,6 +828,48 @@ impl SyncService {
         self.send_input(frame)
     }
 
+    /// Hands music to the device `to` (MUS-015): [`MusicAction::Push`]
+    /// with this device's `queue` JSON (sealed with the family key), or
+    /// [`MusicAction::Pull`] to ask for its queue. `session` answers a
+    /// pull with its id; `None` starts a new one. Returns the session id,
+    /// or `None` while sync does not run.
+    pub fn music_send(
+        &self,
+        to: &str,
+        action: MusicAction,
+        queue: Option<&str>,
+        session: Option<&str>,
+    ) -> Result<Option<String>> {
+        if !self.is_running() {
+            return Ok(None);
+        }
+        let session = session
+            .map(str::to_owned)
+            .unwrap_or_else(|| uuid::Uuid::now_v7().simple().to_string());
+        let hlc = lock(&self.inner.clock).now();
+        let mut frame = MusicFrame::new(&session, action, to, hlc);
+        if let Some(queue) = queue {
+            let key = lock(&self.inner.state)
+                .family
+                .as_ref()
+                .map(seal_key)
+                .ok_or_else(|| ServiceError::new("pairing", "no family"))?;
+            frame.sealed = Some(
+                music::seal_queue(&key, &session, queue)
+                    .map_err(|e| ServiceError::new("invalid", e.to_string()))?,
+            );
+        }
+        frame
+            .validate()
+            .map_err(|e| ServiceError::new("invalid", e.to_string()))?;
+        if let Some(r) = &lock(&self.inner.state).running {
+            r.node
+                .music(frame)
+                .map_err(|e| ServiceError::new("io", e.to_string()))?;
+        }
+        Ok(Some(session))
+    }
+
     fn input_frame(&self, session: &str, action: InputAction) -> InputFrame {
         let hlc = lock(&self.inner.clock).now();
         InputFrame::new(session, action, hlc)
@@ -944,6 +1014,34 @@ impl Inner {
             label: frame.label.clone(),
             secret: frame.secret,
             text,
+        })
+    }
+
+    /// A `music` frame for this device, its queue opened; `None` for
+    /// frames to another device, unknown actions and queues that do not
+    /// open (another family key epoch).
+    fn remote_music(&self, frame: &MusicFrame) -> Option<RemoteMusic> {
+        let me = self.identity.device_id();
+        if frame.to != me || frame.hlc.device == me || frame.action == MusicAction::Other {
+            return None;
+        }
+        self.observe(&frame.hlc);
+        let key = lock(&self.state).family.as_ref().map(seal_key)?;
+        let queue = music::open_queue(&key, frame).ok()?;
+        if frame.action == MusicAction::Push && queue.is_none() {
+            return None;
+        }
+        let device_name = self
+            .devices()
+            .into_iter()
+            .find(|d| d.device_id == frame.hlc.device)
+            .map(|d| d.name);
+        Some(RemoteMusic {
+            session: frame.session.clone(),
+            action: frame.action,
+            device_id: frame.hlc.device.clone(),
+            device_name,
+            queue,
         })
     }
 
@@ -1511,6 +1609,11 @@ async fn event_loop(weak: Weak<Inner>, mut events: tokio::sync::mpsc::UnboundedR
             LanEvent::Input(frame) => {
                 if let Some(event) = inner.remote_input(&frame) {
                     inner.emit(&ServiceEvent::Input(event));
+                }
+            }
+            LanEvent::Music(frame) => {
+                if let Some(event) = inner.remote_music(&frame) {
+                    inner.emit(&ServiceEvent::Music(event));
                 }
             }
             LanEvent::Pulled => {

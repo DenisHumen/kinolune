@@ -20,6 +20,8 @@
 | Личные ключи разработчика к TMDB, Fanart.tv, OpenSubtitles, Subdl, AcoustID | `.env.local` разработчика | локальные сборки и тесты | имена переменных — в `.env.example` |
 | Ключи проекта к TMDB, Fanart.tv, OpenSubtitles, AcoustID | Secrets окружений `release` и `store` | релизные сборки (PKG) | регистрирует владелец (LEGAL-002) |
 | Ключ проекта Subdl (`PA_SUBDL_API_KEY`, PLAY-016) | Secret репозитория (виден всем окружениям) | релизные сборки: `CARGO_PA_SUBDL_API_KEY` в `release-app.yml` | добавлен владельцем |
+| Личные ключи разработчика к TMDB, Fanart.tv, OpenSubtitles, AcoustID, Last.fm | `.env.local` разработчика | локальные сборки и тесты | имена переменных — в `.env.example` |
+| Ключи проекта к TMDB, Fanart.tv, OpenSubtitles, AcoustID, Last.fm (`PA_LASTFM_API_KEY`, `PA_LASTFM_SECRET`, MUS-015) | Secrets окружений `release` и `store` | релизные сборки (PKG) | регистрирует владелец (LEGAL-002) |
 | Twitch client_id, Trakt client_id, LRCLIB App-Id, AniDB client | можно в открытом виде (конфиг сборки) | клиенты | **не секреты**; Twitch client secret не заводим никогда |
 | OAuth client id облаков (NET-017): `PA_GDRIVE_CLIENT_ID`, `PA_ONEDRIVE_CLIENT_ID`, `PA_DROPBOX_CLIENT_ID`; `PA_GDRIVE_CLIENT_SECRET`; ключ приложения MEGA `PA_MEGA_APP_KEY` | Secrets окружений `release` и `store` (в сборку — как `CARGO_PA_*`, см. `release-app.yml`); у разработчика — `.env.local` | ядро (`pa-cloud`), вшиваются при сборке | client id **не секреты** (публичные клиенты с PKCE), в Secrets — чтобы не держать в git. Secret Google-клиента «Desktop app» по RFC 8252 §8.5 не конфиденциален, но в git тоже не кладём. Пусто — пользователь вводит свой client ID. Регистрация — ниже |
 | Trakt app (SYNC-011): `PA_TRAKT_CLIENT_ID`, необязательный `PA_TRAKT_CLIENT_SECRET` | Secrets окружений `release` и `store` (в сборку — `CARGO_PA_TRAKT_*`, как ключ TMDB) | ядро (`pa-trakt`) | client_id публичен; secret Trakt пометил устаревшим для входа пользователя, а в open source приложении он **не секрет** (как у десктопных клиентов Google): храним в Secrets только чтобы не светить в git. Без них пользователь вводит свой Client ID в расширенных настройках. Регистрирует владелец |
@@ -49,7 +51,7 @@ Kinolune — публичный OAuth-клиент: PKCE (S256), только ч
 
 ## Секреты пользователя на устройстве (`pa-secrets`)
 
-Всё выше — секреты проекта и сборок. Секреты пользователя (пароли SMB/WebDAV, токены Twitch и Trakt, свой ключ TMDB) живут только на его устройстве, в системном защищённом хранилище, через крейт [`pa-secrets`](../../core/crates/pa-secrets) (CORE-007, исследование 04 §5.1). В настройки (`pa-runtime`, экспортируются в JSON), в SQLite библиотеки и в логи они не попадают.
+Всё выше — секреты проекта и сборок. Секреты пользователя (пароли SMB/WebDAV, токены Twitch и Trakt, свой ключ TMDB, сессия Last.fm и токен ListenBrainz) живут только на его устройстве, в системном защищённом хранилище, через крейт [`pa-secrets`](../../core/crates/pa-secrets) (CORE-007, исследование 04 §5.1). В настройки (`pa-runtime`, экспортируются в JSON), в SQLite библиотеки и в логи они не попадают.
 
 | Платформа | Хранилище | Как подключено |
 |---|---|---|

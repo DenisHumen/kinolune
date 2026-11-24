@@ -235,6 +235,39 @@ fn open_raw(
         .map_err(|_| SealError::Open)
 }
 
+/// Longest container of [`seal_up_to`] for a payload of at most `max`
+/// bytes: base64url of nonce, tag and payload, plus the prefix and epoch.
+pub fn sealed_len_for(max: usize) -> usize {
+    (NONCE_LEN + TAG_LEN + max).div_ceil(3) * 4 + PREFIX.len() + 11
+}
+
+/// [`seal`] with another size limit, e.g. a music queue handed to another
+/// device (MUS-015). Open it with [`open_up_to`] and the same limit.
+pub fn seal_up_to(
+    key: &SealKey,
+    context: &str,
+    secret: &[u8],
+    max: usize,
+) -> Result<String, SealError> {
+    seal_limited(key, context, secret, max)
+}
+
+/// Whether `text` has the form of a container of [`seal_up_to`] with the
+/// limit `max` (it is not opened).
+pub fn is_sealed_up_to(text: &str, max: usize) -> bool {
+    parse_limited(text, sealed_len_for(max)).is_ok()
+}
+
+/// Opens a container of [`seal_up_to`] with the limit `max`.
+pub fn open_up_to(
+    key: &SealKey,
+    context: &str,
+    sealed: &str,
+    max: usize,
+) -> Result<Zeroizing<Vec<u8>>, SealError> {
+    open_raw(key, context, parse_limited(sealed, sealed_len_for(max))?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
