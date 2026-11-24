@@ -2,11 +2,11 @@
 //! Message codec, version compatibility and op exchange (SYNC-002).
 
 use pa_model::{MediaKey, MediaKind, SCHEMA_VERSION};
+use pa_sync::nodelog::{self, Digest, NodeLog, Range, VersionVector};
 use pa_sync::proto::{
     self, Ack, Auth, Change, Cursor, ErrorFrame, Family, Hello, Journal, Message, OpFrame, Payload,
     PlayState, PlaybackUpdate, ProtoRange, Pull, PullEnd, Role, Takeover,
 };
-use pa_sync::nodelog::{self, Digest, NodeLog, Range, VersionVector};
 use pa_sync::proto::{DigestFrame, VvFrame};
 use pa_sync::{Error, Hlc, Op, OpBody, OpId, Replica, outbox};
 use uuid::Uuid;

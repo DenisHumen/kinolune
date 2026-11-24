@@ -132,7 +132,13 @@ pub struct Entry {
 impl Entry {
     /// Its hash ([`entry_hash`]).
     pub fn hash(&self) -> String {
-        entry_hash(&self.origin, self.seq, &self.prev, self.op_id, &self.payload)
+        entry_hash(
+            &self.origin,
+            self.seq,
+            &self.prev,
+            self.op_id,
+            &self.payload,
+        )
     }
 
     /// The `op` frame that carries it.
@@ -639,10 +645,7 @@ impl Digest {
     pub fn validate(&self) -> Result<(), Error> {
         let ok = is_hash(&self.root)
             && self.parts.len() <= MAX_DIGEST_PARTS
-            && self
-                .parts
-                .iter()
-                .all(|(p, h)| p.len() <= 512 && is_hash(h));
+            && self.parts.iter().all(|(p, h)| p.len() <= 512 && is_hash(h));
         ok.then_some(()).ok_or(Error::Invalid("digest"))
     }
 }
@@ -732,10 +735,7 @@ mod tests {
         let mut theirs = VersionVector::default();
         theirs.raise("a", 2);
         let missing = a.missing_for(&theirs);
-        assert_eq!(
-            missing.iter().map(|e| e.seq).collect::<Vec<_>>(),
-            [3, 4, 5]
-        );
+        assert_eq!(missing.iter().map(|e| e.seq).collect::<Vec<_>>(), [3, 4, 5]);
         assert_eq!(theirs.lacks(&a.vector()).len(), 1);
         assert!(a.vector().covers(&theirs));
     }

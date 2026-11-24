@@ -166,7 +166,11 @@ fn split_line(text: &str) -> (Option<(u64, &str, &str)>, std::borrow::Cow<'_, st
 
 /// An op line with its log place in front.
 fn log_line(entry: &Entry, hash: &str) -> String {
-    let body = entry.payload.body.strip_prefix('{').unwrap_or(&entry.payload.body);
+    let body = entry
+        .payload
+        .body
+        .strip_prefix('{')
+        .unwrap_or(&entry.payload.body);
     format!(
         "{{\"seq\":{},\"prev\":\"{}\",\"hash\":\"{hash}\",{body}",
         entry.seq, entry.prev
@@ -182,7 +186,9 @@ fn peek_op_id(body: &str) -> Option<OpId> {
     struct Peek {
         data: Data,
     }
-    serde_json::from_str::<Peek>(body).ok().map(|p| p.data.op_id)
+    serde_json::from_str::<Peek>(body)
+        .ok()
+        .map(|p| p.data.op_id)
 }
 
 /// Reads one line of `device`'s journal after `last`; a line of an older
@@ -996,9 +1002,7 @@ impl Sink<'_> {
             (self.entry)(entry, snapshot);
             return;
         };
-        if op.hlc.device != device
-            || op.hlc.wall_ms > self.now_ms.saturating_add(MAX_DRIFT_MS)
-        {
+        if op.hlc.device != device || op.hlc.wall_ms > self.now_ms.saturating_add(MAX_DRIFT_MS) {
             self.report.skipped += 1;
             return;
         }

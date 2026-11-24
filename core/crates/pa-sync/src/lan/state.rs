@@ -946,7 +946,9 @@ mod tests {
         let to_phone = sent(&mut phone);
         assert!(!to_phone.iter().any(|m| matches!(m, Message::Ack(_))));
         assert!(
-            to_phone.iter().any(|m| matches!(m, Message::Want(r) if r.origin == "phone-run" && r.from == 1)),
+            to_phone
+                .iter()
+                .any(|m| matches!(m, Message::Want(r) if r.origin == "phone-run" && r.from == 1)),
             "{to_phone:?}"
         );
         assert!(sent(&mut tv).is_empty(), "nothing stored, nothing relayed");

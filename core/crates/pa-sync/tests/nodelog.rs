@@ -60,7 +60,11 @@ fn body() -> impl Strategy<Value = OpBody> {
 #[derive(Debug, Clone)]
 enum Step {
     /// Node writes an op; its wall clock is `wall` (clocks disagree freely).
-    Write { node: usize, wall: u64, body: OpBody },
+    Write {
+        node: usize,
+        wall: u64,
+        body: OpBody,
+    },
     /// One anti-entropy pass `from` → `to`: the frames go out shuffled by
     /// `seed`, some lost, some twice, one maybe damaged.
     Sync {
@@ -348,7 +352,7 @@ fn a_damaged_entry_is_detected_and_fetched_again() {
         Inserted::Gap { .. }
     ));
     assert_eq!(c.vector().get("a"), 1);
-    assert_eq!(c.gaps(), [want.clone()]);
+    assert_eq!(c.gaps(), std::slice::from_ref(&want));
     // From any other member: b.
     for e in b.range(&want) {
         let h = e.hash();
@@ -435,7 +439,9 @@ fn state_registers_match_op_registers() {
             channel_id: "1".into(),
             followed: true,
         },
-        OpBody::SourceDelete { source: "s1".into() },
+        OpBody::SourceDelete {
+            source: "s1".into(),
+        },
         OpBody::ProfileDelete {
             profile: "kid".into(),
         },
