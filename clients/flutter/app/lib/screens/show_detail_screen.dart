@@ -722,8 +722,9 @@ class _EpisodeList extends StatelessWidget {
     return FocusTraversalGroup(
       child: SliverLayoutBuilder(
         builder: (context, c) {
+          // As many columns as keep a card at most [cardWidth] wide.
           final columns = ((c.crossAxisExtent + gap) / (cardWidth + gap))
-              .floor()
+              .ceil()
               .clamp(1, 1 << 20);
           final width = (c.crossAxisExtent - gap * (columns - 1)) / columns;
           return SliverGrid.builder(

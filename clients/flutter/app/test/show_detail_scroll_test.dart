@@ -4,6 +4,8 @@
 // episode on a phone, a tablet, a desktop (drag and mouse wheel) and a TV
 // (D-pad focus walks the cards and keeps the focused one in view); the
 // episodes are built lazily; a show with many seasons reaches its last tab.
+// With KINOLUNE_SCREENSHOTS_DIR set it writes the end of the season per
+// form factor (docs/screenshots/progress/bug-019).
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -142,6 +144,7 @@ void main() {
       await t.ensureVisible(_card(_long));
       await settle(t, 4);
       _expectInView(t, _card(_long), size);
+      await capture(t, 'long-season-end-$name');
       await t.tap(_card(_long));
       await settle(t, 8);
       final player = t.widget<PlayerScreen>(find.byType(PlayerScreen));

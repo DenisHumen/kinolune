@@ -276,7 +276,10 @@ void main() {
     final (s, lib, _) = await _services();
     await _open(t, s, ff: FormFactor.tv, size: const Size(960, 540));
     final card = find.byKey(showEpisodeKey('e-1-3'));
-    await t.ensureVisible(card);
+    // Below the fold on TV: built ahead, scrolled in (BUG-019).
+    await t.ensureVisible(
+      find.byKey(showEpisodeKey('e-1-3'), skipOffstage: false),
+    );
     await settle(t, 2);
     // No «⋯» on TV: the remote holds OK.
     expect(find.byKey(showEpisodeMenuKey('e-1-3')), findsNothing);
