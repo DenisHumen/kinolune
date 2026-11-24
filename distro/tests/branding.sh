@@ -8,7 +8,8 @@
 #    except the attribution "based on Fedora Linux" and technical identifiers (ID_LIKE),
 #    no fedora-logos, our icon, dnf still sees the Fedora release, and `fastfetch --pipe`
 #    (as root and as an unprivileged user) prints "Kinolune OS" and our logo.
-# With CAPTURE_DIR the plain and the coloured fastfetch output are saved there.
+# With CAPTURE_DIR the plain and the coloured fastfetch output (machine-neutral modules
+# only) are saved there.
 # Needs: ENGINE (docker or podman), python3.
 set -euo pipefail
 source "$(dirname "$0")/../scripts/lib.sh"
@@ -20,7 +21,7 @@ log "Brand assets in distro/rootfs are in sync with design/brand"
 "${DISTRO_DIR}/branding/sync-assets.sh" --check
 
 log "Branding checks inside ${IMAGE}"
-out="$("${ENGINE}" run --rm -i --network none "${IMAGE}" bash -s <<'CHECK'
+out="$("${ENGINE}" run --rm -i --network none --hostname kinolune "${IMAGE}" bash -s <<'CHECK'
 set -uo pipefail
 fail=0
 bad() { echo "FAIL: $*"; fail=1; }
@@ -98,10 +99,12 @@ check_ff root "${ff_root}"
 ff_user="$(cd /tmp && runuser -u nobody -- env HOME=/tmp/ffhome fastfetch --pipe 2>&1)"
 check_ff nobody "${ff_user}"
 [ "${fail}" = 0 ] && ok "fastfetch shows Kinolune OS and the logo"
+# Captures for docs: only modules that do not describe the machine running the test.
+cap="Title:Separator:OS:Packages:Shell:Locale:Break:Colors"
 echo "----- fastfetch --pipe -----"
-printf '%s\n' "${ff_user}"
+HOME=/root fastfetch --pipe -s "${cap}" 2>&1
 echo "----- fastfetch (colour) -----"
-HOME=/root fastfetch --pipe false 2>&1
+HOME=/root fastfetch --pipe false -s "${cap}" 2>&1
 echo "----- end -----"
 exit "${fail}"
 CHECK
