@@ -585,6 +585,60 @@
   "@showEpisodeWatched": {
     "description": "Badge on the still of a watched episode."
   },
+  "showMarkWatched": "Mark as watched",
+  "@showMarkWatched": {
+    "description": "UI-049: menu of an episode: mark it watched."
+  },
+  "showMarkUnwatched": "Mark as unwatched",
+  "@showMarkUnwatched": {
+    "description": "UI-049: menu of an episode: clear its watched mark."
+  },
+  "showMarkPreviousWatched": "Mark all previous as watched",
+  "@showMarkPreviousWatched": {
+    "description": "UI-049: menu of an episode: mark every episode before it watched (for those who started elsewhere)."
+  },
+  "showMarkSeasonWatched": "Mark season as watched",
+  "@showMarkSeasonWatched": {
+    "description": "UI-049: menu of a season tab or the show: mark every episode of the season watched."
+  },
+  "showMarkSeasonUnwatched": "Mark season as unwatched",
+  "@showMarkSeasonUnwatched": {
+    "description": "UI-049: menu of a season tab or the show: clear the watched marks of the season."
+  },
+  "showMarkShowWatched": "Mark show as watched",
+  "@showMarkShowWatched": {
+    "description": "UI-049: menu of the show: mark every episode watched."
+  },
+  "showMarkShowUnwatched": "Mark show as unwatched",
+  "@showMarkShowUnwatched": {
+    "description": "UI-049: menu of the show: clear every watched mark."
+  },
+  "showMore": "More",
+  "@showMore": {
+    "description": "UI-049: button on the show page that opens the menu of the show (watched marks)."
+  },
+  "showEpisodeActions": "Episode actions",
+  "@showEpisodeActions": {
+    "description": "UI-049: screen-reader label and tooltip of the «⋯» button on an episode card."
+  },
+  "showMarkedWatched": "{count, plural, =1{1 episode marked as watched} other{{count} episodes marked as watched}}",
+  "@showMarkedWatched": {
+    "description": "UI-049: snack bar after a bulk mark, with Undo.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "showMarkedUnwatched": "{count, plural, =1{1 episode marked as unwatched} other{{count} episodes marked as unwatched}}",
+  "@showMarkedUnwatched": {
+    "description": "UI-049: snack bar after a bulk unmark, with Undo.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "watchedMinutesLeft": "{minutes} min left",
   "@watchedMinutesLeft": {
     "description": "UI-037: time left, on the still of a started episode or movie.",

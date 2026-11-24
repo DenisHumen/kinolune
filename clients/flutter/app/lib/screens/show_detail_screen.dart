@@ -11,6 +11,10 @@
 // the order per show; the v0 library gets TMDB and absolute order computed
 // here ([orderEpisodes]), not stored, and its progress from "Continue
 // watching".
+//
+// UI-049: an episode, the episodes before it, a season or the whole show
+// are marked watched or not from the menus of episode_marks.dart (long
+// press, right click, a held OK, the «⋯» of a card, a season tab, «Ещё»).
 
 import 'dart:async';
 import 'dart:ui' show ImageFilter;
@@ -33,6 +37,7 @@ import '../widgets/format.dart';
 import '../widgets/watched_art.dart';
 import 'detail_layout.dart' show MatchBadge;
 import 'detail_sections.dart';
+import 'episode_marks.dart';
 import 'fix_match_dialog.dart';
 import 'playback.dart';
 
@@ -324,6 +329,8 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
       if (details.genres.isNotEmpty) details.genres.take(3).join(', '),
     ].join('  ·  ');
     final badges = techBadges(_targetTech, null);
+    // UI-049: watched marks need a library that can clear them.
+    final canMark = canMarkEpisodes(context);
 
     final t = target;
     final tp = t?.episode.progress;
@@ -371,6 +378,21 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
         label: l.offlineDownloadSeason,
         items: [for (final e in inSeason) e.item],
       ),
+      // UI-049: the season of the tab or the whole show watched or not.
+      if (canMark && eps.episodes.isNotEmpty)
+        Builder(
+          builder: (context) => KButton(
+            key: showMoreKey,
+            icon: Icons.more_horiz,
+            label: l.showMore,
+            onPressed: () => showShowMarkMenu(
+              context,
+              inSeason,
+              eps.episodes,
+              position: centreOf(context),
+            ),
+          ),
+        ),
       KButton(
         icon: Icons.manage_search,
         label: l.commonFixMatch,
@@ -490,6 +512,13 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
                             _season = s;
                             _seasonFromRoute = false;
                           }),
+                          onMenu: canMark
+                              ? (p) => showSeasonMarkMenu(
+                                  context,
+                                  eps.inSeason(s),
+                                  position: p,
+                                )
+                              : null,
                         ),
                     ],
                   ),
@@ -508,6 +537,8 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
                   order: eps.order,
                   hideSpoilers: hideSpoilers,
                   nextId: _nextId(eps, target),
+                  all: eps.episodes,
+                  canMark: canMark,
                 ),
               ),
             ),
@@ -572,17 +603,22 @@ class _SeasonChip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.onMenu,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
+  /// UI-049: the watched marks of the season.
+  final ValueChanged<Offset>? onMenu;
+
   @override
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
     return KFocusable(
       onActivate: onTap,
+      onContextMenu: onMenu,
       radius: 999,
       light: false,
       focusScale: d.focusScaleButton,
@@ -624,12 +660,21 @@ class _EpisodeRow extends StatelessWidget {
     required this.order,
     required this.hideSpoilers,
     this.nextId,
+    this.all = const [],
+    this.canMark = false,
   });
 
   final List<ShowEpisode> episodes;
   final EpisodeOrder order;
   final bool hideSpoilers;
   final String? nextId;
+
+  /// Every episode of the show in the page's order (UI-049: «все
+  /// предыдущие»).
+  final List<ShowEpisode> all;
+
+  /// The episode menu with the watched marks is there (UI-049).
+  final bool canMark;
 
   @override
   Widget build(BuildContext context) {
@@ -639,6 +684,9 @@ class _EpisodeRow extends StatelessWidget {
       e.item,
       startPositionMs: resumePositionMs(e.progress),
     );
+    ValueChanged<Offset>? menu(ShowEpisode e) => canMark
+        ? (p) => showEpisodeMarkMenu(context, e, all, position: p)
+        : null;
     if (d.isPhone) {
       return FocusTraversalGroup(
         child: Padding(
@@ -658,6 +706,7 @@ class _EpisodeRow extends StatelessWidget {
                   width: double.infinity,
                   horizontal: true,
                   onTap: () => play(e),
+                  onMenu: menu(e),
                 ),
             ],
           ),
@@ -690,6 +739,7 @@ class _EpisodeRow extends StatelessWidget {
               next: e.item.id == nextId,
               width: width,
               onTap: () => play(e),
+              onMenu: menu(e),
             );
           },
         ),
@@ -711,6 +761,7 @@ class _EpisodeCard extends StatelessWidget {
     required this.onTap,
     this.horizontal = false,
     this.next = false,
+    this.onMenu,
   });
 
   final ShowEpisode episode;
@@ -724,6 +775,10 @@ class _EpisodeCard extends StatelessWidget {
 
   /// Still on the left, text on the right (phones).
   final bool horizontal;
+
+  /// UI-049: the menu with the watched marks, at a global position (long
+  /// press, right click, a held OK, the menu key, «⋯»).
+  final ValueChanged<Offset>? onMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -739,6 +794,15 @@ class _EpisodeCard extends StatelessWidget {
 
     final state = watchArtOf(p);
     final radius = d.cardRadius * .75;
+    // UI-049: «⋯» for touch and mouse; the remote holds OK instead.
+    final Widget? more = onMenu == null || d.isTv
+        ? null
+        : _EpisodeMoreButton(
+            id: e.id,
+            label: l.showEpisodeActions,
+            onMenu: onMenu!,
+            onArt: !horizontal,
+          );
     Widget still(bool focused) => ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: AspectRatio(
@@ -772,6 +836,8 @@ class _EpisodeCard extends StatelessWidget {
               left: 6,
               child: OfflineBadge(itemId: e.id, size: 16),
             ),
+            if (more != null && !horizontal)
+              Positioned(top: 2, right: 2, child: more),
           ],
         ),
       ),
@@ -829,6 +895,7 @@ class _EpisodeCard extends StatelessWidget {
         focusScale: horizontal ? 1.01 : (d.isTv ? 1.05 : 1.03),
         light: false,
         semanticLabel: '$code ${e.title}',
+        onContextMenu: onMenu,
         builder: (context, focused) => SizedBox(
           width: width,
           child: horizontal
@@ -844,6 +911,7 @@ class _EpisodeCard extends StatelessWidget {
                       SizedBox(width: 150, child: still(focused)),
                       const SizedBox(width: 14),
                       Expanded(child: text()),
+                      ?more,
                     ],
                   ),
                 )
@@ -859,6 +927,45 @@ class _EpisodeCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// «⋯» of an episode card (UI-049): opens its menu. Out of the focus
+/// order: on TV and with the keyboard the card itself opens the menu (a
+/// held OK, the menu key).
+class _EpisodeMoreButton extends StatelessWidget {
+  const _EpisodeMoreButton({
+    required this.id,
+    required this.label,
+    required this.onMenu,
+    required this.onArt,
+  });
+
+  final String id;
+  final String label;
+  final ValueChanged<Offset> onMenu;
+
+  /// Over the still: on a dark disc so it reads on any frame.
+  final bool onArt;
+
+  @override
+  Widget build(BuildContext context) => ExcludeFocus(
+    child: Builder(
+      builder: (context) => IconButton(
+        key: showEpisodeMenuKey(id),
+        tooltip: label,
+        visualDensity: VisualDensity.compact,
+        iconSize: 20,
+        color: Colors.white,
+        style: onArt
+            ? IconButton.styleFrom(
+                backgroundColor: Colors.black.withValues(alpha: .45),
+              )
+            : null,
+        icon: const Icon(Icons.more_horiz),
+        onPressed: () => onMenu(centreOf(context)),
+      ),
+    ),
+  );
 }
 
 /// Blurs [child] when [on] (Hide Spoilers).
