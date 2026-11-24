@@ -113,6 +113,7 @@ mod details;
 pub mod ed2k;
 mod episode_order;
 mod error;
+mod external_titles;
 pub mod fingerprint;
 mod fix;
 mod folder_auto;
@@ -174,6 +175,7 @@ pub use ed2k::{
 };
 pub use episode_order::{EpisodeOrder, ShowEpisode, ShowEpisodes};
 pub use error::Error;
+pub use external_titles::{ExternalTitle, TitleKind};
 pub use folder_probe::FolderJournal;
 pub use folder_rules::{FolderRuleInfo, ReleaseTemplate};
 pub use folder_sync::{FolderSyncMode, FolderSyncRun, FolderSyncStatus};
