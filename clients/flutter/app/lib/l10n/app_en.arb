@@ -6152,6 +6152,142 @@
   "@healthSyncAuto": {
     "description": "Health screen: automatic folder sync (SYNC-015) without a folder yet."
   },
+  "newDeviceQrTitle": "Transfer settings from your phone",
+  "@newDeviceQrTitle": {
+    "description": "First run on a new device (UI-046): title of the QR code a phone scans to transfer sources, profiles and settings."
+  },
+  "newDeviceQrBody": "On your phone open {appName} → Settings → Devices → «Set up a new device» and point the camera at this code. Sources with their passwords, profiles and settings come over by themselves.",
+  "@newDeviceQrBody": {
+    "description": "New device (UI-046): how to use the QR code.",
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceQrCode": "No camera? Type this code on the phone: {code}",
+  "@newDeviceQrCode": {
+    "description": "New device (UI-046): the 6-digit fallback code, formatted as «123 456».",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceQrWaiting": "Waiting for your phone…",
+  "@newDeviceQrWaiting": {
+    "description": "New device (UI-046): shown while no phone has answered yet."
+  },
+  "newDeviceDoneTitle": "Settings from «{device}» are here",
+  "@newDeviceDoneTitle": {
+    "description": "New device (UI-046): the phone's data arrived.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceDoneSources": "{count, plural, =0{No new sources: they were here already.} =1{1 source added; the library is being scanned.} other{{count} sources added; the library is being scanned.}}",
+  "@newDeviceDoneSources": {
+    "description": "New device (UI-046): sources added from the phone.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newDeviceDoneProfiles": "Profiles and their PIN locks arrive in a moment.",
+  "@newDeviceDoneProfiles": {
+    "description": "New device (UI-046): profiles come over sync after the transfer."
+  },
+  "newDeviceDoneNoBundle": "The devices are linked, but the settings did not arrive. Add sources here or try again from the phone.",
+  "@newDeviceDoneNoBundle": {
+    "description": "New device (UI-046): paired, but the bundle was lost."
+  },
+  "newDeviceDoneOpen": "Start watching",
+  "@newDeviceDoneOpen": {
+    "description": "New device (UI-046): button that closes the first run after the transfer."
+  },
+  "newDeviceSendPanelTitle": "New device",
+  "@newDeviceSendPanelTitle": {
+    "description": "Settings → Devices (UI-046): panel to set up a TV or another new device from this phone."
+  },
+  "newDeviceSendPanelBody": "A TV or another device with {appName} shows a QR code on its first start. Scan it and its sources, passwords, profiles and settings are set up from this device.",
+  "@newDeviceSendPanelBody": {
+    "description": "Settings → Devices (UI-046): what setting up a new device does.",
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceSendAction": "Set up a new device",
+  "@newDeviceSendAction": {
+    "description": "Settings → Devices (UI-046): opens the transfer to a new device."
+  },
+  "newDeviceSendTitle": "Set up a new device",
+  "@newDeviceSendTitle": {
+    "description": "Transfer screen on the phone (UI-046): title."
+  },
+  "newDeviceSendTarget": "Transfer to «{device}»?",
+  "@newDeviceSendTarget": {
+    "description": "Transfer screen (UI-046): the new device's name from its QR code.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceSendTargetUnnamed": "Transfer to the new device?",
+  "@newDeviceSendTargetUnnamed": {
+    "description": "Transfer screen (UI-046): the code was typed, the device name is unknown."
+  },
+  "newDeviceSendWhat": "Sources with their passwords, profiles with their PIN locks and your settings. Everything is end-to-end encrypted and goes only to your own device over your home network.",
+  "@newDeviceSendWhat": {
+    "description": "Transfer screen (UI-046): what goes over and how."
+  },
+  "newDeviceSendButton": "Transfer",
+  "@newDeviceSendButton": {
+    "description": "Transfer screen (UI-046): starts the transfer."
+  },
+  "newDeviceSendCodeField": "Code on the new device",
+  "@newDeviceSendCodeField": {
+    "description": "Transfer screen (UI-046): field for the 6 digits when the phone has no camera."
+  },
+  "newDeviceSendCodeHint": "Scan the QR code on the new device's screen or type the 6 digits under it.",
+  "@newDeviceSendCodeHint": {
+    "description": "Transfer screen (UI-046): how to find the code."
+  },
+  "newDeviceSendNext": "Next",
+  "@newDeviceSendNext": {
+    "description": "Transfer screen (UI-046): goes on with the typed code."
+  },
+  "newDeviceSendWaiting": "Waiting for «{device}»… Keep this screen open.",
+  "@newDeviceSendWaiting": {
+    "description": "Transfer screen (UI-046): the invitation is open.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceSendDone": "«{device}» is set up: sources, profiles and settings are there.",
+  "@newDeviceSendDone": {
+    "description": "Transfer screen (UI-046): the new device joined.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "newDeviceSendClose": "Done",
+  "@newDeviceSendClose": {
+    "description": "Transfer screen (UI-046): closes it."
+  },
+  "newDeviceUnnamed": "the new device",
+  "@newDeviceUnnamed": {
+    "description": "UI-046: stands for the new device when its name is unknown."
+  },
   "sourcesAddClouds": "Cloud storage",
   "@sourcesAddClouds": {
     "description": "Add source list: header above MEGA, Google Drive, OneDrive and Dropbox (NET-017)."
@@ -6343,6 +6479,92 @@
         "type": "String"
       }
     }
+  },
+  "libUploadWhereTitle": "Where should files go?",
+  "@libUploadWhereTitle": {
+    "description": "LIB-027: dialog title — pick the source files added to the library go to."
+  },
+  "libUploadWhereHint": "Added files go into the library on this server or folder. Kinolune remembers the choice.",
+  "@libUploadWhereHint": {
+    "description": "LIB-027: hint in the source dialog."
+  },
+  "libUploadUnavailable": "Files cannot be added to the library here.",
+  "@libUploadUnavailable": {
+    "description": "LIB-027: no file writes in this build (demo without the core)."
+  },
+  "libUploadNowhere": "There is nowhere to upload: add a server or NAS folder that can be written to.",
+  "@libUploadNowhere": {
+    "description": "LIB-027: no writable source for the library."
+  },
+  "libUploadStarted": "{count, plural, one{{count} file is going to the library on “{place}”.} other{{count} files are going to the library on “{place}”.}}",
+  "@libUploadStarted": {
+    "description": "LIB-027: snack bar after files were dropped, shared or picked.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "libUploadSkipped": "{count, plural, one{{count} item is not for the library and was skipped.} other{{count} items are not for the library and were skipped.}}",
+  "@libUploadSkipped": {
+    "description": "LIB-027: appended to the snack bar when some items were documents or other files.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libUploadOpenDownloads": "Downloads",
+  "@libUploadOpenDownloads": {
+    "description": "LIB-027: snack bar action that opens the Downloads screen."
+  },
+  "libUploadNothing": "Nothing here goes into the library: videos, music, Blu-ray and DVD folders and ISO images do.",
+  "@libUploadNothing": {
+    "description": "LIB-027: nothing of the drop or share could be added."
+  },
+  "libUploadAdd": "Add to library",
+  "@libUploadAdd": {
+    "description": "LIB-027: button on the Downloads screen that picks files or a folder."
+  },
+  "libUploadPickFiles": "Files…",
+  "@libUploadPickFiles": {
+    "description": "LIB-027: menu item — pick files."
+  },
+  "libUploadPickFolder": "Folder…",
+  "@libUploadPickFolder": {
+    "description": "LIB-027: menu item — pick a folder (e.g. a Blu-ray folder)."
+  },
+  "libUploadDropHint": "Drop to add to the library",
+  "@libUploadDropHint": {
+    "description": "LIB-027: hint over the window while files are dragged onto it."
+  },
+  "libUploadDropKinds": "Movies, shows, music, Blu-ray and DVD folders, ISO",
+  "@libUploadDropKinds": {
+    "description": "LIB-027: second line of the drag hint."
+  },
+  "libUploadSectionTitle": "To the library",
+  "@libUploadSectionTitle": {
+    "description": "LIB-027: Downloads screen section with files going up to the server or NAS."
+  },
+  "libUploadDone": "Added to “{folder}”",
+  "@libUploadDone": {
+    "description": "LIB-027: an upload finished; the folder of the source it went to.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "libUploadWillResume": "No connection to the source — the upload goes on by itself",
+  "@libUploadWillResume": {
+    "description": "LIB-027: the network dropped, an automatic retry is planned."
+  },
+  "libUploadNoSpace": "Not enough space on the source — free some and tap Retry",
+  "@libUploadNoSpace": {
+    "description": "LIB-027: the source is full."
   },
   "twitchMultiviewTitle": "Multiview",
   "@twitchMultiviewTitle": {

@@ -16,6 +16,9 @@ export 'package:pa_player/pa_player.dart'
         SleepTimer,
         NowPlayingBar,
         NowPlayingScreen,
+        // MUS-005 Now Playing and the mini player
+        AudioFormat,
+        MiniPlayerStyle,
         // MUS-003 queue and playlists
         QueueSource,
         SaveQueueCallback,
