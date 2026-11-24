@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Эмоуты 7TV, BetterTTV и FFZ в чате Twitch
+# ADR-0141: Эмоуты 7TV, BetterTTV и FFZ в чате Twitch
 
 - **Статус:** Принят
 - **Дата:** 2026-11-24
