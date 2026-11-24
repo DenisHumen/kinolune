@@ -230,7 +230,11 @@ void main() {
         ),
       );
       final tile = find.byKey(const ValueKey('chat-third-party-emotes'));
-      await t.dragUntilVisible(tile, find.byType(ListView), const Offset(0, -300));
+      await t.dragUntilVisible(
+        tile,
+        find.byType(ListView),
+        const Offset(0, -300),
+      );
       await t.pumpAndSettle();
       expect(find.text(ru.twitchChatAdvanced), findsOneWidget);
       expect(find.text(ru.twitchChatThirdPartyEmotes), findsOneWidget);
