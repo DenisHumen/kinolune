@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //! OAuth 2.0 for native apps (RFC 8252) with PKCE (RFC 7636): Kinolune is
 //! a *public client*. There is no client secret in the code; the project's
-//! client ids come from the build (`KINOLUNE_*_CLIENT_ID`, empty in the
+//! client ids come from the build (`PA_*_CLIENT_ID` or, through the Flutter
+//! build hook, `CARGO_PA_*_CLIENT_ID`; empty in the
 //! repository, see `docs/dev/secrets.md`) and a user may enter their own
 //! (advanced settings). Scopes are read-only.
 //!
@@ -70,7 +71,12 @@ impl fmt::Debug for Provider {
 }
 
 fn build_env(value: Option<&'static str>) -> String {
-    value.unwrap_or("").trim().to_owned()
+    let v = value.unwrap_or("").trim();
+    if v.eq_ignore_ascii_case("changeme") {
+        String::new()
+    } else {
+        v.to_owned()
+    }
 }
 
 impl Provider {
@@ -80,14 +86,18 @@ impl Provider {
     /// the user's own client id).
     #[must_use]
     pub fn google() -> Self {
-        let secret = build_env(option_env!("KINOLUNE_GDRIVE_CLIENT_SECRET"));
+        let secret = build_env(
+            option_env!("PA_GDRIVE_CLIENT_SECRET").or(option_env!("CARGO_PA_GDRIVE_CLIENT_SECRET")),
+        );
         Self {
             id: "google",
             auth_url: "https://accounts.google.com/o/oauth2/v2/auth".into(),
             token_url: "https://oauth2.googleapis.com/token".into(),
             scope: "https://www.googleapis.com/auth/drive.readonly".into(),
             extra: vec![("access_type", "offline"), ("prompt", "consent")],
-            client_id: build_env(option_env!("KINOLUNE_GDRIVE_CLIENT_ID")),
+            client_id: build_env(
+                option_env!("PA_GDRIVE_CLIENT_ID").or(option_env!("CARGO_PA_GDRIVE_CLIENT_ID")),
+            ),
             client_secret: (!secret.is_empty()).then_some(secret),
         }
     }
@@ -102,7 +112,9 @@ impl Provider {
             token_url: "https://login.microsoftonline.com/common/oauth2/v2.0/token".into(),
             scope: "Files.Read offline_access".into(),
             extra: vec![("prompt", "select_account")],
-            client_id: build_env(option_env!("KINOLUNE_ONEDRIVE_CLIENT_ID")),
+            client_id: build_env(
+                option_env!("PA_ONEDRIVE_CLIENT_ID").or(option_env!("CARGO_PA_ONEDRIVE_CLIENT_ID")),
+            ),
             client_secret: None,
         }
     }
@@ -118,7 +130,9 @@ impl Provider {
             token_url: "https://api.dropboxapi.com/oauth2/token".into(),
             scope: "files.metadata.read files.content.read account_info.read".into(),
             extra: vec![("token_access_type", "offline")],
-            client_id: build_env(option_env!("KINOLUNE_DROPBOX_CLIENT_ID")),
+            client_id: build_env(
+                option_env!("PA_DROPBOX_CLIENT_ID").or(option_env!("CARGO_PA_DROPBOX_CLIENT_ID")),
+            ),
             client_secret: None,
         }
     }

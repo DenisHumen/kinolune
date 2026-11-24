@@ -437,10 +437,10 @@ project_alpha/
   - Что: артисты, альбомы, треки, стриминг, scrobble; совместимость с Navidrome.
   - deps: NET-011 · size: M · parallel: yes · веха: M6 · ref: 01 §1.5 (музыка)
   - done when: тесты против Navidrome в Docker.
-- [ ] **NET-017** Облачные хранилища [P1]
-  - Что: сначала Yandex.Disk (WebDAV или REST), затем Google Drive, OneDrive и Dropbox через OAuth с PKCE (public client, без client secret в коде; если провайдер требует секрет — свой client_id пользователя).
+- [x] **NET-017** Облачные хранилища [P1]
+  - Что: сначала MEGA и Google Drive, затем OneDrive и Dropbox (российских сервисов нет — решение владельца 2026-11-24). MEGA — e-mail и пароль (+ код 2FA) или публичная ссылка; Google Drive, OneDrive и Dropbox — OAuth с PKCE (public client, без client secret в коде; если провайдер требует секрет — свой client_id пользователя).
   - deps: NET-004 · size: L · parallel: yes · веха: M4 · ref: 01 §1.5
-  - done when: контракт-тесты Vfs против тестовых аккаунтов (вручную, по чек-листу) и моков.
+  - done when: контракт-тесты Vfs против тестовых аккаунтов (вручную, по чек-листу) и моков. Сделано (ADR-NNNN): крейт `pa-cloud` — любой `Drive` как `pa-vfs` только на чтение (чтение диапазонами с упреждением, кэш листингов, одинаковые имена → ` (2)`, документы без байтов пропускаются); MEGA — свой клиент JSON API без SDK (вход v1/v2 с 2FA, хранится сессия, пароль — нет; AES-CTR расшифровка с любого смещения; публичные ссылки на папку и файл, ключ — в защищённом хранилище); Google Drive, OneDrive, Dropbox — OAuth 2.0 + PKCE, loopback `127.0.0.1:47290` и `kinolune://oauth` на Android со своим клиентом, refresh token в SecretStore с перезаписью при ротации, client ID из сборки (`PA_*_CLIENT_ID`) или свой в «Дополнительно»; виды источника `mega`, `gdrive`, `onedrive`, `dropbox` в `pa-sources`, `CoreCloud` в FRB, пункты «Облачные хранилища» в «Добавить» (ru/en). Тесты: контракт `pa-vfs` для всех четырёх против моков API (MEGA — и для ссылки на папку), векторы NIST/RFC для AES/CTR/PBKDF2, RSA сессии, `pa-sources/tests/cloud.rs`, `test/cloud_source_test.dart`; ручная проверка — [docs/qa/cloud-storages-checklist.md](qa/cloud-storages-checklist.md).
 - [x] **NET-018** Прочие источники [P2]: UPnP/DLNA, `.strm`, M3U/M3U8
   - Что: UPnP ContentDirectory browse; разбор `.strm` и плейлистов M3U как источников.
   - deps: NET-011 · size: M · parallel: yes · веха: M10 · ref: 01 §1.5

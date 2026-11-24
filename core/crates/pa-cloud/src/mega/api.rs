@@ -20,11 +20,12 @@ use crate::http::{Http, Request, encode};
 pub const API: &str = "https://g.api.mega.co.nz";
 
 /// The app key MEGA asks third-party clients to send (`ak`); from the build
-/// (`KINOLUNE_MEGA_APP_KEY`), empty in the repository.
+/// (`PA_MEGA_APP_KEY` or `CARGO_PA_MEGA_APP_KEY`), empty in the repository.
 fn app_key() -> Option<&'static str> {
-    option_env!("KINOLUNE_MEGA_APP_KEY")
+    option_env!("PA_MEGA_APP_KEY")
+        .or(option_env!("CARGO_PA_MEGA_APP_KEY"))
         .map(str::trim)
-        .filter(|k| !k.is_empty())
+        .filter(|k| !k.is_empty() && !k.eq_ignore_ascii_case("changeme"))
 }
 
 /// An error code of the API.

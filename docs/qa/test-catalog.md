@@ -1171,6 +1171,23 @@ PLAY-AND-006, ADR-0135: ASS рисует libass (из нашего `libmpv.so`) 
 
 Автотесты: SRC-112…SRC-120 — `test/plex_source_test.dart`, SRC-111 — `test/lan_discovery_test.dart`; ядро — `pa-plex/tests/plex.rs`, `pa-sources/tests/plex.rs`, `pa-catalog/tests/plex.rs` (синтетические ответы plex.tv и сервера). SRC-121…SRC-126 (NET-013) проверяются только у владельца с настоящим Plex Media Server и Plex Web: без аккаунта plex.tv и claim-токена живого сервера в CI нет. Ядро против синтетического сервера — `pa-plex/tests/playback.rs` (параметры timeline, scrobble, unscrobble, removeFromContinueWatching, транскода; viewOffset и viewCount читаются обратно), `pa-catalog/tests/plex.rs` (`plex_progress_goes_both_ways`: позиция туда и обратно, «Продолжить просмотр», видеоплейлист), `pa-sources/tests/plex.rs`.
 
+### Облачные хранилища (NET-017)
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| SRC-132 | «Добавить источник» → заголовок «Облачные хранилища», ниже MEGA, Google Drive, OneDrive, Dropbox со значком облака; нажатие открывает форму облака; без ядра — «недоступно в упрощённом режиме» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SRC-133 | Google Drive / OneDrive / Dropbox: «Откроется браузер…», «Только чтение…»; «Войти через браузер» (`cloud-sign-in`) → открывается страница входа сервиса, в форме «Ждём ответа из браузера…» и «Открыть браузер ещё раз» (`cloud-open-again`) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SRC-134 | Вход в браузере разрешён → браузер «Вход выполнен — вернитесь в приложение»; в форме «Вход выполнен: <почта>» (`cloud-account`), «Папка (необязательно)» (`cloud-folder`), «Имя» (`cloud-name`); «Добавить» (`cloud-add`) → источник добавлен, проверяется и сканируется | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SRC-135 | Вход отклонён в браузере → «Вход отменён в браузере. Попробуйте ещё раз.» (`cloud-cancelled`), снова «Войти через браузер» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SRC-136 | В сборке нет ключа сервиса → «В этой сборке нет ключа …» (`cloud-no-client`), «Дополнительно» (`cloud-advanced`) раскрыто, «Войти через браузер» неактивна, пока не введён «Свой client ID» (`cloud-client-id`); у Google ещё «Client secret» (`cloud-client-secret`); на Android со своим client ID — «Возвращаться в приложение по ссылке kinolune://oauth» (`cloud-app-redirect`) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SRC-137 | MEGA: переключатель «Аккаунт / Ссылка» (`cloud-mega-mode`); «Эл. почта» (`cloud-mega-email`), «Пароль» (`cloud-mega-password`), «Войти и добавить» (`cloud-mega-add`) активна, когда оба заполнены; у аккаунта с 2FA появляется «Код двухфакторной защиты» (`cloud-mega-mfa`), почта и пароль блокируются; неверный пароль или код → понятная ошибка | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SRC-138 | MEGA «Ссылка»: поле ссылки (`cloud-mega-link`) с ключом после # → «Добавить» добавляет папку или файл без аккаунта; ссылка без ключа → ошибка «нет ключа» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| SRC-139 | «Отмена» (`cloud-cancel`) или «Назад» во время ожидания браузера → вход прерывается | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SRC-140 | «Изменить» у облачного источника → только имя (`cloud-name`), «Сохранить» (`cloud-save`) не просит войти заново | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SRC-141 | Фильм из облака (MEGA, Google Drive, OneDrive, Dropbox) после скана распознан и играет; перемотка в середину 4K-файла начинает играть за секунды, без скачивания с начала | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+
+Автотесты: SRC-132…SRC-138 — `test/cloud_source_test.dart`. Ядро — `pa-cloud/tests/{mega,gdrive,onedrive,dropbox}.rs` (контракт `pa-vfs` против моков API, расшифровка MEGA CTR с невыровненных смещений, вход MEGA с 2FA, ротация refresh token, истёкшие ссылки загрузки), `pa-sources/tests/cloud.rs`. Настоящие аккаунты — вручную по [чек-листу](cloud-storages-checklist.md).
+
 ### Обзор файлов источника
 
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
