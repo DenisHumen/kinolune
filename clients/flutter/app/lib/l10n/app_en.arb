@@ -6151,5 +6151,26 @@
   "twitchChatThirdPartyEmotesHint": "Emotes streamers add through these services. Their lists and images are loaded straight from the services.",
   "@twitchChatThirdPartyEmotesHint": {
     "description": "Chat settings: explanation under the third-party emotes switch (TWI-023)."
+  },
+  "sourcesSecretFallback": "Passwords are stored in an encrypted file because the system keychain {why}. To keep them in the keychain, turn it on or unlock it and restart {appName}.",
+  "@sourcesSecretFallback": {
+    "description": "Sources screen: why passwords are in the encrypted file and the one fix (BUG-013). {why} is one of secretsWhy*; the core's own message is folded under Details.",
+    "placeholders": {
+      "why": {
+        "type": "String"
+      },
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "episodeUntitled": "Episode {number}",
+  "@episodeUntitled": {
+    "description": "Title of an episode that has no title of its own, e.g. a series without a provider match (BUG-014).",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
   }
 }

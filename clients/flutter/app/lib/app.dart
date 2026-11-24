@@ -11,6 +11,8 @@ import 'fakes/fake_personal_media.dart';
 import 'fakes/fake_review_inbox.dart';
 import 'features/updates/update_section.dart';
 import 'flavor.dart';
+import 'integration/library.dart' show UntitledEpisode;
+import 'integration/player.dart' show PlayerScreen;
 import 'l10n/l10n.dart';
 import 'licenses.dart';
 import 'notices/notice_feeds.dart';
@@ -176,6 +178,8 @@ class _KinoluneAppState extends State<KinoluneApp> {
       child: InAppNoticeHost(
         notices: _services.notices,
         navigatorKey: _navigatorKey,
+        // BUG-016: cards wait while a video plays.
+        held: PlayerScreen.anyOpen,
         child: child,
       ),
     ),
@@ -210,9 +214,12 @@ class _KinoluneAppState extends State<KinoluneApp> {
         child: KeepFocusVisible(
           enabled: !tv,
           child: ListenableBuilder(
-            listenable: _services,
+            listenable: Listenable.merge([_services, PlayerScreen.anyOpen]),
             builder: (context, _) {
               final l = context.l10n;
+              // BUG-014: episodes without a title of their own are named
+              // in the UI language («Серия 13»).
+              UntitledEpisode.title = (n) => l.episodeUntitled(n ?? 0);
               // UI-015: App Lock covers everything until the PIN; the app
               // under it keeps its state but takes no focus.
               final profiles = _services.profileControl;
@@ -249,10 +256,14 @@ class _KinoluneAppState extends State<KinoluneApp> {
               if (!_showLibmpvWarning && !secretNotice && updates == null) {
                 return _notices(child!);
               }
+              // BUG-016: nothing over the video; the banners come back when
+              // the player closes (unless dismissed). The column stays, so
+              // the player's route is not moved in the tree.
+              final player = PlayerScreen.anyOpen.value;
               return _notices(
                 Column(
                   children: [
-                    if (_showLibmpvWarning)
+                    if (_showLibmpvWarning && !player)
                       _TopBanner(
                         icon: Icons.warning_amber_rounded,
                         text: l.appLibmpvMissing(kAppName),
@@ -260,7 +271,7 @@ class _KinoluneAppState extends State<KinoluneApp> {
                         onAction: () =>
                             setState(() => _showLibmpvWarning = false),
                       ),
-                    if (secretNotice)
+                    if (secretNotice && !player)
                       _TopBanner(
                         key: const ValueKey('secret-fallback-notice'),
                         icon: Icons.lock_open_outlined,
@@ -270,7 +281,7 @@ class _KinoluneAppState extends State<KinoluneApp> {
                         onAction: () =>
                             unawaited(_services.dismissSecretNotice()),
                       ),
-                    if (updates != null)
+                    if (updates != null && !player)
                       // PKG-022: the strip announces a new release too
                       // (with its changelog), not a notice card.
                       UpdateBanner(

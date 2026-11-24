@@ -166,4 +166,20 @@ void main() {
     expect((await inbox.exportNfo(up.id, replace: true)).replaced, 1);
     expect(await inbox.renameWithIds(up.id), 0);
   });
+
+  test('a scan or metadata run reaches the inbox listeners (BUG-012)', () async {
+    // The home line and the Settings count reload on `changes`; a run that
+    // puts works into the inbox decides nothing here, so the library's
+    // own change signal must come through.
+    var seen = 0;
+    final sub = inbox.changes.listen((_) => seen++);
+    await lib.scan().toList();
+    await pumpEventQueue();
+    expect(seen, greaterThan(0));
+    final before = seen;
+    lib.notifyExternalChange();
+    await pumpEventQueue();
+    expect(seen, greaterThan(before));
+    await sub.cancel();
+  });
 }

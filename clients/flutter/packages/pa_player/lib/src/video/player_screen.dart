@@ -240,6 +240,20 @@ class PlayerScreen extends StatefulWidget {
   final Widget Function(BuildContext context, EngineState state)?
   timelineHeader;
 
+  /// Whether a video player is on screen (BUG-016): the app holds its
+  /// banners and notice cards until it closes, so nothing covers the
+  /// picture.
+  static ValueListenable<bool> get anyOpen => _anyOpen;
+  static final _anyOpen = ValueNotifier<bool>(false);
+  static int _openCount = 0;
+
+  /// Counts a player in or out. The flag changes after the current frame's
+  /// work (players mount and unmount while the tree builds).
+  static void _countOpen(int delta) {
+    _openCount += delta;
+    scheduleMicrotask(() => _anyOpen.value = _openCount > 0);
+  }
+
   @override
   State<PlayerScreen> createState() => PlayerScreenState();
 }
@@ -354,6 +368,7 @@ class PlayerScreenState extends State<PlayerScreen>
   @override
   void initState() {
     super.initState();
+    PlayerScreen._countOpen(1);
     final factory = widget.engineFactory ?? MediaKitEngine.create;
     engine = factory(video: true);
     request = widget.request;
@@ -991,6 +1006,7 @@ class PlayerScreenState extends State<PlayerScreen>
 
   @override
   void dispose() {
+    PlayerScreen._countOpen(-1);
     WidgetsBinding.instance.removeObserver(this);
     engine.state.removeListener(_onEngine);
     _sessionClaim.release();

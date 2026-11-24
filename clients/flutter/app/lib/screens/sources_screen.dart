@@ -18,6 +18,7 @@ import '../sources/source_address.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
 import '../theme/kinolune_theme.dart';
+import '../widgets/secret_storage_text.dart' show secretFallbackWhy;
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import '../widgets/scan_status.dart';
@@ -128,10 +129,20 @@ class _SourcesScreenState extends State<SourcesScreen> {
                           icon: Icons.info_outline,
                           text: l.sourcesReducedBanner(kAppName),
                         ),
+                      // BUG-013: plain words and the fix; the core's own
+                      // message (D-Bus, paths) only under «Подробнее».
                       if (secretWarning != null)
                         _Notice(
+                          key: const ValueKey('sources-secret-warning'),
                           icon: Icons.lock_outline,
-                          text: l.sourcesSecretWarning(secretWarning),
+                          text: l.sourcesSecretFallback(
+                            secretFallbackWhy(
+                              l,
+                              services.secretStorage.fallbackKind,
+                            ),
+                            kAppName,
+                          ),
+                          details: secretWarning,
                         ),
                       if (listError != null)
                         Padding(
@@ -195,10 +206,18 @@ class _SourcesScreenState extends State<SourcesScreen> {
 }
 
 class _Notice extends StatelessWidget {
-  const _Notice({required this.icon, required this.text});
+  const _Notice({
+    super.key,
+    required this.icon,
+    required this.text,
+    this.details,
+  });
 
   final IconData icon;
   final String text;
+
+  /// Technical text, folded under «Подробнее».
+  final String? details;
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +235,17 @@ class _Notice extends StatelessWidget {
         children: [
           Icon(icon, color: KColors.textSecondary),
           const SizedBox(width: 12),
-          Expanded(child: Text(text, style: theme.textTheme.bodySmall)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(text, style: theme.textTheme.bodySmall),
+                if (details case final d? when d.isNotEmpty)
+                  ErrorDetails(details: d),
+              ],
+            ),
+          ),
         ],
       ),
     );
