@@ -953,14 +953,17 @@ class _EpisodeMoreButton extends StatelessWidget {
       builder: (context) => IconButton(
         key: showEpisodeMenuKey(id),
         tooltip: label,
-        visualDensity: VisualDensity.compact,
+        // A 32 px disc, but a 48 px tap target on every form factor
+        // (Android asks for 48, iOS for 44).
+        visualDensity: VisualDensity.standard,
         iconSize: 20,
         color: Colors.white,
-        style: onArt
-            ? IconButton.styleFrom(
-                backgroundColor: Colors.black.withValues(alpha: .45),
-              )
-            : null,
+        style: IconButton.styleFrom(
+          minimumSize: const Size.square(32),
+          padding: const EdgeInsets.all(6),
+          tapTargetSize: MaterialTapTargetSize.padded,
+          backgroundColor: onArt ? Colors.black.withValues(alpha: .45) : null,
+        ),
         icon: const Icon(Icons.more_horiz),
         onPressed: () => onMenu(centreOf(context)),
       ),
