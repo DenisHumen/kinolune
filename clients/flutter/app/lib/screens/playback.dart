@@ -4,6 +4,8 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../cast/cast_play.dart';
+import '../cast/cast_ui.dart';
 import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
@@ -103,6 +105,8 @@ Future<void> playVideo(
     enabled: tv ? null : false, // null: on Android
   );
   handoff.begin(item.id, start, durationMs: item.durationMs ?? 0);
+  // PLAY-012: the OSD's cast button reads the engine's position.
+  final engineRef = _EngineRef()..item = item;
   await Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
       fullscreenDialog: true,
@@ -110,11 +114,25 @@ Future<void> playVideo(
         controller: handoff,
         child: PlayerScreen(
           request: request,
-          engineFactory: display.wrap(
-            handoff.engineFactory(services.playerEngineFactory),
+          engineFactory: engineRef.wrap(
+            display.wrap(handoff.engineFactory(services.playerEngineFactory)),
           ),
-          onProgress: _saver(services, item, reporter),
-          loadNext: _nextLoader(services, l, item, reporter),
+          onProgress: _saver(services, item, reporter, engineRef),
+          // PLAY-012: «На телевизор» from the player continues there.
+          osdActions: tv
+              ? null
+              : (context) => [
+                  CastButton(
+                    onPick: (device, anchor) => castFromPlayer(
+                      context,
+                      engineRef.item,
+                      device,
+                      anchor: anchor,
+                      engine: engineRef.engine,
+                    ),
+                  ),
+                ],
+          loadNext: _nextLoader(services, l, item, reporter, engineRef),
           // QA-015: off only stops the countdown; «Далее» stays.
           continuousPlayback: services.continuousPlayback.value,
           subtitleSettings: services.subtitleSettings,
@@ -233,6 +251,45 @@ Future<String?> _serverStream(
     debugPrint('Server playback of ${item.id} not planned: $e');
     return null;
   }
+}
+
+/// The HLS URL of [item] from its media server, transcoded from [startMs]
+/// for a cast receiver (PLAY-012); null when the item is not on one or the
+/// server cannot.
+Future<String?> serverStreamUrl(
+  AppServices services,
+  LibraryItem item,
+  int startMs,
+) => _serverStream(services, item, startMs, const ServerTranscode());
+
+/// The progress path of the player (library, handoff, media server) for a
+/// cast session of [item] (PLAY-012). The handoff session is taken over
+/// when the player that started it has closed.
+void Function(int, int) castProgressSaver(
+  AppServices services,
+  LibraryItem item,
+  JellyfinReporter reporter,
+) {
+  final save = _saver(services, item, reporter);
+  final handoff = services.handoff;
+  return (pos, dur) {
+    if (handoff.playingItemId != item.id) {
+      handoff.begin(item.id, pos, durationMs: dur);
+    }
+    save(pos, dur);
+  };
+}
+
+/// Keeps the engine the player made (PLAY-012: the cast button pauses it
+/// and casts from its position).
+class _EngineRef {
+  PlayerEngine? engine;
+
+  /// The item playing now (Up Next moves it on).
+  late LibraryItem item;
+
+  PlayerEngineFactory wrap(PlayerEngineFactory base) =>
+      ({bool video = true}) => engine = base(video: video);
 }
 
 /// A transcode on the media server the user asked for (NET-013).
@@ -390,10 +447,12 @@ Future<List<ExternalSubtitle>?> sidecarSubtitles(
 void Function(int, int) _saver(
   AppServices services,
   LibraryItem item,
-  JellyfinReporter reporter,
-) {
+  JellyfinReporter reporter, [
+  _EngineRef? playing,
+]) {
   final writer = ProgressWriter(services.library.saveProgress);
   return (pos, dur) {
+    playing?.item = item;
     writer.add(
       Progress(
         itemId: item.id,
@@ -443,8 +502,9 @@ Future<UpNextItem?> Function()? _nextLoader(
   AppServices services,
   AppLocalizations l,
   LibraryItem item,
-  JellyfinReporter reporter,
-) {
+  JellyfinReporter reporter, [
+  _EngineRef? playing,
+]) {
   if (item.kind != ItemKind.episode) return null;
   final library = services.library;
   return () async {
@@ -453,8 +513,8 @@ Future<UpNextItem?> Function()? _nextLoader(
     final start = resumePositionMs(await library.progress(next.id));
     return UpNextItem(
       request: await _request(services, l, next, start, eager: false),
-      onProgress: _saver(services, next, reporter),
-      loadNext: _nextLoader(services, l, next, reporter),
+      onProgress: _saver(services, next, reporter, playing),
+      loadNext: _nextLoader(services, l, next, reporter, playing),
     );
   };
 }

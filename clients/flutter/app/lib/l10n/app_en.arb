@@ -6206,6 +6206,161 @@
   "@healthSyncAuto": {
     "description": "Health screen: automatic folder sync (SYNC-015) without a folder yet."
   },
+  "castButtonTooltip": "Play on a TV",
+  "@castButtonTooltip": {
+    "description": "Cast button in the player and on detail pages (PLAY-012)."
+  },
+  "castDetailButton": "On TV",
+  "@castDetailButton": {
+    "description": "Detail page button that casts the title to a Chromecast or AirPlay device (PLAY-012)."
+  },
+  "castPickerTitle": "Play on",
+  "@castPickerTitle": {
+    "description": "Title of the list of cast devices (PLAY-012)."
+  },
+  "castAirPlay": "AirPlay",
+  "@castAirPlay": {
+    "description": "The AirPlay entry in the cast device list (PLAY-012)."
+  },
+  "castStop": "Stop casting",
+  "@castStop": {
+    "description": "Ends the cast session (PLAY-012)."
+  },
+  "castPlay": "Play",
+  "@castPlay": {
+    "description": "Cast mini-controller: resume on the TV (PLAY-012)."
+  },
+  "castPause": "Pause",
+  "@castPause": {
+    "description": "Cast mini-controller: pause on the TV (PLAY-012)."
+  },
+  "castBack": "Back {seconds} s",
+  "@castBack": {
+    "description": "Cast controls: seek back (PLAY-012).",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "castForward": "Forward {seconds} s",
+  "@castForward": {
+    "description": "Cast controls: seek forward (PLAY-012).",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "castOnDevice": "Playing on {device}",
+  "@castOnDevice": {
+    "description": "Cast mini-controller: which device plays (PLAY-012).",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "castConnecting": "Connecting to {device}…",
+  "@castConnecting": {
+    "description": "Snack bar while a cast device connects (PLAY-012).",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "castStarted": "Playing on {device}",
+  "@castStarted": {
+    "description": "Snack bar once the TV plays the title (PLAY-012).",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "castFailed": "Couldn't start playback on {device}. Check that the phone and the TV are on the same Wi-Fi.",
+  "@castFailed": {
+    "description": "Snack bar when casting failed (PLAY-012).",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "castNoNetwork": "Connect to Wi-Fi to play on a TV: the TV fetches the video from this device.",
+  "@castNoNetwork": {
+    "description": "Snack bar: no LAN address to serve the file (PLAY-012)."
+  },
+  "castUnsupportedTitle": "{device} can't play this file",
+  "@castUnsupportedTitle": {
+    "description": "Dialog title when the receiver does not support the file's format (PLAY-012).",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "castUnsupportedHint": "Movies from Jellyfin, Emby or Plex are converted by the server for the TV. You can also watch it here or try anyway.",
+  "@castUnsupportedHint": {
+    "description": "Dialog: how to watch a file the TV can't play (PLAY-012)."
+  },
+  "castProblemContainer": "The TV doesn't open {format} files.",
+  "@castProblemContainer": {
+    "description": "Why a file can't be cast: the container (PLAY-012).",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "castProblemVideo": "The TV doesn't decode {format} video.",
+  "@castProblemVideo": {
+    "description": "Why a file can't be cast: the video codec (PLAY-012).",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "castProblemAudio": "The TV doesn't play {format} sound.",
+  "@castProblemAudio": {
+    "description": "Why a file can't be cast: the audio codec (PLAY-012).",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "castProblemPicture": "The picture is too big for this device ({format}).",
+  "@castProblemPicture": {
+    "description": "Why a file can't be cast: resolution or bit depth (PLAY-012).",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "castProblemHdr": "This device doesn't show the file's HDR format.",
+  "@castProblemHdr": {
+    "description": "Why a file can't be cast: HDR (PLAY-012)."
+  },
+  "castProblemParts": "A movie split into several files plays only here.",
+  "@castProblemParts": {
+    "description": "Why a file can't be cast: several parts (PLAY-012)."
+  },
+  "castProblemUnknown": "The file's format isn't known yet.",
+  "@castProblemUnknown": {
+    "description": "Why a file can't be cast: not probed, unknown extension (PLAY-012)."
+  },
+  "castTryAnyway": "Try anyway",
+  "@castTryAnyway": {
+    "description": "Dialog button: cast the file although the TV may not play it (PLAY-012)."
+  },
+  "castCancel": "Cancel",
+  "@castCancel": {
+    "description": "Dialog button (PLAY-012)."
+  },
   "newDeviceQrTitle": "Transfer settings from your phone",
   "@newDeviceQrTitle": {
     "description": "First run on a new device (UI-046): title of the QR code a phone scans to transfer sources, profiles and settings."

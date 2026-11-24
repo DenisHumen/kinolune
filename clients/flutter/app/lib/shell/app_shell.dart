@@ -20,6 +20,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../cast/cast_controller.dart';
+import '../cast/cast_ui.dart';
 import '../files/files_controller.dart' show UploadRequest;
 import '../files/library_upload.dart';
 import '../files/share_intake.dart';
@@ -512,16 +514,18 @@ class _MiniPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     final services = Services.of(context);
     final books = services.audiobooks;
+    // PLAY-012: the cast mini-controller sits above the music bar.
+    final cast = CastController.instance;
     return ListenableBuilder(
-      listenable: Listenable.merge([services.music, books]),
+      listenable: Listenable.merge([services.music, books, cast]),
       builder: (context, _) {
         final book =
             books.player.book != null &&
             (services.music.current == null || books.bookIsLatest);
-        if (services.music.current == null && !book) {
-          return const SizedBox.shrink();
-        }
-        return ConstrainedBox(
+        final music = services.music.current != null || book;
+        final casting = cast.offered && cast.session != null;
+        if (!music && !casting) return const SizedBox.shrink();
+        Widget docked(Widget child) => ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -536,14 +540,25 @@ class _MiniPlayer extends StatelessWidget {
                 ),
               ],
             ),
-            child: book
-                ? const BookMiniBar()
-                : NowPlayingBar(
-                    controller: services.music,
-                    style: style,
-                    onOpen: () => openNowPlaying(context),
-                  ),
+            child: child,
           ),
+        );
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (casting) docked(CastMiniBar(controller: cast)),
+            if (casting && music) const SizedBox(height: 8),
+            if (music)
+              docked(
+                book
+                    ? const BookMiniBar()
+                    : NowPlayingBar(
+                        controller: services.music,
+                        style: style,
+                        onOpen: () => openNowPlaying(context),
+                      ),
+              ),
+          ],
         );
       },
     );

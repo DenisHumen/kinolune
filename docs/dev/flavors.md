@@ -9,6 +9,8 @@
 
 Флейвор не меняет форматы данных и протоколы.
 
+Отдельно от флейвора — **Google Cast** (PLAY-012, ADR-0153): Cast SDK проприетарный, поэтому он есть во всех сборках обоих флейворов, кроме F-Droid. Рецепт F-Droid (PKG-010) собирает с `--dart-define=KINOLUNE_GOOGLE_CAST=false`: Dart не показывает кнопку трансляции (`AppFlavor.googleCast`), Gradle не добавляет `play-services-cast-framework`, `mediarouter` и манифест `src/cast` (вместо `src/cast/kotlin` — заглушка `src/nocast/kotlin`). AirPlay на Apple от флага не зависит.
+
 ## Как выбрать флейвор
 
 | Где | store | full |
