@@ -166,19 +166,21 @@ impl CoreEvent {
     }
 }
 
-// The Dart `coreEvents()` (hand-written in pa_core) opens and closes a
-// stream with the three calls below. They are sync on purpose (BUG-007):
-// the subscription exists before `coreEvents().listen` returns, so no
-// event of a later call is lost, and a cancel ends the stream at once
-// instead of at its next event.
+// Long streams of the core — `coreEvents()`, `CoreSync.events()`,
+// `CoreDiscovery.watch()`, `CoreOffline.watch()` — are opened and closed
+// by id (BUG-007, BUG-008): pa_core wraps them by hand (`closableStream`).
+// The listen calls are sync on purpose: the subscription exists before
+// `listen` returns, so no event of a later call is lost, and a cancel ends
+// the stream at once instead of at its next event.
 
-/// The id for [`core_events_listen`]. In Dart use `coreEvents()`.
+/// The id for a long stream (`core_events_listen`, `CoreSync::events_listen`,
+/// …). In Dart use `coreEvents()` and the other wrappers of pa_core.
 #[frb(sync)]
-pub fn core_events_next_id() -> i64 {
-    crate::bus::next_stream_id()
+pub fn core_stream_next_id() -> i64 {
+    crate::streams::next_id()
 }
 
-/// All events of the core from now on, until [`core_events_close`] with
+/// All events of the core from now on, until [`core_stream_close`] with
 /// the same `id`. Any number of streams may be open. In Dart use
 /// `coreEvents()`.
 #[frb(sync)]
@@ -186,11 +188,12 @@ pub fn core_events_listen(id: i64, sink: StreamSink<CoreEvent>) {
     crate::bus::open_stream(id, move |event| sink.add(event.clone()).is_ok());
 }
 
-/// Ends the stream `id` now: Dart gets the end of the stream right away.
-/// In Dart use `coreEvents()`, whose `cancel()` calls this.
+/// Ends the long stream `id` now: Dart gets the end of the stream right
+/// away and the core drops its subscription. In Dart a `cancel()` of the
+/// pa_core wrappers calls this.
 #[frb(sync)]
-pub fn core_events_close(id: i64) {
-    crate::bus::close_stream(id);
+pub fn core_stream_close(id: i64) {
+    crate::streams::close(id);
 }
 
 /// Emits `count` ticks `0, 1, …, count - 1` into `sink`, then closes the stream.

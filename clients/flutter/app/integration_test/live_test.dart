@@ -86,6 +86,37 @@ void _log(String line) {
 
 int _rssMb() => ProcessInfo.currentRss ~/ (1024 * 1024);
 
+/// The step that runs now, for notes from error handlers.
+String _step = '';
+
+/// BUG-015: the live run on Linux (semantics always on) threw `Null check
+/// operator` in `_updateSemanticsNodeGeometry` around the seek, which no
+/// widget test reproduces. Notes the step at once (debugPrint of the error
+/// itself is throttled and comes late) and writes the render and semantics
+/// trees of the first two such errors next to the screenshots.
+void _watchSemanticsErrors() {
+  final previous = FlutterError.onError;
+  var dumps = 0;
+  FlutterError.onError = (details) {
+    if ('${details.stack}'.contains('_updateSemanticsNodeGeometry')) {
+      _log('NOTE semantics geometry error in step "$_step"');
+      if (dumps < 2) {
+        dumps++;
+        try {
+          final view = RendererBinding.instance.renderViews.first;
+          File('$_out/semantics-error-$dumps.txt').writeAsStringSync(
+            'step: $_step\n\n${view.toStringDeep()}\n\n'
+            '${view.debugSemantics?.toStringDeep() ?? 'no semantics'}\n',
+          );
+        } catch (e) {
+          _log('NOTE semantics dump failed: ${_oneLine(e)}');
+        }
+      }
+    }
+    previous?.call(details);
+  };
+}
+
 /// BUG-001: where native memory sits — threads of the process and glibc
 /// malloc (`mallinfo2`: from the system, in use, mmapped), to tell a leak
 /// (in use grows) from fragmentation (only from-the-system grows).
@@ -156,6 +187,7 @@ void main() {
     await t.step('first run: onboarding', critical: true, () async {
       unawaited(app.main(const []));
       await t.waitFor(find.byType(OnboardingScreen), 'onboarding', secs: 60);
+      _watchSemanticsErrors();
       return 'onboarding shown on an empty profile';
     });
 
@@ -962,6 +994,7 @@ class _Driver {
     bool critical = false,
   }) async {
     final sw = Stopwatch()..start();
+    _step = name;
     try {
       final detail = await body();
       _log('STEP ok "$name" ${sw.elapsed.inMilliseconds}ms: $detail');

@@ -24,12 +24,18 @@ enum SourceType {
   emby,
   subsonic,
   dlna,
-  playlist;
+  playlist,
+
+  /// Cloud storages (NET-017): MEGA, Google Drive, OneDrive, Dropbox.
+  mega,
+  gdrive,
+  onedrive,
+  dropbox;
 
   /// Kinds the Rust source manager supports (NET-011; Jellyfin: NET-014;
   /// Emby: NET-015; SFTP and FTP: NET-006; Subsonic and OpenSubsonic music
   /// servers such as Navidrome: NET-016; UPnP/DLNA servers and M3U
-  /// playlists: NET-018; Plex: NET-012).
+  /// playlists: NET-018; Plex: NET-012; clouds: NET-017).
   static const available = {
     local,
     smb,
@@ -42,10 +48,15 @@ enum SourceType {
     subsonic,
     dlna,
     playlist,
+    mega,
+    gdrive,
+    onedrive,
+    dropbox,
   };
 
   /// `pa-sources` kind string (`local`, `smb`, `webdav`, `sftp`, `ftp`,
-  /// `plex`, `jellyfin`, `emby`, `subsonic`, `dlna`, `playlist`).
+  /// `plex`, `jellyfin`, `emby`, `subsonic`, `dlna`, `playlist`, `mega`,
+  /// `gdrive`, `onedrive`, `dropbox`).
   String get coreKind => name;
 
   static SourceType? fromCoreKind(String kind) => switch (kind) {
@@ -60,8 +71,16 @@ enum SourceType {
     'subsonic' => subsonic,
     'dlna' => dlna,
     'playlist' => playlist,
+    'mega' => mega,
+    'gdrive' => gdrive,
+    'onedrive' => onedrive,
+    'dropbox' => dropbox,
     _ => null,
   };
+
+  /// A cloud storage (NET-017): added by signing in (`CloudLink`), not with
+  /// a [SourceDraft].
+  bool get cloud => const {mega, gdrive, onedrive, dropbox}.contains(this);
 
   /// Kinds the library scan can index: the core reads local folders, SMB
   /// and WebDAV through `pa-vfs` (LIB-018), a Jellyfin or Emby server's

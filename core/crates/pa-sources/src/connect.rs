@@ -215,6 +215,9 @@ fn backend(
         }
         SourceKind::Subsonic => Ok(Box::new(manager.subsonic_tree(stored, password)?)),
         SourceKind::Plex => Ok(Box::new(manager.plex_tree(stored, password)?)),
+        SourceKind::Mega | SourceKind::GoogleDrive | SourceKind::OneDrive | SourceKind::Dropbox => {
+            Ok(Box::new(manager.cloud_tree(stored, password)?))
+        }
         SourceKind::Dlna => {
             let url = url::Url::parse(&s.uri).map_err(|_| invalid("bad UPnP address".into()))?;
             Ok(Box::new(pa_dlna::DlnaFs::with_timeouts(

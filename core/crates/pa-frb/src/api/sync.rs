@@ -830,16 +830,20 @@ impl CoreSync {
         Ok(self.service.unpair(&device_id)?)
     }
 
-    /// Events until the service is dropped. Returns at once; the stream
-    /// stays open. `pb.*` of other profiles are left out.
-    pub fn events(&self, sink: StreamSink<CoreSyncEvent>) {
+    /// Events until the service is dropped or `core_stream_close(id)`
+    /// (BUG-008): `pb.*` of other profiles are left out. `id` comes from
+    /// `core_stream_next_id`; in Dart use `CoreSync.events()` of pa_core.
+    /// Sync: the subscription exists when this returns.
+    #[frb(sync)]
+    pub fn events_listen(&self, id: i64, sink: StreamSink<CoreSyncEvent>) {
         let rx = self.service.subscribe();
         let catalog = Arc::clone(&self.catalog);
+        let sink = crate::streams::Closable::open(id, sink);
         std::thread::Builder::new()
             .name("pa-sync-events".into())
             .spawn(move || {
                 let profile = catalog.sync_profile().unwrap_or_default();
-                for event in rx {
+                while let Some(event) = sink.recv(&rx) {
                     let target = match &event {
                         ServiceEvent::Playback(u) => Some((&u.profile, &u.key, &u.aliases)),
                         ServiceEvent::Takeover(t) => Some((&t.profile, &t.key, &t.aliases)),
@@ -857,7 +861,7 @@ impl CoreSync {
                     if event.kind == CoreSyncEventKind::Input && event.input.is_none() {
                         continue;
                     }
-                    if sink.add(event).is_err() {
+                    if !sink.send(|s| s.add(event).is_ok()) {
                         return;
                     }
                 }

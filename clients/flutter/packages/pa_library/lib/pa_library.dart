@@ -48,6 +48,7 @@ export 'src/search_groups.dart';
 export 'src/skip_segments.dart';
 export 'src/subtitles.dart';
 export 'src/trailers.dart';
+export 'src/untitled_episode.dart';
 export 'src/trickplay.dart';
 export 'src/watch_marks.dart';
 export 'src/scanner.dart'

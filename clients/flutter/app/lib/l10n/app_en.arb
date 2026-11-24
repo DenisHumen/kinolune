@@ -2159,6 +2159,18 @@
   "@twitchEmbedRetry": {
     "description": "Reloads the embedded Twitch player."
   },
+  "twitchEmbedFullscreen": "Fullscreen (F)",
+  "@twitchEmbedFullscreen": {
+    "description": "Tooltip of the fullscreen button of the embedded Twitch player on desktops (TWI-029)."
+  },
+  "twitchEmbedNeedsWebView2": "To watch Twitch inside Kinolune, install Microsoft Edge WebView2 Runtime (free, from Microsoft) and restart the app. Until then, watch on Twitch.",
+  "@twitchEmbedNeedsWebView2": {
+    "description": "Windows without the WebView2 runtime: the Twitch player cannot open inside the app (TWI-029)."
+  },
+  "twitchEmbedNeedsWebKit": "To watch Twitch inside Kinolune, install WebKitGTK (the libwebkit2gtk-4.1 package of your distribution) and restart the app. Until then, watch on Twitch.",
+  "@twitchEmbedNeedsWebKit": {
+    "description": "Linux without WebKitGTK: the Twitch player cannot open inside the app (TWI-029)."
+  },
   "sourcesErrorSecretLocked": "The password could not be saved or read: the system keychain is locked. Unlock it (for example in Passwords and Keys) and try again.",
   "sourcesErrorSecretTimeout": "The password could not be saved or read: the system keychain did not respond. Restart the app; if the keychain still does not respond, passwords will be kept in an encrypted file instead.",
   "secretsNoticeFallback": "{appName} keeps passwords and tokens in an encrypted file in its data folder because the system keychain {why}. This keeps them out of plain sight, but programs running under your account can still read them. Settings → Privacy shows where they are.",
@@ -6140,6 +6152,141 @@
   "@healthSyncAuto": {
     "description": "Health screen: automatic folder sync (SYNC-015) without a folder yet."
   },
+  "sourcesAddClouds": "Cloud storage",
+  "@sourcesAddClouds": {
+    "description": "Add source list: header above MEGA, Google Drive, OneDrive and Dropbox (NET-017)."
+  },
+  "sourcesCloudIntro": "Your browser will open: sign in to {cloud} there and allow Kinolune to read your files. No password is typed into the app.",
+  "@sourcesCloudIntro": {
+    "description": "Cloud sign-in, first step. {cloud} is Google Drive, OneDrive or Dropbox.",
+    "placeholders": {
+      "cloud": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesCloudSignIn": "Sign in with the browser",
+  "@sourcesCloudSignIn": {
+    "description": "Button that opens the cloud's sign-in page in the browser."
+  },
+  "sourcesCloudWaiting": "Waiting for the browser…",
+  "@sourcesCloudWaiting": {
+    "description": "While the user signs in in the browser."
+  },
+  "sourcesCloudOpenAgain": "Open the browser again",
+  "@sourcesCloudOpenAgain": {
+    "description": "Opens the sign-in page once more (the tab was closed)."
+  },
+  "sourcesCloudSignedIn": "Signed in: {account}",
+  "@sourcesCloudSignedIn": {
+    "description": "After the browser sign-in. {account} is the e-mail or name of the cloud account.",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesCloudFolder": "Folder (optional)",
+  "@sourcesCloudFolder": {
+    "description": "Cloud source: the folder of the cloud to use as the source."
+  },
+  "sourcesCloudFolderHelper": "For example, Movies. Empty: the whole storage.",
+  "@sourcesCloudFolderHelper": {
+    "description": "Helper under the cloud folder field."
+  },
+  "sourcesCloudAdd": "Add",
+  "@sourcesCloudAdd": {
+    "description": "Adds the signed-in cloud (or a MEGA link) as a source."
+  },
+  "sourcesCloudAdding": "Adding…",
+  "@sourcesCloudAdding": {
+    "description": "While the cloud source is saved."
+  },
+  "sourcesCloudOwnClient": "Own client ID",
+  "@sourcesCloudOwnClient": {
+    "description": "Advanced: the user's own OAuth client id of the cloud."
+  },
+  "sourcesCloudOwnClientHelper": "If this build has no key for the service, or you want your own. See the documentation for how to get one.",
+  "@sourcesCloudOwnClientHelper": {
+    "description": "Helper under the own client id field."
+  },
+  "sourcesCloudOwnSecret": "Client secret (if Google asks for one)",
+  "@sourcesCloudOwnSecret": {
+    "description": "Advanced, Google Drive only: the secret of the user's own client."
+  },
+  "sourcesCloudAppRedirect": "Return to the app through the kinolune://oauth link",
+  "@sourcesCloudAppRedirect": {
+    "description": "Android, own client id: the sign-in returns through the app link instead of a local address."
+  },
+  "sourcesCloudNoClient": "This build has no key for {cloud}. Enter your own client ID under Advanced.",
+  "@sourcesCloudNoClient": {
+    "description": "Cloud sign-in when the build has no OAuth client id. {cloud} is the service.",
+    "placeholders": {
+      "cloud": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesCloudCancelled": "The sign-in was cancelled in the browser. Try again.",
+  "@sourcesCloudCancelled": {
+    "description": "The user declined access or closed the sign-in."
+  },
+  "sourcesCloudReadOnly": "Read only: Kinolune does not change or delete anything in the cloud.",
+  "@sourcesCloudReadOnly": {
+    "description": "Note under the cloud sign-in."
+  },
+  "sourcesCloudMegaAccount": "Account",
+  "@sourcesCloudMegaAccount": {
+    "description": "MEGA: sign in with e-mail and password."
+  },
+  "sourcesCloudMegaLink": "Link",
+  "@sourcesCloudMegaLink": {
+    "description": "MEGA: add a public folder or file link."
+  },
+  "sourcesCloudMegaEmail": "E-mail",
+  "@sourcesCloudMegaEmail": {
+    "description": "MEGA account e-mail field."
+  },
+  "sourcesCloudMegaMfa": "Two-factor code",
+  "@sourcesCloudMegaMfa": {
+    "description": "MEGA: the 2FA code, asked when the account has it."
+  },
+  "sourcesCloudMegaMfaHelper": "Two-factor authentication is on: enter the 6 digits from your authenticator app.",
+  "@sourcesCloudMegaMfaHelper": {
+    "description": "Helper under the MEGA 2FA code field."
+  },
+  "sourcesCloudMegaSignIn": "Sign in and add",
+  "@sourcesCloudMegaSignIn": {
+    "description": "MEGA: signs in with e-mail and password and adds the account."
+  },
+  "sourcesCloudMegaNote": "The password is used only to sign in and is not saved: Kinolune keeps the session in the system's secure storage. MEGA files are decrypted on this device.",
+  "@sourcesCloudMegaNote": {
+    "description": "Note under the MEGA sign-in."
+  },
+  "sourcesCloudMegaLinkLabel": "MEGA folder or file link",
+  "@sourcesCloudMegaLinkLabel": {
+    "description": "MEGA public link field."
+  },
+  "sourcesCloudMegaLinkHint": "https://mega.nz/folder/…#key",
+  "@sourcesCloudMegaLinkHint": {
+    "description": "Example of a MEGA link with its key."
+  },
+  "sourcesCloudMegaLinkHelper": "The whole link, with the key after #.",
+  "@sourcesCloudMegaLinkHelper": {
+    "description": "Helper under the MEGA link field."
+  },
+  "sourcesCloudMegaLinkNote": "The key after # stays in the system's secure storage and is never sent to MEGA.",
+  "@sourcesCloudMegaLinkNote": {
+    "description": "Note under the MEGA link field."
+  },
+  "subtitlesOnlineSubdlKey": "SubDL API key (optional)",
+  "@subtitlesOnlineSubdlKey": {
+    "description": "Settings, subtitles from the internet: the user's own key for SubDL, the second subtitle source (PLAY-016); shown only when the build has no SubDL key."
+  },
+  "subtitlesOnlineSubdlKeyHint": "SubDL is a second source of subtitles. Get a free key at subdl.com (sign in → API) and paste it here; without it only OpenSubtitles is searched.",
+  "@subtitlesOnlineSubdlKeyHint": {
+    "description": "Settings, subtitles from the internet: hint under the SubDL key field (PLAY-016)."
+  },
   "twitchChatAdvanced": "Advanced",
   "@twitchChatAdvanced": {
     "description": "Chat settings: section with advanced options (TWI-023)."
@@ -6183,5 +6330,26 @@
   "settingsDynamicRangeMatchSubtitle": "The TV turns on Dolby Vision or HDR as the video has it. Off: Dolby Vision is shown as HDR10.",
   "@settingsDynamicRangeMatchSubtitle": {
     "description": "Playback settings on TV: explanation under the match dynamic range switch (PLAY-AND-005)."
+  },
+  "sourcesSecretFallback": "Passwords are stored in an encrypted file because the system keychain {why}. To keep them in the keychain, turn it on or unlock it and restart {appName}.",
+  "@sourcesSecretFallback": {
+    "description": "Sources screen: why passwords are in the encrypted file and the one fix (BUG-013). {why} is one of secretsWhy*; the core's own message is folded under Details.",
+    "placeholders": {
+      "why": {
+        "type": "String"
+      },
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "showEpisodeUntitled": "Episode {number}",
+  "@showEpisodeUntitled": {
+    "description": "Title of an episode that has no title of its own, e.g. a series without a provider match (BUG-014).",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
   }
 }

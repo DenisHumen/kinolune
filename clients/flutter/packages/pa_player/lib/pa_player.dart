@@ -37,6 +37,7 @@ export 'src/system/display_match.dart';
 export 'src/system/media_session.dart';
 export 'src/system/music_session.dart';
 export 'src/system/pip.dart';
+export 'src/system/window_fullscreen.dart';
 export 'src/tracks/track_policy.dart';
 export 'src/trickplay.dart';
 export 'src/ui/min_tap_target.dart';

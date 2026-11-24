@@ -160,4 +160,6 @@ export 'package:pa_library/pa_library.dart'
         // PLAY-011 skip intro and credits
         LibrarySkipSegments,
         MediaSkipKind,
-        MediaSkipSegment;
+        MediaSkipSegment,
+        // BUG-014 untitled episodes in the UI language
+        UntitledEpisode;
