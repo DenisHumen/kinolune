@@ -28,6 +28,7 @@ pub mod plex;
 pub mod profiles;
 pub mod recognition;
 pub mod remote_config;
+pub mod scrobble;
 pub mod review;
 pub mod secrets;
 pub mod skip;

@@ -41,6 +41,8 @@ pa-remote-config = { path = "../pa-remote-config" }
 pa-runtime = { path = "../pa-runtime" }
 pa-probe = { path = "../pa-probe" }
 pa-secrets = { path = "../pa-secrets" }
+# MUS-015: Last.fm and ListenBrainz scrobbling of music.
+pa-scrobble = { path = "../pa-scrobble" }
 pa-skip = { path = "../pa-skip" }
 pa-sources = { path = "../pa-sources" }
 pa-storage = { path = "../pa-storage" }
