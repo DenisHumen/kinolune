@@ -105,6 +105,7 @@ void main() {
       await settle(t, 4);
       expect(find.text(ru.reviewHomeLineShows(2)), findsNothing);
       expect(find.text(ru.reviewHomeLineTitles(7)), findsOneWidget);
+      await capture(t, 'bug-012/home-review-line-after-run');
     });
 
     testWidgets('and the Settings count without leaving the page', (t) async {
@@ -170,6 +171,7 @@ void main() {
         );
         await settle(t, 4);
         expect(find.text(_coreReason), findsOneWidget);
+        await capture(t, 'bug-013/sources-keychain-$code');
       });
     }
   });
@@ -213,6 +215,7 @@ void main() {
       await _push(t, const ShowDetailScreen(show: show));
       expect(find.text('Серия 13'), findsWidgets);
       expect(find.textContaining('Episode'), findsNothing);
+      await capture(t, 'bug-014/show-untitled-episodes-ru');
 
       // English keeps «Episode N».
       s.locale.value = const Locale('en');
@@ -244,6 +247,7 @@ void main() {
       expect(find.byType(PlayerScreen), findsOneWidget);
       expect(PlayerScreen.anyOpen.value, isTrue);
       expect(banner, findsNothing);
+      await capture(t, 'bug-016/player-without-banner');
 
       // A notice that comes while the video plays waits for it.
       s.notices.post(
