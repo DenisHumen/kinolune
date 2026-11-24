@@ -171,7 +171,7 @@ sequenceDiagram
 
 ### 7.5. Музыка на другом устройстве (`music`)
 
-> Задача `MUS-015` · решение: [ADR-NNNN](../adr/NNNN-music-handoff-scrobbling-equalizer.md) · реализация: `core/crates/pa-sync/src/music.rs`, `SyncService::music_send`, `pa-frb` `CoreSync::music_send`, `clients/flutter/app/lib/features/music/music_handoff.dart` · тесты: `core/crates/pa-sync/tests/service.rs` (`music_handoff_push_and_pull`), `clients/flutter/app/test/music_handoff_test.dart`.
+> Задача `MUS-015` · решение: [ADR-0156](../adr/0156-music-handoff-scrobbling-equalizer.md) · реализация: `core/crates/pa-sync/src/music.rs`, `SyncService::music_send`, `pa-frb` `CoreSync::music_send`, `clients/flutter/app/lib/features/music/music_handoff.dart` · тесты: `core/crates/pa-sync/tests/service.rs` (`music_handoff_push_and_pull`), `clients/flutter/app/test/music_handoff_test.dart`.
 
 - Кадр `{"t":"music","session","action","hlc","to","sealed"?}`. `action`: `push` — «вот моя очередь, играй с позиции» (отправитель ставит паузу), `pull` — «отдай мне свою очередь»; неизвестное значение читается как `other` и пропускается. `to` — ровно одно устройство семьи; остальные кадр только пересылают.
 - `push` обязательно несёт `sealed`: контейнер `sb1` (§7.3, `pa_sync::seal`) с ключом семьи и контекстом `music:<session>`; открытый текст — JSON очереди приложения не длиннее 128 КиБ (`MAX_QUEUE_LEN`). `pull` без `sealed`. Кадр с очередью в открытом виде не проходит проверку.

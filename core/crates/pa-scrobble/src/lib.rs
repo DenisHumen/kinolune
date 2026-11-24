@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Music scrobbling to Last.fm and ListenBrainz (MUS-015, ADR-NNNN).
+//! Music scrobbling to Last.fm and ListenBrainz (MUS-015, ADR-0156).
 //!
 //! - [`rules`]: when a play counts (sans-IO): «now playing» when a track
 //!   starts, a scrobble once it has been *listened to* for half its length

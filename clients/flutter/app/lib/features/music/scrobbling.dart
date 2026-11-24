@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Last.fm and ListenBrainz scrobbling of music (MUS-015, ADR-NNNN). The core
+// Last.fm and ListenBrainz scrobbling of music (MUS-015, ADR-0156). The core
 // (`pa-scrobble`) decides when a play counts (half the track or 4 minutes,
 // tracks of 30 s and more), sends «now playing» and keeps the offline queue;
 // this file follows the music player, keeps the accounts of each profile in

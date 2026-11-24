@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Music continues on another device (MUS-015, ADR-NNNN), like Spotify
+// Music continues on another device (MUS-015, ADR-0156), like Spotify
 // Connect but through the family's own sync (SYNC-003, ADR-0044), no
 // cloud: «Продолжить на…» sends the whole queue, the current track and the
 // playhead to one device (the `music` message, sealed with the family
