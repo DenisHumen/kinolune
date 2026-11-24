@@ -52,10 +52,12 @@ dependencies:
   # TWI-005: "Open on Twitch" on phones and desktops, links (BSD-3-Clause).
   url_launcher: ^6.3.3
   # TWI-005: the official Twitch embed in a WebView on Android, iOS and
-  # macOS (BSD-3-Clause; no Linux/Windows implementation: browser there).
+  # macOS (BSD-3-Clause; Windows and Linux: below and linux/runner, TWI-029).
   webview_flutter: ^4.14.1
   webview_flutter_android: ^4.14.1
   webview_flutter_wkwebview: ^3.27.2
+  # TWI-029: the Twitch embed on Windows in Microsoft Edge WebView2 (BSD-3-Clause).
+  webview_windows: ^0.4.0
   # TWI-009: the Android background check of "X is live" (MIT).
   workmanager: ^0.10.10
 
