@@ -7,6 +7,13 @@
 //! text and without any I/O, so it can run for every message of a busy
 //! chat (research 06 §3.4: 100 messages per second) on the thread that
 //! receives them.
+//!
+//! Third-party emotes (TWI-023) are words: text between Twitch emotes is
+//! split at spaces and each word is looked up in the channel's
+//! [`ThirdPartyEmotes`](crate::ThirdPartyEmotes) (one hash lookup per
+//! word, no allocation unless it matches). A zero-width emote right after
+//! another emote (spaces between them are dropped) becomes an overlay of
+//! it ([`Fragment::Emote::overlay`]).
 
 use std::sync::Arc;
 
@@ -24,6 +31,9 @@ pub enum Fragment {
         asset: Arc<EmoteAsset>,
         /// The code as typed (alt text, copy, and fallback while loading).
         code: String,
+        /// Drawn on top of the previous emote fragment instead of after it
+        /// (zero-width emote, TWI-023).
+        overlay: bool,
     },
 }
 
@@ -53,9 +63,9 @@ impl RenderedMessage {
         let mut seen: Vec<&Arc<EmoteAsset>> = Vec::new();
         for f in &self.fragments {
             if let Fragment::Emote { asset, .. } = f
-                && !seen
-                    .iter()
-                    .any(|s| Arc::ptr_eq(s, asset) || s.id == asset.id)
+                && !seen.iter().any(|s| {
+                    Arc::ptr_eq(s, asset) || (s.provider == asset.provider && s.id == asset.id)
+                })
             {
                 seen.push(asset);
             }
@@ -94,8 +104,10 @@ impl ChannelAssets {
         if text.is_empty() {
             return Vec::new();
         }
+        let mut out = Vec::with_capacity(ranges.len() * 2 + 1);
         if ranges.is_empty() {
-            return vec![Fragment::Text(text.to_owned())];
+            self.push_text(&mut out, text);
+            return finish(out);
         }
         let mut order: Vec<&EmoteRange> = ranges.iter().collect();
         order.sort_by_key(|r| (r.start, r.end));
@@ -106,7 +118,6 @@ impl ChannelAssets {
             index: 0,
             byte: 0,
         };
-        let mut out = Vec::with_capacity(order.len() * 2 + 1);
         let mut text_from = 0usize; // byte
         let mut next_char = 0usize; // first char not yet consumed
         for r in order {
@@ -118,20 +129,79 @@ impl ChannelAssets {
                 continue;
             };
             if start_b > text_from {
-                out.push(Fragment::Text(text[text_from..start_b].to_owned()));
+                self.push_text(&mut out, &text[text_from..start_b]);
             }
             out.push(Fragment::Emote {
                 asset: self.emote(&r.id),
                 code: text[start_b..end_b].to_owned(),
+                overlay: false,
             });
             text_from = end_b;
             next_char = r.end;
         }
         if text_from < text.len() {
-            out.push(Fragment::Text(text[text_from..].to_owned()));
+            self.push_text(&mut out, &text[text_from..]);
         }
-        out
+        finish(out)
     }
+
+    /// Text between Twitch emotes: third-party emote words become emote
+    /// fragments, the rest stays text.
+    fn push_text(&self, out: &mut Vec<Fragment>, text: &str) {
+        if self.third_party().is_none() {
+            out.push(Fragment::Text(text.to_owned()));
+            return;
+        }
+        let mut from = 0usize; // first byte not yet emitted
+        let mut pos = 0usize; // start of the current word
+        for word in text.split(' ') {
+            let end = pos + word.len();
+            if let Some(asset) = self.third_party_emote(word) {
+                if pos > from {
+                    out.push(Fragment::Text(text[from..pos].to_owned()));
+                }
+                out.push(Fragment::Emote {
+                    asset: Arc::clone(asset),
+                    code: word.to_owned(),
+                    overlay: false,
+                });
+                from = end;
+            }
+            pos = end + 1;
+        }
+        if from < text.len() {
+            out.push(Fragment::Text(text[from..].to_owned()));
+        }
+    }
+}
+
+/// Marks zero-width emotes that follow an emote as its overlays and drops
+/// the spaces between them.
+fn finish(mut out: Vec<Fragment>) -> Vec<Fragment> {
+    let any = out
+        .iter()
+        .any(|f| matches!(f, Fragment::Emote { asset, .. } if asset.zero_width));
+    if !any {
+        return out;
+    }
+    let is_emote = |f: &Fragment| matches!(f, Fragment::Emote { .. });
+    let is_gap = |f: &Fragment| matches!(f, Fragment::Text(t) if t.trim().is_empty());
+    let mut result: Vec<Fragment> = Vec::with_capacity(out.len());
+    for mut f in out.drain(..) {
+        if let Fragment::Emote { asset, overlay, .. } = &mut f
+            && asset.zero_width
+        {
+            let n = result.len();
+            let after_emote = n >= 1 && is_emote(&result[n - 1]);
+            let after_gap = n >= 2 && is_gap(&result[n - 1]) && is_emote(&result[n - 2]);
+            if after_gap {
+                result.pop();
+            }
+            *overlay = after_emote || after_gap;
+        }
+        result.push(f);
+    }
+    result
 }
 
 /// Forward-only map from character index to byte offset: one walk over the
