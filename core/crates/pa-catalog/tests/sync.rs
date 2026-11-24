@@ -116,6 +116,7 @@ fn progress_on_one_device_continues_on_the_other() {
             .unwrap()
     );
     assert_eq!(pc.catalog.pending_ops(10).unwrap().len(), 0);
+    assert_eq!(pc.catalog.outbox_len().unwrap(), 0);
 
     let invite = pc.service.invite().unwrap();
     phone.service.join(&invite.qr).unwrap();
@@ -167,4 +168,8 @@ fn progress_on_one_device_continues_on_the_other() {
             .is_some_and(|p| p.watched)
     });
     assert!(pc.catalog.continue_watching(10).unwrap().is_empty());
+    // UI-053: nothing waits once the other device acknowledged it.
+    wait("the desktop's outbox empties", || {
+        pc.catalog.outbox_len().unwrap() == 0
+    });
 }
