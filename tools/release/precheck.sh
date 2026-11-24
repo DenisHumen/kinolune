@@ -47,6 +47,7 @@
 # Containers are named ${PA_PRECHECK_CONTAINER_PREFIX:-kinolune-precheck}-<stage>-<pid>.
 #
 # Exit status 0 means «можно выпускать» for Linux and Android.
+# shellcheck disable=SC2154 # LIBMPV_*/LIBSMB2_* come from $RUN/native.env (load_native)
 set -euo pipefail
 
 SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
@@ -59,7 +60,7 @@ ABIS=(arm64-v8a armeabi-v7a)
 
 say() { printf '%s\n' "$*" >&2; }
 die() { say "precheck: $*"; exit 2; }
-usage() { sed -n '4,48p' "$SELF" >&2; exit 2; }
+usage() { sed -n '4,49p' "$SELF" >&2; exit 2; }
 
 # --- stage bodies (run inside the container, cwd = $ROOT) -------------------
 
