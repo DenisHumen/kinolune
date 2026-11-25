@@ -227,13 +227,13 @@ void main() {
 
         expect(_text(t, 'show-meta'), contains(show));
         // The tab of the episode to continue: season 2.
-        expect(_text(t, 'show-season-runtime'), season2);
+        expect(_text(t, 'show-runtime-season'), season2);
 
         await t.ensureVisible(find.byKey(const ValueKey('show-season-1')));
         await settle(t, 2);
         await t.tap(find.byKey(const ValueKey('show-season-1')));
         await settle(t, 6);
-        expect(_text(t, 'show-season-runtime'), season1);
+        expect(_text(t, 'show-runtime-season'), season1);
 
         // «Отметить сезон просмотренным» (UI-049): season 2 too; the page
         // updates without being opened again.

@@ -518,7 +518,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
                 ),
                 child: Text(
                   seasonLine,
-                  key: const ValueKey('show-season-runtime'),
+                  key: const ValueKey('show-runtime-season'),
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontSize: d.type.caption + 1,
                     color: KColors.textSecondary,
