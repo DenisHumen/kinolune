@@ -531,6 +531,20 @@ PLAY-AND-005, ADR-0147. Нужны: ТВ-приставка с HDMI (Chromecast 
 
 Автотесты (только логика, без устройства; поэтому в ячейках `⬜`): выбор режима и откат DV — `clients/android/display/src/test/kotlin/dev/projectalpha/display/AfrModeSelectorTest.kt`, `DolbyVisionTest.kt`; передача частоты в Android — `pa_player/test/display_match_test.dart`.
 
+### Звук: passthrough и декодирование (Android)
+
+PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chromecast with Google TV) с AV-ресивером или саундбаром по HDMI/eARC, который показывает формат на экране или дисплее; телефон или приставка без passthrough (встроенные динамики, обычный телевизор без ARC); файлы с дорожками Dolby TrueHD + Atmos, E-AC-3 + Atmos (JOC), AC-3 5.1, DTS, DTS-HD MA. Формат смотреть на дисплее ресивера и в статистике плеера («Путь звука»). Плеер приложения 0.x — media_kit (mpv `audio-spdif`), плеер Media3 — временное приложение с `pa_player_android` (как в разделах выше). Ручной порядок — [android-audio-passthrough-checklist.md](android-audio-passthrough-checklist.md).
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| PLAY-170 | «Звук: Авто (passthrough)», Shield + ресивер с Atmos, TrueHD + Atmos → ресивер показывает «Dolby Atmos» (TrueHD), статистика — «Путь звука: Без декодирования (passthrough)»; E-AC-3 + Atmos → «Dolby Atmos» (DD+); AC-3 → «Dolby Digital»; DTS-HD MA → «DTS-HD MA»; DTS → «DTS» | — | ⬜ | — | — | — | — | — | — |
+| PLAY-171 | Устройство без passthrough (телефон, приставка с обычным телевизором): TrueHD, DTS-HD MA, E-AC-3 → звук есть (LPCM: многоканальный по HDMI или стерео на динамиках), статистика — «Декодируется в PCM»; не тишина и не ошибка | ⬜ | ⬜ | — | — | — | — | — | — |
+| PLAY-172 | «Звук: Всегда декодировать» на Shield с ресивером → ресивер показывает «PCM» / «Multi Ch PCM» для всех форматов, статистика — «Декодируется в PCM»; обратно «Авто» → снова битстрим со следующего видео | — | ⬜ | — | — | — | — | — | — |
+| PLAY-173 | Саундбар только с Dolby (без DTS): DTS → декодируется в PCM (звук есть); E-AC-3 + Atmos на ресивере без Atmos → играет как E-AC-3 5.1 (passthrough); DTS-HD на ресивере только с DTS → ядро DTS 5.1 | — | ⬜ | — | — | — | — | — | — |
+| PLAY-174 | Плеер Media3 (плагин pa_player_android) с FFmpeg-расширением, устройство без декодера TrueHD/DTS → TrueHD и DTS-HD играют (FFmpeg, LGPL), без расширения — дорожка недоступна, но passthrough на ресивер работает | ⬜ | ⬜ | — | — | — | — | — | — |
+
+Автотесты (только логика, без устройства; поэтому в ячейках `⬜`): решение passthrough/декодирование и `audio-spdif` для mpv — `clients/android/audio/src/test/kotlin/dev/projectalpha/audio/AudioPassthroughTest.kt` (идёт в `just android test`); передача в движок — `pa_player/test/audio_passthrough_test.dart`; запрос Media3 — `pa_player_android/test/pa_player_android_test.dart`. Сборка расширения и лицензионный гейт (LGPL, динамическая линковка, декодеры TrueHD/MLP/DTS/E-AC-3/AC-3) — CI `libmpv.yml`, шаги «Media3 FFmpeg audio extension».
+
 ## 8. Загрузки и офлайн
 
 Офлайн-копии фильмов, серий и музыки из сетевых источников (SMB, WebDAV, Jellyfin и др.). Нужна медиатека на Rust-ядре и сетевой источник; экран — Настройки → «Загрузки» → «Загрузки» или пункт «Загрузки» в боковой панели и на «Главной» телефона (UI-018).
@@ -1562,9 +1576,10 @@ PLAY-AND-005, ADR-0147. Нужны: ТВ-приставка с HDMI (Chromecast 
 | SET-150 | ТВ: «Частота кадров» (`settings-frame-rate`): «Авто» / «Выкл», по умолчанию «Авто» → сохраняется; «Выкл» прячет «Разрешение как у видео», и телевизор больше не переключается (PLAY-160). На телефоне и десктопе строки нет | — | 🤖 | — | — | — | — | — | — |
 | SET-151 | ТВ: «Разрешение как у видео» (`settings-resolution-match`, по умолчанию выкл.) вкл. → сохраняется; фильм 1080p на 4K-телевизоре переключает его в 1080p с частотой фильма (PLAY-162) | — | 🤖 | — | — | — | — | — | — |
 | SET-152 | ТВ: «Совпадение динамического диапазона» (`settings-dynamic-range-match`, по умолчанию вкл.) — пока скрыто в коде, появится с переходом плеера на Media3 (UI-013); выкл. → Dolby Vision показывается как HDR10 (PLAY-165) | — | ⬜ | — | — | — | — | — | — |
+| SET-160 | Android: «Звук» (`settings-audio-output`): «Авто (passthrough)» / «Всегда декодировать», по умолчанию «Авто» → сохраняется; следующее видео играет по выбору (PLAY-170, PLAY-172). На десктопе строки нет | 🤖 | 🤖 | — | — | — | — | — | — |
 | SET-24 | «Пауза при переходе на другое устройство» (`settings-takeover-pause`, есть синхронизация) вкл. → видео встаёт на паузу, когда то же видео включили на другом устройстве; выкл. → играет дальше | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 
-Автотесты: SET-18 — `app/test/subtitles_test.dart`; SET-19 — `app/test/track_settings_test.dart`; SET-20, SET-21 — `app/test/settings_about_test.dart`; SET-150, SET-151 — `app/test/display_match_settings_test.dart`; SET-24 — `app/test/handoff_test.dart`.
+Автотесты: SET-18 — `app/test/subtitles_test.dart`; SET-19 — `app/test/track_settings_test.dart`; SET-20, SET-21 — `app/test/settings_about_test.dart`; SET-150, SET-151 — `app/test/display_match_settings_test.dart`; SET-160 — `app/test/audio_output_settings_test.dart`; SET-24 — `app/test/handoff_test.dart`.
 
 ### Стиль субтитров
 

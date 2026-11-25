@@ -7470,6 +7470,22 @@
   "@familyJoinKindServer": {
     "description": "SYNC-015: device kind."
   },
+  "settingsAudioOutput": "Sound",
+  "@settingsAudioOutput": {
+    "description": "Playback settings on Android: passthrough of Dolby/DTS to a receiver or always decode (PLAY-AND-004), a choice of two."
+  },
+  "settingsAudioOutputHint": "Auto sends Dolby (Atmos too) and DTS untouched to a receiver or TV that takes them over HDMI, and the receiver shows the format. Always decode turns everything into PCM on this device: pick it if the receiver stays silent or the soundbar has no DTS. Without HDMI sound is always decoded.",
+  "@settingsAudioOutputHint": {
+    "description": "Playback settings on Android: explanation of the sound choice (PLAY-AND-004)."
+  },
+  "settingsAudioOutputAuto": "Auto (passthrough)",
+  "@settingsAudioOutputAuto": {
+    "description": "Sound choice: pass Dolby and DTS to the receiver when it takes them (PLAY-AND-004). Keep the word passthrough: receivers and forums use it."
+  },
+  "settingsAudioOutputDecode": "Always decode",
+  "@settingsAudioOutputDecode": {
+    "description": "Sound choice: decode everything to PCM on the device (PLAY-AND-004)."
+  },
   "sourcesStatusNoAccess": "No access",
   "@sourcesStatusNoAccess": {
     "description": "UI-053: source status chip when the server refuses the password or rights."
