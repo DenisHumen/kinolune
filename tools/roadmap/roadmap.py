@@ -779,6 +779,10 @@ def main(argv: list[str] | None = None) -> int:
         "--apply", action="store_true",
         help="create and close GitHub issues (default is a read-only dry run)",
     )
+    p_sync.add_argument(
+        "--max-create", type=int, default=20, metavar="N",
+        help="create at most N issues in one run (default 20)",
+    )
     p_sync.set_defaults(func=cmd_issues_sync)
 
     args = parser.parse_args(argv)

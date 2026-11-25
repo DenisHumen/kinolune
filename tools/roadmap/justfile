@@ -15,7 +15,7 @@ lint:
 next *args:
     @{{ python }} -B "{{ script }}" next {{ args }}
 
-# Synchronize beginner-friendly issues from the ready S-sized roadmap tasks
+# Good first issues from ROADMAP: `issues sync` is a dry run, `--apply` changes GitHub
 issues *args:
     @{{ python }} -B "{{ script }}" issues {{ args }}
 

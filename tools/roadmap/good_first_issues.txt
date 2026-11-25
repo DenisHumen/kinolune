@@ -1,5 +1,0 @@
-# SPDX-License-Identifier: MPL-2.0
-# Add an ID only after a maintainer verifies that the task is suitable for a
-# first contribution: bounded, self-contained, no owner decision, special
-# credentials, platform hardware, external service setup, or high-risk code.
-# Keep empty until candidates have been reviewed; task size S is not enough.
