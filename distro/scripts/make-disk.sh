@@ -9,6 +9,7 @@
 #                e.g. 10.0.2.2:5000/alpha-os:dev (the host as seen from a QEMU VM)
 # DISK           output path (default: distro/.work/disk.raw)
 # SSH_PUBKEY     public key injected for root (default: distro/.work/vm_key.pub)
+# Env: MAKE_DISK_CONTAINER  name of the helper container (shared hosts with naming rules)
 #
 # Needs a privileged container (loop devices, mkfs, mounts): the user must be able to run
 # `docker run --privileged` (member of the docker group) or rootful podman. No sudo on the
@@ -39,7 +40,8 @@ truncate -s "${VM_DISK_SIZE}" "${DISK}"
 
 log "Installing ${SOURCE} -> ${DISK} (tracks ${TARGET})"
 # The installer runs from the pinned base image; it only needs bootc + bootupd.
-nice -n 10 "${ENGINE}" run --rm --privileged --pid=host --net=host \
+nice -n 10 "${ENGINE}" run --rm ${MAKE_DISK_CONTAINER:+--name "${MAKE_DISK_CONTAINER}"} \
+    --privileged --pid=host --net=host \
     --security-opt label=disable \
     -v /dev:/dev \
     -v /var/lib/containers:/var/lib/containers \

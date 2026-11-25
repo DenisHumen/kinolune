@@ -78,7 +78,7 @@ func (f *fakeRunner) Run(_ context.Context, c Cmd) ([]byte, error) {
 		shadow := filepath.Join(c.Args[1], "etc", "shadow")
 		data, _ := os.ReadFile(shadow)
 		re := regexp.MustCompile(`(?m)^` + user + `:[^:]*:`)
-		out := re.ReplaceAll(data, []byte(user+":$y$j9T$fakesalt$"+strings.Repeat("A", 43)+":"))
+		out := re.ReplaceAllLiteral(data, []byte(user+":$y$j9T$fakesalt$"+strings.Repeat("A", 43)+":"))
 		return nil, os.WriteFile(shadow, out, 0o600)
 	}
 	return nil, nil
@@ -90,13 +90,13 @@ func (f *fakeRunner) fakeBootc() {
 	sr := filepath.Join(f.root, "ostree", "deploy", "default")
 	dep := filepath.Join(sr, "deploy", "0123abcd.0")
 	files := map[string]string{
-		"etc/passwd":    "root:x:0:0:Super User:/root:/bin/bash\n",
-		"etc/group":     "root:x:0:\nwheel:x:10:\nadm:x:4:\n",
-		"etc/shadow":    "root:!locked::0:99999:7:::\n",
-		"etc/gshadow":   "root:::\nwheel:::\n",
+		"etc/passwd":       "root:x:0:0:Super User:/root:/bin/bash\n",
+		"etc/group":        "root:x:0:\nwheel:x:10:\nadm:x:4:\n",
+		"etc/shadow":       "root:!locked::0:99999:7:::\n",
+		"etc/gshadow":      "root:::\nwheel:::\n",
 		"etc/skel/.bashrc": "# skel\n",
-		"usr/lib/passwd": "bin:x:1:1:bin:/bin:/sbin/nologin\nsomeone:x:1000:1000::/home/someone:/bin/bash\n",
-		"usr/lib/group":  "wheel:x:10:\nbin:x:1:\n",
+		"usr/lib/passwd":   "bin:x:1:1:bin:/bin:/sbin/nologin\nsomeone:x:1000:1000::/home/someone:/bin/bash\n",
+		"usr/lib/group":    "wheel:x:10:\nbin:x:1:\n",
 		"etc/selinux/targeted/contexts/files/file_contexts": "/.* system_u:object_r:default_t:s0\n",
 	}
 	for name, body := range files {
@@ -281,15 +281,15 @@ func TestResolveTargetRefusals(t *testing.T) {
 		resolve func(string) (string, error)
 		want    string
 	}{
-		"installer usb":   {live, "/dev/sdd", nil, "boots from this disk"},
-		"by-id to usb":    {live, "/dev/disk/by-id/usb-SanDisk", func(string) (string, error) { return "/dev/sdd", nil }, "boots from this disk"},
-		"loop":            {live, "/dev/loop0", nil, "virtual device"},
-		"partition":       {live, "/dev/sdd1", nil, "is a partition of /dev/sdd"},
-		"unknown":         {live, "/dev/sdz", nil, "not a disk"},
-		"broken link":     {live, "/dev/disk/by-id/x", func(string) (string, error) { return "", os.ErrNotExist }, "does not exist"},
-		"running system":  {probe(t, "10-workstation-host"), "/dev/nvme0n1", nil, "boots from this disk"},
-		"mounted":         {probe(t, "10-workstation-host"), "/dev/sda", nil, "mounted at /run/media/user/SHARED"},
-		"optical":         {probe(t, "04-qemu-ci"), "/dev/sr0", nil, "optical"},
+		"installer usb":  {live, "/dev/sdd", nil, "boots from this disk"},
+		"by-id to usb":   {live, "/dev/disk/by-id/usb-SanDisk", func(string) (string, error) { return "/dev/sdd", nil }, "boots from this disk"},
+		"loop":           {live, "/dev/loop0", nil, "virtual device"},
+		"partition":      {live, "/dev/sdd1", nil, "is a partition of /dev/sdd"},
+		"unknown":        {live, "/dev/sdz", nil, "not a disk"},
+		"broken link":    {live, "/dev/disk/by-id/x", func(string) (string, error) { return "", os.ErrNotExist }, "does not exist"},
+		"running system": {probe(t, "10-workstation-host"), "/dev/nvme0n1", nil, "boots from this disk"},
+		"mounted":        {probe(t, "10-workstation-host"), "/dev/sda", nil, "mounted at /run/media/user/SHARED"},
+		"optical":        {probe(t, "04-qemu-ci"), "/dev/sr0", nil, "optical"},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -414,7 +414,8 @@ func TestRunFullInstall(t *testing.T) {
 	if got := read(filepath.Join(varSub, "home/admin/.bashrc")); got != "# skel\n" {
 		t.Errorf("skel %q", got)
 	}
-	for _, p := range []string{"@var/home/admin", "@var/home/admin/.ssh", "@var/home/admin/.ssh/authorized_keys", "@var/home/admin/.bashrc"} {
+	for _, p := range []string{"", "/.ssh", "/.ssh/authorized_keys", "/.bashrc"} {
+		p = "ostree/deploy/default/deploy/0123abcd.0/var/home/admin" + p // @var, bind-mounted at the deployment's /var
 		if s.own[p] != 1001 {
 			t.Errorf("%s owned by %d", p, s.own[p])
 		}
