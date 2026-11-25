@@ -204,6 +204,37 @@ macro_rules! version_key {
 }
 pub(crate) use version_key;
 
+/// Duration of what the file `f` plays (BUG-021): a movie split over
+/// several files (`part1`/`part2`, `cd1`/`cd2`, the VOBs of a DVD title
+/// set, the clips of a Blu-ray playlist) plays all its parts as one
+/// timeline (LIB-020, [`crate::play`]), so its runtime is the sum of the
+/// present parts of the same group `play_parts` picks; any other file keeps
+/// its own probed duration. Versions (LIB-010) are separate files, not
+/// parts, and are never added up.
+macro_rules! play_duration {
+    () => {
+        "ifnull((SELECT sum(pd.duration_ms) FROM file_group_members pg
+          JOIN files pd ON pd.id = pg.file_id AND pd.missing_since_ms IS NULL
+         WHERE pg.role = 'part'
+           AND pg.group_id = (SELECT pm.group_id FROM file_group_members pm
+                               WHERE pm.file_id = f.id AND pm.role = 'part'
+                               ORDER BY pm.group_id LIMIT 1)), f.duration_ms)"
+    };
+}
+pub(crate) use play_duration;
+
+/// Files a duration the player reports may fill until probing (LIB-006):
+/// not a part of a split movie (BUG-021). The player reports the whole
+/// timeline of all parts, so writing it into one part would be added up
+/// again by [`play_duration!`]; a part keeps waiting for its own probe.
+macro_rules! not_a_part {
+    () => {
+        "NOT EXISTS (SELECT 1 FROM file_group_members np
+                      WHERE np.file_id = files.id AND np.role = 'part')"
+    };
+}
+pub(crate) use not_a_part;
+
 /// Local poster of the movie file `f` (LIB-007 `group_assets`): art named
 /// after the file (`<movie>-poster.jpg`, `<movie>.jpg`) first, then generic
 /// names (`poster.jpg`, `folder.jpg`) of a single-movie folder or a disc.
@@ -303,7 +334,9 @@ const MOVIE_SQL: &str = concat!(
 SELECT w.id, w.title, w.original_title, w.year, w.overview,
        (SELECT x.ext_id FROM external_ids x
          WHERE x.work_id = w.id AND x.provider = 'tmdb' AND x.ext_kind = 'movie'),
-       f.source_id, s.uri, f.path, f.duration_ms, m.confidence, f.added_at_ms,
+       f.source_id, s.uri, f.path, ",
+    play_duration!(),
+    ", m.confidence, f.added_at_ms,
        -- The row of the default version (LIB-010) of the active profile,
        -- else the first file: the other columns come from it.
        min(CASE WHEN f.id = (SELECT vp.file_id FROM version_prefs vp
@@ -361,7 +394,9 @@ WHERE w.kind IN ('show', 'anime')
 const EPISODE_SQL: &str = concat!(
     "
 SELECT e.id, e.title, e.work_id, e.season_number, ifnull(e.episode_number, e.absolute_number),
-       f.source_id, s.uri, f.path, f.duration_ms, m.confidence, f.added_at_ms, min(f.id),
+       f.source_id, s.uri, f.path, ",
+    play_duration!(),
+    ", m.confidence, f.added_at_ms, min(f.id),
        e.overview, ",
     art!("work_id", "e.work_id", "poster"),
     ", ",

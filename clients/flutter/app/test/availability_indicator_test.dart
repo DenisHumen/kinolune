@@ -18,6 +18,7 @@ import 'package:kinolune/screens/devices_screen.dart';
 import 'package:kinolune/screens/sources_screen.dart';
 import 'package:kinolune/shell/app_shell.dart' show Section;
 import 'package:kinolune/sources/availability.dart';
+import 'package:kinolune/sources/source_manager.dart';
 import 'package:kinolune/sync/device_sync.dart';
 import 'package:kinolune/widgets/availability_status.dart';
 import 'package:material_ui/material_ui.dart';
@@ -203,7 +204,17 @@ void main() {
           final monitor = FakeAvailability();
           final s = await demoServices(availability: monitor);
           await s.setLocale(locale);
+          // The demo has one source; the second one is the share whose
+          // address is gone.
+          await s.createSource(
+            const SourceDraft(
+              type: SourceType.smb,
+              name: 'Study PC',
+              address: 'smb://study-pc.local/media',
+            ),
+          );
           final ids = [for (final m in s.managedSources) m.id];
+          expect(ids, hasLength(2));
           monitor.targets = _all(ids);
           await t.pumpWidget(testApp(s, formFactor: ff));
           await settle(t, 4);

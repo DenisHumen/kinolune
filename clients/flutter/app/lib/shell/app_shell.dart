@@ -977,11 +977,20 @@ class _SidebarItem extends StatelessWidget {
                 color: selected ? KColors.accentSoft : KColors.textSecondary,
               ),
               const SizedBox(width: 14),
-              Text(
-                section.label(context.l10n),
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? Colors.white : KColors.textSecondary,
+              // A long label («Налаштування» in Ukrainian) shrinks a little
+              // instead of running past the sidebar.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    section.label(context.l10n),
+                    maxLines: 1,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected ? Colors.white : KColors.textSecondary,
+                    ),
+                  ),
                 ),
               ),
             ],

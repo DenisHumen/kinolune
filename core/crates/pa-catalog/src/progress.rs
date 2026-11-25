@@ -251,15 +251,21 @@ impl Catalog {
         if duration_ms > 0 {
             // The duration the player saw fills the file until probing (LIB-006).
             let files: &str = match item {
-                ItemRef::Movie(_) => {
-                    "UPDATE files SET duration_ms = ?2 WHERE duration_ms IS NULL AND id IN
+                // Not into a part of a split movie: the player reports all
+                // its parts (BUG-021, `items::not_a_part!`).
+                ItemRef::Movie(_) => concat!(
+                    "UPDATE files SET duration_ms = ?2 WHERE duration_ms IS NULL AND ",
+                    items::not_a_part!(),
+                    " AND id IN
                        (SELECT m.file_id FROM matches m WHERE m.work_id = ?1 AND m.state <> 'rejected')"
-                }
-                ItemRef::Episode(_) => {
-                    "UPDATE files SET duration_ms = ?2 WHERE duration_ms IS NULL AND id IN
+                ),
+                ItemRef::Episode(_) => concat!(
+                    "UPDATE files SET duration_ms = ?2 WHERE duration_ms IS NULL AND ",
+                    items::not_a_part!(),
+                    " AND id IN
                        (SELECT m.file_id FROM match_episodes me JOIN matches m ON m.id = me.match_id
                          WHERE me.episode_id = ?1 AND m.state <> 'rejected')"
-                }
+                ),
                 ItemRef::Track(_) | ItemRef::Show(_) => "",
             };
             let id = match item {

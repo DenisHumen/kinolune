@@ -129,7 +129,9 @@ fn resolution(width: Option<i64>, height: Option<i64>, written: Option<String>) 
 /// the probe and the parser say about them.
 const VERSIONS_SQL: &str = concat!(
     "
-SELECT f.id, f.source_id, s.uri, f.path, f.size_bytes, f.duration_ms,
+SELECT f.id, f.source_id, s.uri, f.path, f.size_bytes, ",
+    crate::items::play_duration!(),
+    ",
        json_extract(f.video_json, '$.width'), json_extract(f.video_json, '$.height'),
        json_extract(pr.hypotheses_json, '$[0].parsed.resolution'),
        json_extract(pr.hypotheses_json, '$[0].parsed.hdr'),
