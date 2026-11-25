@@ -57,6 +57,7 @@ import 'track_settings_screen.dart';
 import 'twitch/twitch_archive_screens.dart';
 import 'twitch/twitch_play.dart' show showTwitchSignIn;
 import 'twitch/twitch_widgets.dart' show TwitchAccountAvatar;
+import '../twitch/twitch_service.dart' show TwitchService;
 
 /// One section of the page: what it is called and contains for the search,
 /// and whether it waits for «Показать расширенные настройки».
@@ -1418,10 +1419,7 @@ class _TwitchSection extends StatelessWidget {
       subtitle: l.settingsTwitchSubtitle,
       children: [
         // TWI-032: the account with its Twitch name and avatar.
-        ListenableBuilder(
-          listenable: services.twitch,
-          builder: (context, _) => const _TwitchAccountCard(),
-        ),
+        const _TwitchAccountCard(),
         ValueListenableBuilder<bool>(
           valueListenable: services.showTwitch,
           builder: (context, show, _) => SettingsSwitchTile(
@@ -1495,8 +1493,15 @@ class _TwitchAccountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l = context.l10n;
     final twitch = Services.of(context).twitch;
+    return ListenableBuilder(
+      listenable: twitch,
+      builder: (context, _) => _card(context, twitch),
+    );
+  }
+
+  Widget _card(BuildContext context, TwitchService twitch) {
+    final l = context.l10n;
     final account = twitch.account;
     if (account == null && !twitch.canSignIn) return const SizedBox.shrink();
     final theme = Theme.of(context);
