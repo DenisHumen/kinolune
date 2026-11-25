@@ -48,6 +48,9 @@ Future<void> _openMovie(WidgetTester t) async {
 }
 
 void main() {
+  // Guards the behaviour; it passes on the code before BUG-025 too (the
+  // shell popped on re-select since R01-APP), so it does not reproduce the
+  // live Windows failure, which is BUG-027.
   testWidgets('desktop sidebar: re-tapping Movies pops a movie page', (
     t,
   ) async {
