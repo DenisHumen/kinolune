@@ -62,6 +62,9 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           ls -l /dev/kvm
 
+      - name: build-iso.sh helper reuse (fake engine, seconds)
+        run: distro/tests/build-iso-helper.sh
+
       - name: Build the ISO (OS image, installer image, image-builder generic-iso, size check)
         env:
           VERSION: ${{ github.event_name == 'pull_request' && format('0.0.0-pr.{0}', github.event.pull_request.number) || format('0.0.0-ci.{0}', github.run_number) }}

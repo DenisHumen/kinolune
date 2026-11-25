@@ -58,17 +58,37 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [[ "$("${ENGINE}" inspect -f '{{.State.Running}}' "${ISO_HELPER_NAME}" 2>/dev/null)" != true ]]; then
+# Bind mounts are fixed when the helper is created. A helper kept by an earlier KEEP=1 run is
+# reused only when it was started with the same image and mounts (a hash kept in a label);
+# otherwise it would still write the ISO into the previous OUT_DIR.
+HELPER_MOUNTS=(
+    "/dev:/dev"
+    "${ISO_STORAGE}:/var/lib/containers/storage"
+    "${WORK_DIR}/iso-cache:/var/cache/image-builder"
+    "${WORK_DIR}/iso-tmp:/var/tmp"
+    "${DISTRO_DIR}:/src/distro:ro"
+    "${OUT_DIR}:/out"
+)
+HELPER_LABEL=io.kinolune.iso-helper.spec
+HELPER_SPEC="$(printf '%s\n' "${ISO_HELPER_IMAGE}" "${HELPER_MOUNTS[@]}" | sha256sum | cut -c1-16)"
+
+helper_state="$("${ENGINE}" inspect \
+    -f "{{.State.Running}} {{index .Config.Labels \"${HELPER_LABEL}\"}}" \
+    "${ISO_HELPER_NAME}" 2>/dev/null || true)"
+if [[ "${helper_state}" == "true ${HELPER_SPEC}" ]]; then
+    log "Reusing helper container ${ISO_HELPER_NAME}"
+else
+    if [[ "${helper_state}" == "true "* ]]; then
+        log "Helper ${ISO_HELPER_NAME} has other mounts or image: recreating it"
+    fi
     log "Starting helper container ${ISO_HELPER_NAME} (${ISO_HELPER_IMAGE})"
     "${ENGINE}" rm -f "${ISO_HELPER_NAME}" >/dev/null 2>&1 || true
+    mount_args=()
+    for m in "${HELPER_MOUNTS[@]}"; do mount_args+=(-v "${m}"); done
     "${ENGINE}" run -d --init --name "${ISO_HELPER_NAME}" --privileged --network host \
         --security-opt label=disable \
-        -v /dev:/dev \
-        -v "${ISO_STORAGE}:/var/lib/containers/storage" \
-        -v "${WORK_DIR}/iso-cache:/var/cache/image-builder" \
-        -v "${WORK_DIR}/iso-tmp:/var/tmp" \
-        -v "${DISTRO_DIR}:/src/distro:ro" \
-        -v "${OUT_DIR}:/out" \
+        --label "${HELPER_LABEL}=${HELPER_SPEC}" \
+        "${mount_args[@]}" \
         "${ISO_HELPER_IMAGE}" sleep infinity >/dev/null
     helper bash -euc '
         dnf -y -q install --setopt=install_weak_deps=False podman image-builder squashfs-tools >/dev/null
