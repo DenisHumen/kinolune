@@ -132,7 +132,6 @@ pub(crate) fn router(library: Library, hub: Hub, activity: Activity, auth: Auth)
             library,
             hub,
             activity,
-        })
             auth: auth.clone(),
         })
         .layer(middleware::from_fn_with_state(auth, authenticate))
