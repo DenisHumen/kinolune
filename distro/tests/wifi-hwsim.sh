@@ -35,6 +35,7 @@ ok() { printf '  \033[1;32mok\033[0m %s\n' "$*" >&2; }
 bad() { printf '  \033[1;31mFAIL\033[0m %s\n' "$*" >&2; fail=1; }
 
 [[ $(id -u) == 0 ]] || { echo "run as root (in a VM)" >&2; exit 1; }
+trap 'echo "wifi-hwsim.sh: failed at line ${LINENO}: ${BASH_COMMAND}" >&2' ERR
 
 cleanup() {
     pkill -F "${RUN}/hostapd-wpa.pid" 2>/dev/null || true
