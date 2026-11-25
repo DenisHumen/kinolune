@@ -111,7 +111,11 @@ fn exact_original_title_two_years_off_is_auto() {
         assert_eq!(m.result.title.as_deref(), Some(film.title));
     }
     // A year apart was already enough.
-    let m = search(&query("Movies/Plan 9 from Outer Space (1958).mkv"), &[&PLAN_9_RU]).unwrap();
+    let m = search(
+        &query("Movies/Plan 9 from Outer Space (1958).mkv"),
+        &[&PLAN_9_RU],
+    )
+    .unwrap();
     assert!(m.score >= AUTO, "{m:?}");
 }
 
@@ -153,7 +157,10 @@ fn a_year_gap_still_asks_when_the_title_is_not_enough() {
     let m = search(&query("Movies/Dune (1986).mkv"), &[&old, &new]);
     assert!(m.as_ref().is_none_or(|m| m.score < AUTO), "{m:?}");
     // Three years off: another film for all the title says.
-    let m = search(&query("Movies/Plan 9 from Outer Space (1960).mkv"), &[&PLAN_9_RU]);
+    let m = search(
+        &query("Movies/Plan 9 from Outer Space (1960).mkv"),
+        &[&PLAN_9_RU],
+    );
     assert!(m.as_ref().is_none_or(|m| m.score < AUTO), "{m:?}");
     // Only part of the title: not the same film.
     let m = search(&query("Movies/Plan 9 (1959).mkv"), &[&PLAN_9_RU]);
