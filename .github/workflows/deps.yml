@@ -47,7 +47,7 @@ jobs:
           persist-credentials: false
       - name: Install toolchain from rust-toolchain.toml
         run: rustup toolchain install && rustup show active-toolchain
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-deny@${{ env.CARGO_DENY_VERSION }}
       - run: cargo deny --locked check licenses bans sources
@@ -63,7 +63,7 @@ jobs:
           persist-credentials: false
       - name: Install toolchain from rust-toolchain.toml
         run: rustup toolchain install && rustup show active-toolchain
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-deny@${{ env.CARGO_DENY_VERSION }},cargo-audit@${{ env.CARGO_AUDIT_VERSION }}
       - run: cargo deny --locked check advisories
@@ -81,7 +81,7 @@ jobs:
           persist-credentials: false
       - name: Install toolchain from rust-toolchain.toml
         run: rustup toolchain install && rustup show active-toolchain
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-deny@${{ env.CARGO_DENY_VERSION }}
       - name: Add a GPL-3.0 crate to pa-ffi in a scratch copy and expect rejection
