@@ -14,6 +14,7 @@ import 'package:kinolune/fakes/fake_twitch.dart';
 import 'package:kinolune/features/updates/update_controller.dart';
 import 'package:kinolune/integration/library.dart'
     show Library, LibraryProfiles, PersonalMedia, ReviewInbox, SourceFiles;
+import 'package:kinolune/network/network_controller.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/home_screen.dart';
 import 'package:kinolune/services/app_services.dart';
@@ -129,6 +130,8 @@ Future<AppServices> demoServices({
   bool advancedSettings = false,
   // NET-024: the availability monitor, when a test gives one.
   AvailabilityService? availability,
+  // DIST-032: Wi-Fi and network from Home, when a test gives it.
+  NetworkController? network,
 }) async {
   library ??= empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -178,6 +181,7 @@ Future<AppServices> demoServices({
     reviewInbox: reviewInbox,
     // UI-035: files of writable sources, when a test gives them.
     files: files,
+    network: network,
   );
   await s.init();
   if (advancedSettings) await s.setShowAdvancedSettings(true);

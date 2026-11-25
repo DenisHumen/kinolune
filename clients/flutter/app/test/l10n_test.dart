@@ -207,6 +207,8 @@ void main() {
         'eq',
         // SYNC-015: joining the family over the LAN.
         'family',
+        // DIST-032: Wi-Fi and network from Home.
+        'network',
       ];
       for (final k in _keys(en)) {
         expect(

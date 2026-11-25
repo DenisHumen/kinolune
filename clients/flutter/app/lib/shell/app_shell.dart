@@ -27,6 +27,7 @@ import '../files/library_upload.dart';
 import '../files/share_intake.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
+import '../network/network_panel.dart';
 import '../offline/offline_downloads.dart';
 import '../offline/offline_ui.dart' show formatOfflinePercent;
 import '../personal/personal_screen.dart';
@@ -832,6 +833,13 @@ class _SidebarLayout extends StatelessWidget {
               children: [
                 Positioned.fill(child: content),
                 const _StatusBarScrim(),
+                // DIST-032: Wi-Fi and network, top right of Home.
+                if (shell.section == Section.home && !shell._nestedCanPop)
+                  Positioned(
+                    right: 20,
+                    top: MediaQuery.paddingOf(context).top + 14,
+                    child: const NetworkStatusButton(),
+                  ),
                 const Positioned(
                   left: 24,
                   right: 24,
@@ -966,6 +974,13 @@ class _RailLayout extends StatelessWidget {
               children: [
                 Positioned.fill(child: content),
                 const _StatusBarScrim(),
+                // DIST-032: Wi-Fi and network, top right of Home.
+                if (shell.section == Section.home && !shell._nestedCanPop)
+                  Positioned(
+                    right: 20,
+                    top: MediaQuery.paddingOf(context).top + 14,
+                    child: const NetworkStatusButton(),
+                  ),
                 const Positioned(
                   left: 16,
                   right: 16,
@@ -1157,6 +1172,13 @@ class _PhoneLayout extends StatelessWidget {
               top: MediaQuery.paddingOf(context).top + 4,
               child: _DownloadsEntry(shell: shell, phone: true),
             ),
+          // DIST-032: Wi-Fi and network (Linux with NetworkManager only).
+          if (shell.section == Section.home && !shell._nestedCanPop)
+            Positioned(
+              right: 100,
+              top: MediaQuery.paddingOf(context).top + 8,
+              child: const NetworkStatusButton(size: 20),
+            ),
           const Positioned(left: 8, right: 8, bottom: 8, child: _MiniPlayer()),
         ],
       ),
@@ -1210,6 +1232,9 @@ class _TvLayout extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // DIST-032: Wi-Fi and network (Linux with NetworkManager).
+                  const NetworkStatusButton(size: 20),
+                  const SizedBox(width: 6),
                   _TvTab(shell: shell, section: Section.search, iconOnly: true),
                   const SizedBox(width: 6),
                   _TvTab(

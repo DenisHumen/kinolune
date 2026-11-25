@@ -27,6 +27,8 @@ dependencies:
     path: ../../../design/flutter/pa_design
   # NET-019: Wi-Fi or mobile data for "Wi-Fi only" downloads (BSD-3-Clause).
   connectivity_plus: ^7.3.2
+  # DIST-032: NetworkManager over the system D-Bus on Linux (MPL-2.0).
+  dbus: ^0.8.1
   # LIB-027: files and folders dragged onto the window go to the library (Apache-2.0).
   desktop_drop: ^0.8.0
   # PKG-022: renamex_np(RENAME_SWAP) swaps Kinolune.app atomically on macOS (BSD-3-Clause).
