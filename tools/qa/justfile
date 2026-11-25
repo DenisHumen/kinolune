@@ -7,7 +7,7 @@ media_tools := source_directory() / "media"
 
 # List recipes
 info:
-    @just --list tests
+    @just --justfile '{{source_file()}}' --list
 
 # Generate the synthetic test-media set into tools/qa/media/synthetic (QA-002)
 media *args:
