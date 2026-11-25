@@ -3,6 +3,13 @@
 // Profile avatars (UI-015): a colour with the first letter of the name
 // (`color:<c>`, as the first-run setup UI-004 stores it) or a colour with a
 // picture (`icon:<i>:<c>`). The core keeps the reference as text.
+//
+// TWI-032: the Twitch avatar of the signed-in user,
+// `twitch:<user_id>;<previous>;<profile_image_url>`. The previous colour or
+// picture comes back when Twitch is signed out (and is the fallback while
+// the picture loads). The public picture URL travels with the profile to
+// the other devices (ADR-0102), each downloads the picture itself; no
+// token ever does.
 
 import 'package:material_ui/material_ui.dart';
 
@@ -11,6 +18,7 @@ import '../l10n/l10n.dart';
 import '../services/local_profile.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/focusable.dart';
+import '../widgets/round_photo.dart';
 
 /// Pictures for avatars, by index.
 const kProfileAvatarIcons = <IconData>[
@@ -28,7 +36,12 @@ const kProfileAvatarIcons = <IconData>[
 
 /// A parsed avatar reference.
 class AvatarRef {
-  const AvatarRef({this.color = 0, this.icon});
+  const AvatarRef({
+    this.color = 0,
+    this.icon,
+    this.twitchUserId,
+    this.twitchUrl,
+  });
 
   /// Index into [kProfileAvatarColors].
   final int color;
@@ -36,14 +49,41 @@ class AvatarRef {
   /// Index into [kProfileAvatarIcons]; null = the initial of the name.
   final int? icon;
 
+  /// The Twitch user whose avatar this is (TWI-032); null: [color] and
+  /// [icon] only.
+  final String? twitchUserId;
+
+  /// The Twitch picture as last seen (`profile_image_url`).
+  final String? twitchUrl;
+
+  bool get isTwitch => twitchUserId != null;
+
+  /// The longest reference the core keeps.
+  static const maxLength = 256;
+
   static int _index(String? s, int length) {
     final i = int.tryParse(s ?? '') ?? 0;
     return i >= 0 && i < length ? i : 0;
   }
 
-  /// `color:3`, `icon:2:5`; anything else is colour 0 with the initial.
+  /// `color:3`, `icon:2:5`, `twitch:<id>;<one of those>;<url>`; anything
+  /// else is colour 0 with the initial.
   static AvatarRef parse(String? ref) {
-    final parts = (ref ?? '').split(':');
+    final r = ref ?? '';
+    if (r.startsWith('twitch:')) {
+      final parts = r.substring('twitch:'.length).split(';');
+      final id = parts[0];
+      if (id.isEmpty) return const AvatarRef();
+      final base = parse(parts.length > 1 ? parts[1] : null);
+      final url = parts.length > 2 ? parts.sublist(2).join(';') : '';
+      return AvatarRef(
+        color: base.color,
+        icon: base.icon,
+        twitchUserId: id,
+        twitchUrl: url.isEmpty ? null : url,
+      );
+    }
+    final parts = r.split(':');
     final colors = kProfileAvatarColors.length;
     if (parts.length == 2 && parts[0] == 'color') {
       return AvatarRef(color: _index(parts[1], colors));
@@ -57,17 +97,46 @@ class AvatarRef {
     return const AvatarRef();
   }
 
-  String get ref => icon == null ? 'color:$color' : 'icon:$icon:$color';
+  String get _base => icon == null ? 'color:$color' : 'icon:$icon:$color';
 
+  String get ref {
+    final id = twitchUserId;
+    if (id == null) return _base;
+    final bare = 'twitch:$id;$_base';
+    final full = twitchUrl == null ? bare : '$bare;$twitchUrl';
+    // A URL too long for the core: the picture comes from this device's
+    // account only.
+    return full.length <= maxLength ? full : bare;
+  }
+
+  /// The colour or picture under the Twitch avatar (the one to go back to).
+  AvatarRef get base => AvatarRef(color: color, icon: icon);
+
+  /// A colour or picture of one's own: no Twitch avatar any more.
   AvatarRef withColor(int c) => AvatarRef(color: c, icon: icon);
   AvatarRef withIcon(int? i) => AvatarRef(color: color, icon: i);
 
-  @override
-  bool operator ==(Object other) =>
-      other is AvatarRef && other.color == color && other.icon == icon;
+  /// The Twitch avatar of [userId] over this colour or picture.
+  AvatarRef withTwitch(String userId, String? url) =>
+      AvatarRef(color: color, icon: icon, twitchUserId: userId, twitchUrl: url);
 
   @override
-  int get hashCode => Object.hash(color, icon);
+  bool operator ==(Object other) =>
+      other is AvatarRef &&
+      other.color == color &&
+      other.icon == icon &&
+      other.twitchUserId == twitchUserId &&
+      other.twitchUrl == twitchUrl;
+
+  @override
+  int get hashCode => Object.hash(color, icon, twitchUserId, twitchUrl);
+}
+
+/// Whether [ref] is a standard avatar (a colour or a picture): the Twitch
+/// avatar is set on it by itself after signing in (TWI-032).
+bool isStandardAvatar(String? ref) {
+  final r = ref ?? '';
+  return r.isEmpty || r.startsWith('color:') || r.startsWith('icon:');
 }
 
 /// The display name of [p]: the first profile has none until named.
@@ -107,7 +176,7 @@ class ProfileAvatar extends StatelessWidget {
         ? ''
         : String.fromCharCode(runes.first).toUpperCase();
     final icon = avatar.icon;
-    final circle = CircleAvatar(
+    final plain = CircleAvatar(
       radius: size / 2,
       backgroundColor:
           kProfileAvatarColors[avatar.color.clamp(
@@ -131,6 +200,16 @@ class ProfileAvatar extends StatelessWidget {
               ),
             ),
     );
+    final twitchId = avatar.twitchUserId;
+    final Widget circle = twitchId == null
+        ? plain
+        : RoundPhoto(
+            key: const ValueKey('profile-avatar-twitch'),
+            url: avatar.twitchUrl,
+            seed: 'avatar-twitch-$twitchId',
+            size: size,
+            fallback: plain,
+          );
     if (!kid) return SizedBox.square(dimension: size, child: circle);
     return SizedBox.square(
       dimension: size,

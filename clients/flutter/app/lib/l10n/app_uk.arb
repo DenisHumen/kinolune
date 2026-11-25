@@ -2336,5 +2336,11 @@
   "commonScreenErrorTitle": "На цьому екрані щось пішло не так",
   "commonScreenErrorMessage": "Помилку записано в журнал застосунку. Повторіть або поверніться назад.",
   "commonScreenErrorRetry": "Повторити",
-  "commonScreenErrorBack": "Назад"
+  "commonScreenErrorBack": "Назад",
+  "twitchAccountRefresh": "Оновити ім'я та аватар",
+  "settingsTwitchAccountSignedOut": "Вхід у Twitch не виконано",
+  "settingsTwitchAccountSignedOutHint": "Увійдіть, щоб бачити ефіри, підписки та свій аватар",
+  "settingsTwitchAccountSignOut": "Вийти",
+  "profilesAvatarFromTwitch": "Аватар із Twitch",
+  "profilesAvatarFromTwitchSubtitle": "Коли вимкнено або ви вийшли з Twitch, повернуться ваш колір чи картинка"
 }

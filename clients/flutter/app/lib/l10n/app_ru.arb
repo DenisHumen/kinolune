@@ -2336,5 +2336,11 @@
   "commonScreenErrorTitle": "На этом экране что-то пошло не так",
   "commonScreenErrorMessage": "Ошибка записана в журнал приложения. Повторите или вернитесь назад.",
   "commonScreenErrorRetry": "Повторить",
-  "commonScreenErrorBack": "Назад"
+  "commonScreenErrorBack": "Назад",
+  "twitchAccountRefresh": "Обновить имя и аватар",
+  "settingsTwitchAccountSignedOut": "Вход в Twitch не выполнен",
+  "settingsTwitchAccountSignedOutHint": "Войдите, чтобы видеть эфиры, подписки и свой аватар",
+  "settingsTwitchAccountSignOut": "Выйти",
+  "profilesAvatarFromTwitch": "Аватар из Twitch",
+  "profilesAvatarFromTwitchSubtitle": "Когда выключено или вы вышли из Twitch, вернутся ваш цвет или картинка"
 }

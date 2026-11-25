@@ -334,7 +334,115 @@ class TwitchService extends ChangeNotifier {
   /// Live status is known (Helix reachable).
   bool get liveKnown => _liveKnown;
 
+  // ----- own account (TWI-032) --------------------------------------------
+
+  /// How long the own name and avatar are kept before Helix is asked again
+  /// (the TWI-007 cache rule).
+  static const accountProfileMaxAge = Duration(hours: 24);
+
+  TwitchAccountProfile? _profile;
+  Future<void>? _profileFetch;
+
+  /// Called once a sign-in is confirmed and the profile is known (the
+  /// profile avatar, UI-015).
+  Future<void> Function(TwitchAccountProfile profile)? onSignedIn;
+
+  /// Called after every fetch of the own profile (a new avatar on Twitch
+  /// reaches the profiles that show it).
+  Future<void> Function(TwitchAccountProfile profile)? onProfileFetched;
+
+  /// Called after signing out (or a sign-in that expired) with the user
+  /// id that left: the profile avatar goes back.
+  Future<void> Function(String userId)? onSignedOut;
+
+  /// The signed-in user's name and avatar; null before Helix answered.
+  TwitchAccountProfile? get accountProfile {
+    final p = _profile;
+    return p != null && p.userId == account?.userId ? p : null;
+  }
+
+  /// The name to show for the account: display name, else the login.
+  String? get accountName => accountProfile?.displayName ?? account?.login;
+
+  /// Avatar URL of [userId] when it is the signed-in user (profile avatars
+  /// of this device use the fresh one).
+  String? avatarOf(String userId) {
+    final p = accountProfile;
+    return p != null && p.userId == userId ? p.avatarUrl : null;
+  }
+
+  /// Fetches the own name and avatar from Helix (`GET /helix/users` with
+  /// the user token, no new scope) when they are older than
+  /// [accountProfileMaxAge] or [force]d. A sign-in Twitch no longer
+  /// accepts (401 after a failed refresh) signs out. Other errors keep
+  /// what is cached.
+  Future<void> refreshAccount({bool force = false}) {
+    final running = _profileFetch;
+    if (running != null) return running;
+    final f = _refreshAccount(force).whenComplete(() => _profileFetch = null);
+    return _profileFetch = f;
+  }
+
+  Future<void> _refreshAccount(bool force) async {
+    final a = account;
+    if (a == null) return;
+    final p = accountProfile;
+    if (!force &&
+        p != null &&
+        clock().difference(p.fetchedAt) < accountProfileMaxAge) {
+      return;
+    }
+    try {
+      final users = await backend.users(ids: [a.userId]);
+      final me = users.where((u) => u.userId == a.userId).firstOrNull;
+      if (me == null) return;
+      _profile = TwitchAccountProfile(
+        userId: a.userId,
+        login: me.login,
+        displayName: me.displayName.isEmpty ? me.login : me.displayName,
+        avatarUrl: me.avatarUrl,
+        fetchedAt: clock(),
+      );
+      await preferences.write(
+        Preferences.twitchAccountProfile,
+        jsonEncode(_profile!.toJson()),
+      );
+      notifyListeners();
+      try {
+        await onProfileFetched?.call(_profile!);
+      } catch (e) {
+        debugPrint('Twitch avatar not passed to the profiles: $e');
+      }
+    } on TwitchUnavailable catch (e) {
+      if (e.reason == TwitchUnavailableReason.signIn) {
+        // The token is gone on Twitch's side: sign out here too.
+        debugPrint('Twitch sign-in expired: signing out');
+        try {
+          await signOut();
+        } on Object catch (_) {
+          // Revoking a dead token may fail; the account is gone anyway.
+        }
+      } else {
+        debugPrint('Twitch own profile not refreshed: ${e.reason.name}');
+      }
+    }
+  }
+
+  Future<void> _forgetProfile() async {
+    _profile = null;
+    await preferences.write(Preferences.twitchAccountProfile, null);
+  }
+
   Future<void> init() async {
+    final cached = await preferences.read(Preferences.twitchAccountProfile);
+    if (cached != null) {
+      try {
+        _profile = TwitchAccountProfile.fromJson(jsonDecode(cached));
+      } catch (_) {
+        _profile = null;
+      }
+    }
+    if (_profile != null && account == null) await _forgetProfile();
     final raw = await preferences.read(Preferences.twitchFavorites);
     if (raw != null) {
       try {
@@ -358,6 +466,8 @@ class TwitchService extends ChangeNotifier {
       orElse: () => TwitchFavoriteFilter.all,
     );
     notifyListeners();
+    // At start: at most once a day (refreshAccount checks the age).
+    if (account != null) unawaited(refreshAccount());
   }
 
   Future<void> _save() => preferences.write(
@@ -500,6 +610,7 @@ class TwitchService extends ChangeNotifier {
   /// Resolves favourites added by name, refreshes profiles and live status
   /// from Helix. Without a login only cached profiles are used.
   Future<void> refresh() async {
+    await refreshAccount();
     if (account == null) {
       await _fromCache();
       _liveKnown = false;
@@ -917,15 +1028,37 @@ class TwitchService extends ChangeNotifier {
     final a = await backend.pollLogin();
     if (a != null) {
       notifyListeners();
+      // TWI-032: the own name and avatar right after signing in.
+      await refreshAccount(force: true);
+      final p = accountProfile;
+      if (p != null) {
+        try {
+          await onSignedIn?.call(p);
+        } catch (e) {
+          debugPrint('Twitch avatar not set on the profile: $e');
+        }
+      }
       unawaited(refresh());
     }
     return a;
   }
 
   Future<void> signOut() async {
-    await backend.signOut();
-    _live.clear();
-    _liveKnown = false;
-    notifyListeners();
+    final userId = account?.userId ?? _profile?.userId;
+    try {
+      await backend.signOut();
+    } finally {
+      await _forgetProfile();
+      _live.clear();
+      _liveKnown = false;
+      notifyListeners();
+      if (userId != null) {
+        try {
+          await onSignedOut?.call(userId);
+        } catch (e) {
+          debugPrint('Profile avatar not restored: $e');
+        }
+      }
+    }
   }
 }
