@@ -2206,5 +2206,9 @@
   "familyJoinKindTablet": "планшет",
   "familyJoinKindTv": "телевізор",
   "familyJoinKindDesktop": "комп'ютер",
-  "familyJoinKindServer": "сервер"
+  "familyJoinKindServer": "сервер",
+  "commonScreenErrorTitle": "На цьому екрані щось пішло не так",
+  "commonScreenErrorMessage": "Помилку записано в журнал застосунку. Повторіть або поверніться назад.",
+  "commonScreenErrorRetry": "Повторити",
+  "commonScreenErrorBack": "Назад"
 }

@@ -70,6 +70,10 @@ dependencies:
 dependency_overrides:
   media_kit_libs_android_video:
     path: ../packages/media_kit_libs_android_video
+  # BUG-001: media_kit_video 2.0.1 with the Linux video texture freed when the
+  # player closes (memory grew with every closed player).
+  media_kit_video:
+    path: ../packages/media_kit_video
 
 dev_dependencies:
   flutter_test:
@@ -80,6 +84,9 @@ dev_dependencies:
   # QA-006: profile-mode perf scenarios (integration_test/perf_test.dart).
   integration_test:
     sdk: flutter
+  # BUG-026: a fake web view platform for the embed's setup calls
+  # (BSD-3-Clause, already in the tree through webview_flutter).
+  webview_flutter_platform_interface: ^2.15.1
 
 flutter:
   uses-material-design: true

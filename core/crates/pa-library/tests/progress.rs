@@ -731,6 +731,61 @@ fn in_progress_episode_replaces_up_next_of_its_show() {
     assert_eq!(row[0].item.duration_ms, Some(100_000));
 }
 
+/// BUG-020: Space at the end of S1E3 restarted it and the player saved a
+/// position near the start over the finished episode. It stays watched, is
+/// not "in progress", and "Continue" goes on to S1E4.
+#[test]
+fn stray_small_position_after_a_finished_episode_keeps_up_next() {
+    let mut conn = pa_library::open_in_memory().unwrap();
+    add_show(
+        &conn,
+        Some(1399),
+        &[
+            (1, 2, "regular", true),
+            (1, 3, "regular", true),
+            (1, 4, "regular", true),
+        ],
+    );
+    play(
+        &mut conn,
+        "tmdb:episode:1399:1:2",
+        MediaKind::Episode,
+        100,
+        T0,
+    );
+    play(
+        &mut conn,
+        "tmdb:episode:1399:1:3",
+        MediaKind::Episode,
+        100,
+        T0 + MIN,
+    );
+    let mut sink = LocalOnly::new("tv");
+    for (i, position_ms) in [1_000, 3_000, 6_000, 30_000].into_iter().enumerate() {
+        let at = T0 + 2 * MIN + i64::try_from(i).unwrap() * 1_000;
+        let row = report(
+            &mut conn,
+            &mut sink,
+            "tmdb:episode:1399:1:3",
+            MediaKind::Episode,
+            position_ms,
+            Some(100_000),
+            at,
+        );
+        assert!(row.watched, "S1E3 stays watched at {position_ms} ms");
+        assert_eq!(
+            row_keys(&conn, &ContinueQuery::default()),
+            [("tmdb:episode:1399:1:4".to_owned(), ContinueReason::UpNext)],
+            "after a stray {position_ms} ms over S1E3"
+        );
+    }
+    let row =
+        progress::continue_watching(&conn, &Thresholds::default(), 1, &ContinueQuery::default())
+            .unwrap();
+    assert_eq!(row[0].item.position_ms, 0);
+    assert_eq!(row[0].anchor_key, key("tmdb:episode:1399:1:3"));
+}
+
 #[test]
 fn removed_up_next_returns_after_the_next_episode_is_finished() {
     let mut conn = pa_library::open_in_memory().unwrap();
