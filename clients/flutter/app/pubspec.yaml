@@ -48,6 +48,8 @@ dependencies:
     path: ../packages/media_kit_libs_windows_video
   # PKG-018: the running version (versionName, version.json) for updates (BSD-3-Clause).
   package_info_plus: ^10.2.2
+  # BUG-022: native local paths on Windows (BSD-3-Clause).
+  path: ^1.9.1
   path_provider: ^2.1.6
   permission_handler: ^13.0.2
   qr: ^4.0.1
