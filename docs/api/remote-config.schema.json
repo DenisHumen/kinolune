@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kinolune.app/schemas/remote-config.schema.json",
+  "title": "Kinolune signed remote configuration",
+  "description": "Structural schema for config/remote-config.json. JSON Schema cannot verify the minisign signature, anti-rollback serial, or all runtime validation rules.",
+  "type": "object",
+  "required": ["schema", "serial"],
+  "properties": {
+    "schema": { "type": "integer", "minimum": 1, "description": "Document schema supported by the client." },
+    "serial": { "type": "integer", "minimum": 1, "description": "Monotonically increasing document number; clients reject rollback." },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "refresh": {
+      "type": "object",
+      "properties": {
+        "interval_secs": { "type": "integer", "minimum": 0 },
+        "retry_secs": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "flags": {
+      "type": "object",
+      "description": "A missing flag is disabled.",
+      "additionalProperties": { "type": "boolean" }
+    },
+    "kill_switches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["feature"],
+        "properties": {
+          "feature": { "type": "string", "minLength": 1 },
+          "min_app_version": { "type": "string" },
+          "max_app_version": { "type": "string" },
+          "platforms": { "type": "array", "items": { "type": "string" } },
+          "reason": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "twitch": {
+      "type": "object",
+      "properties": {
+        "gql_client_id": { "type": "string" },
+        "persisted_queries": { "type": "object", "additionalProperties": { "type": "string" } },
+        "player": { "type": "string", "enum": ["embed", "native"] }
+      },
+      "additionalProperties": true
+    },
+    "updates": {
+      "type": "object",
+      "properties": { "release_public_key": { "type": "string" } },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

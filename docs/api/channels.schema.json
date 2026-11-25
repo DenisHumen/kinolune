@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kinolune.app/schemas/channels.schema.json",
+  "title": "Kinolune OS update channel manifest (draft)",
+  "description": "Draft structural schema from docs/research/05 §4.1. SITE-004 has not implemented or published this contract yet.",
+  "type": "object",
+  "required": ["version", "digest", "rollout"],
+  "properties": {
+    "version": { "type": "string" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-fA-F0-9]{64}$" },
+    "rollout": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "min_from": { "type": "string" },
+    "notes_url": { "type": "string", "format": "uri" },
+    "requires_reboot": { "type": "boolean" },
+    "halt": { "type": "boolean" }
+  },
+  "additionalProperties": true
+}

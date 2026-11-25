@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kinolune.app/schemas/releases.schema.json",
+  "title": "Kinolune GitHub releases response subset",
+  "description": "Fields used by the app's updater from the GitHub Releases API. Other GitHub response fields are allowed.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "tag_name": { "type": "string", "pattern": "^app-v" },
+      "name": { "type": ["string", "null"] },
+      "draft": { "type": "boolean" },
+      "prerelease": { "type": "boolean" },
+      "body": { "type": ["string", "null"] },
+      "html_url": { "type": "string", "format": "uri" },
+      "published_at": { "type": ["string", "null"], "format": "date-time" },
+      "assets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["name", "browser_download_url"],
+          "properties": {
+            "name": { "type": "string" },
+            "size": { "type": ["integer", "null"], "minimum": 0 },
+            "browser_download_url": { "type": "string", "format": "uri" }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "additionalProperties": true
+  }
+}
