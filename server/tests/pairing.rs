@@ -125,6 +125,7 @@ fn hello(device: &str, nonce: Option<String>) -> Message {
         cursor: None,
         head: None,
         nonce,
+        vv: None,
     })
 }
 

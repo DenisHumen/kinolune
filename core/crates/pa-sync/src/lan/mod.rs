@@ -86,6 +86,9 @@ pub struct LanConfig {
     pub playback_ttl: Duration,
     /// How often the election is re-evaluated.
     pub tick: Duration,
+    /// How often a link of protocol 2 runs anti-entropy (SYNC-017): the
+    /// version vector, the holes still open and the state digest.
+    pub anti_entropy: Duration,
 }
 
 impl LanConfig {
@@ -104,6 +107,7 @@ impl LanConfig {
             handshake_timeout: Duration::from_secs(5),
             playback_ttl: Duration::from_secs(600),
             tick: Duration::from_millis(250),
+            anti_entropy: Duration::from_millis(crate::nodelog::DIGEST_INTERVAL_MS),
         }
     }
 }

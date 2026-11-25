@@ -123,3 +123,11 @@ windows-native-keyring-store = { version = "1.1", default-features = false }
 x25519-dalek = { version = "3.0", default-features = false, features = ["precomputed-tables", "static_secrets", "zeroize"] }
 zbus-secret-service-keyring-store = { version = "1.0.1", default-features = false, features = ["rt-async-io-crypto-rust"] }
 zeroize = "1.9"
+
+# Argon2id (PIN and password hashes) is memory-hard on purpose; unoptimized
+# it makes debug builds and tests of pa-library and pa-server crawl.
+[profile.dev.package.argon2]
+opt-level = 3
+
+[profile.dev.package.blake2]
+opt-level = 3

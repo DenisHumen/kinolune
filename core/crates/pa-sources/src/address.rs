@@ -420,7 +420,8 @@ pub fn file_uri_to_path(uri: &str) -> Option<PathBuf> {
     if s.len() >= 3 && s.as_bytes()[0] == b'/' && s.as_bytes()[2] == b':' {
         s.remove(0);
     }
-    Some(PathBuf::from(s))
+    // BUG-022: native separators (`C:\Media` on Windows).
+    Some(pa_vfs::host::host_path(&s))
 }
 
 #[cfg(test)]
