@@ -228,12 +228,14 @@ Future<AppServices> twitchServices({
   DeviceSync? sync,
   PlayerEngineFactory? engineFactory,
   bool twitchNative = false,
+  UpdateController? updates,
 }) async {
   final s = await demoServices(
     twitch: twitch,
     sync: sync,
     engineFactory: engineFactory,
     twitchNative: twitchNative,
+    updates: updates,
   );
   await s.setShowTwitch(true);
   await seedDemoTwitchFavorites(s.twitch);

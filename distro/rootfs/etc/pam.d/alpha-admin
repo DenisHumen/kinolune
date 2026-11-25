@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MPL-2.0
+# PAM service of the admin backend's password check (alpha-admin-auth,
+# DIST-013): the system's usual password stack, plus the account checks
+# (expired or locked accounts cannot log in). No session is opened.
+auth       required     pam_env.so
+auth       include      password-auth
+account    required     pam_nologin.so
+account    include      password-auth

@@ -174,10 +174,11 @@ type Options struct {
 	Smart bool
 }
 
-// DefaultMinSize is the provisional minimum system disk size (16 GB):
-// ESP 1 GiB + /boot 2 GiB + root with room for two OS deployments.
-// DIST-005 owns the final number.
-const DefaultMinSize = 16_000_000_000
+// DefaultMinSize is the minimum system disk size (DIST-005): ESP 1 GiB +
+// /boot 2 GiB + a 16 GiB btrfs root (two OS deployments and /var), plus
+// 2 MiB for GPT alignment and the backup header: about 20.4 GB. It equals
+// install.MinDiskSize + GPT overhead; a test in package install keeps them in sync.
+const DefaultMinSize = 19<<30 + 2<<20
 
 // Probe lists whole disks with their human names, flags and findings.
 // Excluded disks are returned too (Excluded=true) so the UI can explain

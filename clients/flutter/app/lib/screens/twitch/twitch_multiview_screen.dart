@@ -42,6 +42,7 @@ import '../../twitch/twitch_models.dart';
 import '../../twitch/twitch_multiview.dart';
 import '../../twitch/twitch_native.dart';
 import '../../twitch/twitch_service.dart';
+import '../../widgets/error_boundary.dart';
 import 'twitch_embed_screen.dart'
     show TwitchEmbedSurfaceFactory, WebViewTwitchSurface, TwitchEmbedSurface;
 import 'twitch_player_screen.dart'
@@ -164,13 +165,18 @@ Future<void> openTwitchMultiview(
   await Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
       fullscreenDialog: true,
-      builder: (_) => TwitchMultiviewScreen(
-        logins: logins,
-        max: max,
-        streams: factory,
-        embed: support == MultiviewSupport.embed,
-        chat: chat,
-        live: live,
+      // BUG-026: a failure while building is an error screen, not a gray
+      // window.
+      builder: (_) => ErrorBoundary(
+        name: 'twitch-multiview',
+        child: TwitchMultiviewScreen(
+          logins: logins,
+          max: max,
+          streams: factory,
+          embed: support == MultiviewSupport.embed,
+          chat: chat,
+          live: live,
+        ),
       ),
     ),
   );

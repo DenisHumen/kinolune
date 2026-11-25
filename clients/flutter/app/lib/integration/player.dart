@@ -68,4 +68,7 @@ export 'package:pa_player/pa_player.dart'
         // PLAY-AND-005 auto frame rate and HDR on TV
         DisplayMatchSettings,
         DisplayMatcher,
-        FrameRateMatch;
+        FrameRateMatch,
+        // PLAY-AND-004 audio passthrough over HDMI
+        AudioOutputMode,
+        AudioPassthrough;

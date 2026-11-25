@@ -16,10 +16,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import soak_memory  # noqa: E402
 
 
-def log(rss: list[int], native: bool = False) -> str:
-    extra = " threads=60 heap=900MB inuse=300MB free=600MB" if native else ""
+def log(rss: list[int], native: bool = False, inuse: list[int] | None = None) -> str:
+    def extra(i: int) -> str:
+        if inuse is not None:
+            return f" threads=60 heap=900MB inuse={inuse[i]}MB free=600MB"
+        return " threads=60 heap=900MB inuse=300MB free=600MB" if native else ""
+
     return "".join(
-        f"E2E SOAK cycle {i} ok Sintel 16s rss={mb}MB{extra} play=[0:00 → 0:06]\n"
+        f"E2E SOAK cycle {i} ok Sintel 16s rss={mb}MB{extra(i - 1)} play=[0:00 → 0:06]\n"
         for i, mb in enumerate(rss, 1)
     )
 
@@ -57,6 +61,20 @@ class SoakMemoryTest(unittest.TestCase):
         self.assertEqual(rc, 0, out)
         self.assertIn("cycles 151–200 (50)", out)
         self.assertIn("threads 60 heap 900 inuse 300 free 600", out)
+
+    def test_a_leak_under_flat_rss_fails_on_malloc_in_use(self) -> None:
+        rss = [700 + (i % 3) for i in range(60)]
+        inuse = [300 + 2 * i for i in range(60)]  # 100 MB / 50 cycles held
+        rc, out = self.run_on(log(rss, inuse=inuse))
+        self.assertEqual(rc, 1, out)
+        self.assertIn("RSS slope: ", out)
+        self.assertIn("malloc in use slope: 2.00 MB/cycle", out)
+
+    def test_flat_malloc_in_use_passes(self) -> None:
+        rss = [700 + (i % 3) for i in range(60)]
+        rc, out = self.run_on(log(rss, native=True))
+        self.assertEqual(rc, 0, out)
+        self.assertIn("malloc in use slope: 0.00 MB/cycle", out)
 
     def test_slow_steady_growth_over_the_limit_fails(self) -> None:
         rss = [500 + 2 * i for i in range(100)]  # 2 MB/cycle = 100 MB / 50

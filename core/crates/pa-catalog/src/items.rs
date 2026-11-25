@@ -278,11 +278,13 @@ fn show_folder(rel: &str) -> String {
 
 /// Absolute local path of `rel` in a source with `uri`.
 pub(crate) fn local_path(uri: &str, rel: &str) -> Option<String> {
-    let mut root = uri::file_uri_to_path(uri)?;
-    if !rel.is_empty() {
-        root.push(rel);
-    }
-    Some(root.to_string_lossy().into_owned())
+    let root = uri::file_uri_to_path(uri)?;
+    // BUG-022: one name at a time, so Windows gets backslashes throughout.
+    Some(
+        pa_vfs::host::join_relative(&root, rel)
+            .to_string_lossy()
+            .into_owned(),
+    )
 }
 
 /// `files.path` is a `VfsPath` (`/Movies/x.mkv`); items carry it without the
@@ -836,6 +838,27 @@ fn hit_item(conn: &Connection, hit: &SearchHit) -> Result<Option<Item>, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn local_path_joins_names_natively() {
+        // BUG-022: the `files.path` names are pushed one by one.
+        let got = local_path("file:///srv/My%20Media", "Movies/Dune (2021)/Dune.mkv").unwrap();
+        if cfg!(windows) {
+            assert_eq!(got, r"\srv\My Media\Movies\Dune (2021)\Dune.mkv");
+        } else {
+            assert_eq!(got, "/srv/My Media/Movies/Dune (2021)/Dune.mkv");
+        }
+        assert_eq!(local_path("smb://nas/share", "a.mkv"), None);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn local_path_of_a_windows_root() {
+        assert_eq!(
+            local_path("file:///C:/Users/me/library", "Movies/Charge (2022)/a.mkv").as_deref(),
+            Some(r"C:\Users\me\library\Movies\Charge (2022)\a.mkv")
+        );
+    }
 
     #[test]
     fn item_ids_round_trip() {

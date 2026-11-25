@@ -660,3 +660,95 @@ fn journals_are_listed_and_own_ops_read_back() {
     let ids: Vec<_> = own.iter().map(|op| op.op_id).collect();
     assert_eq!(ids, [first.op_id, second.op_id]);
 }
+
+/// SYNC-017: a journal is the device's node log. Lines of an older build
+/// (no log place) are numbered on load, the new build appends after them,
+/// a reader feeds a node log whose vector counts every line, and a line
+/// changed on disk is seen and not applied.
+#[test]
+fn journals_are_node_logs_and_older_lines_are_numbered() {
+    use pa_sync::nodelog::{Inserted, NodeLog};
+
+    let dir = tempfile::tempdir().unwrap();
+    let vfs = LocalFs::new(dir.path()).unwrap();
+    let now = 1_763_000_000_000;
+    let mut a = Device::new("a", 0);
+    a.sync(&vfs, now, false);
+    // Two lines written by an older build.
+    for i in 0..2 {
+        let op = a.record(
+            OpBody::Watched {
+                profile: "default".into(),
+                key: key(i),
+            },
+            now + i,
+        );
+        a.unsent.clear();
+        append_raw(
+            dir.path(),
+            "a",
+            format!("{}\n", pa_sync::outbox::encode(&op).unwrap()).as_bytes(),
+        );
+    }
+    // This build appends the third.
+    a.record(
+        OpBody::Watched {
+            profile: "default".into(),
+            key: key(2),
+        },
+        now + 5,
+    );
+    a.sync(&vfs, now + 5, false);
+    let text = std::fs::read_to_string(journal(dir.path(), "a")).unwrap();
+    let last = text.lines().last().unwrap();
+    assert!(last.starts_with("{\"seq\":3,\"prev\":\""), "{last}");
+
+    let f = Folder::new(&vfs);
+    let read = |log: &mut NodeLog| {
+        let mut cursors = Cursors::new();
+        let mut applied = 0;
+        let report = f
+            .read_logged(
+                "b",
+                &mut cursors,
+                now + 6,
+                &mut |_| {
+                    applied += 1;
+                    Ok(true)
+                },
+                &mut |e, snapshot| {
+                    assert!(!snapshot);
+                    let h = e.hash();
+                    assert!(matches!(log.insert(e, &h), Inserted::New { .. }));
+                },
+            )
+            .unwrap();
+        (report, applied, cursors["a"].seq)
+    };
+    let mut log = NodeLog::new("b").unwrap();
+    let (report, applied, seq) = read(&mut log);
+    assert_eq!((report.ops, report.gaps, report.corrupt), (3, 0, 0));
+    assert_eq!((applied, seq), (3, 3));
+    assert_eq!(log.vector().get("a"), 3);
+
+    // One byte of line 3 changed on disk: seen, not applied.
+    let damaged = text.replace("twitch:vod:123", "twitch:vod:124");
+    assert_ne!(damaged, text);
+    std::fs::write(journal(dir.path(), "a"), damaged).unwrap();
+    let mut fresh = NodeLog::new("c").unwrap();
+    let (report, applied, _) = read(&mut fresh);
+    assert_eq!((report.ops, report.corrupt), (2, 1));
+    assert_eq!(applied, 2);
+    assert_eq!(fresh.vector().get("a"), 2);
+    // The intact entry comes from another member's log.
+    let want = pa_sync::nodelog::Range {
+        origin: "a".into(),
+        from: 3,
+        to: 3,
+    };
+    for e in log.range(&want) {
+        let h = e.hash();
+        assert!(matches!(fresh.insert(e, &h), Inserted::New { .. }));
+    }
+    assert_eq!(fresh.vector(), log.vector());
+}

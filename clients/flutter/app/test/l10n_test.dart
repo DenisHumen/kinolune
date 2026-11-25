@@ -207,6 +207,8 @@ void main() {
         'eq',
         // SYNC-015: joining the family over the LAN.
         'family',
+        // UI-053: the availability indicator and «Состояние подключений».
+        'availability',
         // DIST-032: Wi-Fi and network from Home.
         'network',
       ];

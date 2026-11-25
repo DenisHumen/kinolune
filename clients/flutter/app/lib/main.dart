@@ -69,6 +69,7 @@ import 'twitch/twitch_downloads.dart';
 import 'twitch/twitch_native.dart';
 import 'twitch/twitch_service.dart';
 import 'widgets/artwork_image.dart';
+import 'widgets/error_boundary.dart';
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,6 +77,9 @@ Future<void> main(List<String> args) async {
   LaunchLinks.initial = args;
   ensurePaPlayerInitialized();
   registerAppLicenses();
+  // BUG-026: a screen that fails to build inside an ErrorBoundary shows an
+  // error with «Повторить» / «Назад», not a gray window.
+  installErrorBoundaries();
 
   final formFactor = await detectFormFactor();
   final dir = await getApplicationSupportDirectory();

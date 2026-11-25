@@ -5,6 +5,8 @@
 //   src/main/kotlin                            PlayerActivity, OSD channels, plugin
 //   clients/android/player/src/main/kotlin     Media3Engine (PlayerEngine contract), CoreDataSource
 //   clients/android/display/src/main/kotlin    display modes (AFR), HDR, Dolby Vision (PLAY-AND-005)
+//   clients/android/audio/src/main/kotlin      passthrough decisions, HDMI audio capabilities (PLAY-AND-004)
+//   <paFfmpegExtDir>/java + jniLibs            optional Media3 FFmpeg audio extension (tools/media3-ffmpeg)
 //   clients/android/player/src/main/res        loopback network security config (PLAY-AND-003)
 //   <paGenDir>/kotlin + jniLibs                UniFFI bindings and libpa_ffi.so of the core
 //                                              (tools/bindings/build-aar.sh, CORE-004)
@@ -38,6 +40,8 @@ plugins {
 
 val workspaceRoot: File = projectDir.resolve("../../../../..").canonicalFile
 val genDir: File = (findProperty("paGenDir") as String?)?.let { file(it) } ?: workspaceRoot.resolve("target/android")
+// PLAY-AND-004: the Media3 FFmpeg audio extension (tools/media3-ffmpeg, our LGPL FFmpeg); optional.
+val ffmpegExtDir: File? = (findProperty("paFfmpegExtDir") as String?)?.let { file(it) }
 
 android {
     namespace = "dev.projectalpha.player.flutter"
@@ -54,8 +58,14 @@ android {
             kotlin.srcDir(workspaceRoot.resolve("clients/android/player/src/main/kotlin"))
             // PLAY-AND-005: display modes (AFR), HDR and Dolby Vision decisions.
             kotlin.srcDir(workspaceRoot.resolve("clients/android/display/src/main/kotlin"))
+            // PLAY-AND-004: passthrough and «всегда декодировать».
+            kotlin.srcDir(workspaceRoot.resolve("clients/android/audio/src/main/kotlin"))
             kotlin.srcDir(genDir.resolve("kotlin"))
             jniLibs.srcDir(genDir.resolve("jniLibs"))
+            ffmpegExtDir?.let {
+                java.srcDir(it.resolve("java"))
+                jniLibs.srcDir(it.resolve("jniLibs"))
+            }
             // PLAY-AND-003: the loopback network security config of the engine library.
             res.srcDir(workspaceRoot.resolve("clients/android/player/src/main/res"))
         }
@@ -64,6 +74,7 @@ android {
     defaultConfig {
         minSdk = 24
         consumerProguardFiles(workspaceRoot.resolve("tools/bindings/pa-core-android/consumer-rules.pro"))
+        ffmpegExtDir?.let { consumerProguardFiles(it.resolve("proguard-rules.txt")) }
     }
 }
 
@@ -80,6 +91,8 @@ dependencies {
     implementation("androidx.media3:media3-ui:$media3")
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation("androidx.annotation:annotation:1.9.1")
+    // The FFmpeg extension's sources use Checker Framework annotations (MIT; compile time only).
+    if (ffmpegExtDir != null) compileOnly("org.checkerframework:checker-qual:3.49.0")
     // UniFFI's Kotlin runtime. JNA is dual-licensed Apache-2.0 / LGPL-2.1; we use it under Apache-2.0.
     implementation("net.java.dev.jna:jna:5.19.1@aar")
 }

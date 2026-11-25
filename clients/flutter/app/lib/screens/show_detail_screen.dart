@@ -247,36 +247,11 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     });
   }
 
-  /// Resume the latest started episode; after a finished one the next
-  /// (PLAY-005 [nextEpisodeIn]); else the first regular episode.
+  /// «Продолжить»: [showContinueTarget] (BUG-020: after a watched episode
+  /// the next one, even if a stray small position was saved over it).
   static _Target? _target(ShowEpisodes eps) {
-    if (eps.episodes.isEmpty) return null;
-    ShowEpisode? latest;
-    for (final e in eps.episodes) {
-      final p = e.progress;
-      if (p == null) continue;
-      if (latest == null || p.updatedAt.isAfter(latest.progress!.updatedAt)) {
-        latest = e;
-      }
-    }
-    if (latest != null) {
-      if (resumePositionMs(latest.progress) > 0) {
-        return _Target(latest, resume: true);
-      }
-      if (latest.watched || latest.progress!.fraction > continueWatchingMax) {
-        final next = nextEpisodeIn([
-          for (final e in eps.episodes) e.item,
-        ], latest.item);
-        if (next != null) {
-          return _Target(eps.episodes.firstWhere((e) => e.item.id == next.id));
-        }
-      }
-    }
-    final first = eps.episodes.firstWhere(
-      (e) => (e.item.season ?? 1) >= 1,
-      orElse: () => eps.episodes.first,
-    );
-    return _Target(first);
+    final t = showContinueTarget(eps.episodes);
+    return t == null ? null : _Target(t.episode, resume: t.resume);
   }
 
   @override

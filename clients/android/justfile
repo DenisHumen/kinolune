@@ -15,6 +15,12 @@ fixtures_dir := 'clients/android/player/build/fixtures'
 fixtures:
     clients/android/player/tools/make-fixtures.sh {{ fixtures_dir }}
 
+# PLAY-AND-004: the Media3 FFmpeg audio extension for one ABI, built on our LGPL FFmpeg from the
+# native_libs.sh cache (clients/flutter/app/tool/native_libs.sh fetch); ANDROID_NDK_HOME = NDK r28c.
+# test-device picks up tools/media3-ffmpeg/out/android-x86_64 when it exists.
+ffmpeg-ext abi='x86_64':
+    tools/media3-ffmpeg/build.sh android-{{ abi }} "${PA_NATIVE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/kinolune-native}/libmpv-android-{{ abi }}"
+
 # JUnit tests of the player library (JVM)
 test:
     gradle -p clients/android/player testDebugUnitTest -PpaGenDir="$(realpath {{ gen_dir }})" --console=plain
@@ -26,8 +32,9 @@ test-device: fixtures
     test -n "${ANDROID_SERIAL:-}" || { echo "set ANDROID_SERIAL to the emulator or device to test on" >&2; exit 1; }
     jni="${PA_TEST_JNI_DIR:-clients/flutter/packages/media_kit_libs_android_video/android/src/main/jniLibs}"; \
     test -d "$jni" || { echo "no native libraries in $jni (run clients/flutter/app/tool/native_libs.sh or set PA_TEST_JNI_DIR)" >&2; exit 1; }; \
+    ext="tools/media3-ffmpeg/out/android-x86_64"; ext_arg=""; [ -d "$ext" ] && ext_arg="-PpaFfmpegExtDir=$(realpath "$ext")"; \
     gradle -p clients/android/player connectedDebugAndroidTest -PpaGenDir="$(realpath {{ gen_dir }})" \
-        -PpaFixturesDir="$(realpath {{ fixtures_dir }})" -PpaTestJniDir="$(realpath "$jni")" --console=plain
+        -PpaFixturesDir="$(realpath {{ fixtures_dir }})" -PpaTestJniDir="$(realpath "$jni")" $ext_arg --console=plain
 
 # CORE-015: instrumented tests of the Keystore secret store, directly and through the core (set ANDROID_SERIAL)
 secrets-test-device:

@@ -37,6 +37,7 @@ export 'src/subtitles/subtitle_rendering.dart';
 export 'src/subtitles/subtitle_search.dart';
 export 'src/subtitles/subtitle_style.dart';
 export 'src/system/audio_output.dart';
+export 'src/system/audio_passthrough.dart';
 export 'src/system/display_match.dart';
 export 'src/system/media_session.dart';
 export 'src/system/music_session.dart';

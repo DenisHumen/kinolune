@@ -25,6 +25,7 @@ class FakePlayerEngine
         SubtitleRenderingEngine,
         PlaylistEditingEngine,
         AudioProcessingEngine,
+        AudioPassthroughEngine,
         VideoTrackEngine {
   FakePlayerEngine({this.loadedDuration = const Duration(minutes: 10)});
 
@@ -64,6 +65,9 @@ class FakePlayerEngine
 
   /// Last sound processing passed to [setAudioProcessing] (PLAY-004).
   AudioProcessing? audioProcessing;
+
+  /// Last codec list passed to [setAudioPassthrough] (PLAY-AND-004).
+  String? audioPassthrough;
 
   /// Extra rows [EngineState.stats] holds while [statsActive].
   Map<String, String> fakeStats = const {'A/V sync': '0 ms'};
@@ -311,6 +315,12 @@ class FakePlayerEngine
   Future<void> setAudioProcessing(AudioProcessing processing) async {
     // Not in [calls]: the screen sets it on start, like the rendering.
     audioProcessing = processing;
+  }
+
+  @override
+  Future<void> setAudioPassthrough(String codecs) async {
+    // Not in [calls]: set once when the engine is made (PLAY-AND-004).
+    audioPassthrough = codecs;
   }
 
   @override

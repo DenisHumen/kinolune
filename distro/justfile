@@ -6,6 +6,30 @@
 installer-disks *args:
     cd installer && go run ./cmd/alpha-installer disks {{args}}
 
-# Installer Go checks: gofmt, vet, tests on recorded lsblk/udev fixtures
+# Installer plan for an answer file (validates it, touches nothing)
+installer-plan answers *args:
+    cd installer && go run ./cmd/alpha-installer install --answers {{answers}} --dry-run {{args}}
+
+# Installer Go checks: gofmt, vet, tests on recorded lsblk/udev fixtures and a fake runner
 installer-test:
     cd installer && test -z "$(gofmt -l .)" && go vet ./... && go test ./...
+
+# QEMU: non-interactive install onto a virtual NVMe (OVMF), boot it, checks over SSH (~20 min)
+installer-vm-test:
+    tests/vm-install.sh
+
+# Update agent (alpha-updated) Go checks: gofmt, vet, tests on a fake bootc
+updated-test:
+    cd updated && test -z "$(gofmt -l .)" && go vet ./... && go test -race ./...
+
+# Admin backend (alpha-admin) Go checks: gofmt, vet, tests on fake D-Bus services
+admin-test:
+    cd admin && test -z "$(gofmt -l .)" && go vet ./... && go test -race ./...
+
+# alpha-admin with real PAM in a throw-away Fedora container
+admin-pam-test:
+    admin/tests/pam-container.sh
+
+# alpha-admin end to end in QEMU (image build, install, API against the real OS)
+admin-vm-test:
+    admin/tests/vm-admin-e2e.sh
