@@ -307,6 +307,10 @@ project_alpha/
   - Что: docker-compose с Samba (SMB2/3, signing, encryption), NFS-ganesha, WebDAV (nginx, Apache, `rclone serve`), SFTP и FTP; деградация сети через `tc netem`; общий тест-сьют `pa-vfs`.
   - deps: NET-001, NET-003, NET-004 · size: M · parallel: yes · веха: M1 · ref: 01 §1.5, 02 §4
   - done when: контракт-тесты Vfs запускаются против всех серверов в CI.
+- [x] **CI-013** Gradle в CI без падений на HTTP 429 от Maven Central
+  - Что: Android-job (`flutter.yml` Android build smoke, `flavors.yml` Android store bundle, `pa-core.yml` Android example APK, `release-app.yml` Android APKs, `android-core.yml`, `ffi-bindings.yml`) падали до сборки: Gradle получал 429 Too Many Requests от `repo.maven.apache.org` и отключал репозиторий. Кэш Gradle user home (зависимости, плагины, wrapper) через `gradle/actions/setup-gradle`, закреплённый по SHA: пишет только `main`, PR и релиз читают; повторы с экспоненциальной паузой (`org.gradle.internal.repository.max.tentatives=8`, пауза от 2 с с удвоением) и длинные HTTP-таймауты в `~/.gradle/gradle.properties` только в CI (`tools/ci/gradle-network.sh`), `settings.gradle` приложения не меняется. Зеркало Google для Maven Central не подключено: init-скрипт поменял бы порядок репозиториев у включённой сборки `flutter_tools/gradle` (у неё нет своих репозиториев, пришлось бы заново добавлять plugin portal) — это не «чисто».
+  - deps: — · size: S · parallel: yes · веха: M0 · ref: падения CI 2026-11-25 (Maven 429)
+  - done when: все Android-job используют кэш Gradle и повторы; zizmor и actionlint без замечаний; ручной прогон Android-workflow на ветке зелёный. Сделано: `tools/ci/gradle-network.sh` (идемпотентный), `setup-gradle` в четырёх Flutter-Android job, шаг повторов во всех шести; в `release-app.yml` кэш выключен (`cache-disabled`, решение мейнтейнера 2026-11-25: подписанные выпуски без общего кэша), повторы остаются.
 
 ### 3.3. CORE — ядро на Rust, FFI, общие сервисы
 
@@ -2048,6 +2052,10 @@ project_alpha/
   - Что: решение владельца 2026-11-20 после сбоя alpha.17 (скрипт без права на запуск нашёлся только через час сборки на GitHub). Одна команда `tools/release/precheck.sh` на сервере сборки перед каждым тегом: те же шаги и скрипты `packaging/`, что в `release-app.yml`, — Linux (полная сборка, AppImage, .deb, .rpm, подпись временным одноразовым ключом), Android (APK arm64 и armeabi-v7a, проверка лицензий нативных библиотек), общие проверки (права на запуск у скриптов, которые вызывает CI; ожидаемые файлы; заметки из тега). Кэши Rust/Flutter/Gradle и собранные libmpv/libsmb2 между запусками сохраняются — цель 10–20 мин без изменений нативных библиотек. Прогресс по этапам и итог «можно выпускать» или что сломалось. Windows и macOS — параллельно `release-app.yml` в режиме `dry_run` на GitHub; тег — только когда прошли обе проверки. Адрес сервера и личные пути в репозиторий не попадают.
   - deps: — · size: M · parallel: yes · веха: M10 · ref: PKG-023, сбой релиза alpha.17
   - done when: на сервере сборки precheck повторяет сбой alpha.17 (скрипт без права на запуск) и падает за минуты; на чистом main проходит; время повторного запуска в PR; порядок выпуска в docs/dev обновлён («precheck → dry_run → тег»); проверка прав на запуск — ещё и в CI hygiene. Сделано: `tools/release/precheck.sh` (этапы general/native/assets/linux/android/assemble в контейнере `precheck.Dockerfile`, кэши в `~/.cache/kinolune-precheck`, `--github` запускает dry run Windows и macOS), `tools/release/check_ci_exec.py` и задание `exec-bits` в Hygiene, порядок выпуска — `docs/dev/release.md`. На сервере: сбой alpha.17 (import-key.sh без права на запуск) пойман за 0 с статической проверкой и тем же «Permission denied» в этапе assemble; первый запуск 17 мин, повторный без изменений 1 мин, с изменением кода ядра и Dart 3 мин.
+- [ ] **PKG-026** Сборка для Linux на ARM (aarch64)
+  - Что: запрос владельца 2026-11-25. Сейчас Linux-сборки только x86_64 (AppImage, .deb, .rpm), macOS уже есть для arm64 и x86_64. Добавить linux-arm64: Rust-ядро под `aarch64-unknown-linux-gnu`, наши LGPL FFmpeg/libmpv и libsmb2 под aarch64 (проверить, что рецепты `tools/ffmpeg` и `libmpv.yml` уже собирают этот таргет, иначе добавить с той же проверкой LGPL/GPL-канарейкой), Flutter `linux-arm64`; задание в `release-app.yml` на ARM-раннере GitHub (`ubuntu-24.04-arm`, бесплатен для публичных репозиториев) без эмуляции; `kinolune-<версия>-aarch64.AppImage`, `.deb` (`arm64`) и `.rpm` (`aarch64`) в релизе и в SHA256SUMS с подписью; APT/DNF-репозитории отдают обе архитектуры; автообновление (PKG-018/022) выбирает файл своей архитектуры; предпроверка `tools/release/precheck.sh` и тест обновления alpha.N → alpha.N+1 на arm64. Kinolune OS под arm64 — отдельной задачей DIST, не здесь.
+  - deps: PKG-022, PKG-025 · size: M · parallel: yes · веха: M10 · ref: запрос владельца 2026-11-25
+  - done when: релиз содержит arm64 AppImage, .deb и .rpm; на ARM-раннере (или Raspberry Pi 5 / ARM-ноутбуке) приложение ставится через `apt`/`dnf`, запускается под Wayland, играет локальный файл и SMB; обновление с прошлой альфы на arm64 проходит; лицензионная проверка без GPL.
 
 ### 3.20. QA — качество, тестовые данные, безопасность
 
@@ -2759,11 +2767,11 @@ project_alpha/
 |---|---|---|---|
 | DEC | 8 | SYNC | 20 |
 | REPO | 15 | SRV | 19 |
-| CI | 12 | MUS | 20 |
+| CI | 13 | MUS | 20 |
 | CORE | 16 | TWI | 40 |
 | NET | 24 | DIST | 33 |
 | LIB | 27 | DSN | 23 |
-| META | 35 | PKG | 25 |
+| META | 35 | PKG | 26 |
 | PLAY | 22 | QA | 19 |
 | PLAY-AND | 10 | DOC | 10 |
 | PLAY-DSK | 9 | LEGAL | 11 |
@@ -2774,4 +2782,4 @@ project_alpha/
 | | | SOC | 7 |
 | | | ECO | 9 |
 | | | BUG | 27 |
-| | | **Всего** | **571** (563 задач + 8 решений владельца) |
+| | | **Всего** | **572** (564 задач + 8 решений владельца) |
