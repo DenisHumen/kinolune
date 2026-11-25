@@ -54,11 +54,11 @@ vm_as() { local u="$1"; shift; ssh "${SSH_OPTS[@]}" -p "${VM_SSH_PORT}" "${u}@12
 vm_put() { scp -q "${SSH_OPTS[@]}" -P "${VM_SSH_PORT}" "$1" "root@127.0.0.1:$2"; }
 
 vm_stop() {
-    local pid i
+    local pid _
     # The pid file belongs to whoever runs QEMU (root in a helper container).
     pid="$("${QEMU_EXEC_ARR[@]}" cat "${W}/qemu.pid" 2>/dev/null)" || return 0
     "${QEMU_EXEC_ARR[@]}" kill "${pid}" 2>/dev/null || true
-    for i in $(seq 1 30); do
+    for _ in $(seq 1 30); do
         "${QEMU_EXEC_ARR[@]}" kill -0 "${pid}" 2>/dev/null || break
         sleep 1
     done
@@ -91,8 +91,8 @@ vm_start() {
 }
 
 wait_ssh() {
-    local i
-    for i in $(seq 1 90); do
+    local _
+    for _ in $(seq 1 90); do
         if vm true 2>/dev/null; then return 0; fi
         sleep 5
     done
@@ -210,6 +210,7 @@ check "/boot is ext4" test "$(vm findmnt -no FSTYPE /boot)" = ext4
 check "ESP is vfat" test "$(vm findmnt -no FSTYPE /boot/efi 2>/dev/null || vm "blkid -s TYPE -o value /dev/nvme0n1p1")" = vfat
 check "partition labels" test "$(vm "lsblk -no PARTLABEL /dev/nvme0n1 | grep -v '^$' | tr '\n' ' '")" = "EFI-SYSTEM boot root kinolune-data "
 check "admin is in wheel" grep -qw wheel <<< "$(vm id -nG admin)"
+# shellcheck disable=SC2016 # a literal "$y$" prefix
 check "admin password is yescrypt" grep -q '^admin:\$y\$' <<< "$(vm getent shadow admin)"
 check "admin logs in with the SSH key" test "$(vm_as admin whoami)" = admin
 check "admin home is owned by admin" test "$(vm stat -c %U /var/home/admin)" = admin
