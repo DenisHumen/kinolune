@@ -167,11 +167,12 @@ mod tests {
         assert_eq!(cache.playing(t0 + Duration::from_secs(14)), 1);
         assert_eq!(cache.playing(t0 + Duration::from_secs(15)), 0);
         // Without `ttl_ms`: the protocol default (15 s).
+        let t1 = t0 + Duration::from_secs(20);
         let mut u = update("tmdb:movie:604", 1_000, "tv");
         u.ttl_ms = None;
-        put(&mut cache, &u, t0);
-        assert_eq!(cache.playing(t0 + Duration::from_secs(14)), 1);
-        assert_eq!(cache.playing(t0 + Duration::from_secs(15)), 0);
+        put(&mut cache, &u, t1);
+        assert_eq!(cache.playing(t1 + Duration::from_secs(14)), 1);
+        assert_eq!(cache.playing(t1 + Duration::from_secs(15)), 0);
     }
 
     #[test]
