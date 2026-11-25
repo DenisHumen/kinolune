@@ -802,10 +802,7 @@ class _DetailsDialog extends StatelessWidget {
             .firstOrNull;
         final auto = n?.autoconnect ?? true;
         return AlertDialog(
-          title: Text(
-        ssid,
-        style: Theme.of(context).textTheme.titleLarge,
-      ),
+          title: Text(ssid, style: Theme.of(context).textTheme.titleLarge),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
