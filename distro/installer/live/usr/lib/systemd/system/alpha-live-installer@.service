@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: MPL-2.0
+# Kinolune OS installer on a console of the live ISO (DIST-007): takes the place of the
+# login prompt on tty1 (and on ttyS0 when it is a kernel console, see the drop-in).
+[Unit]
+Description=Kinolune OS installer on %I
+Documentation=https://github.com/DenisHumen/kinolune/tree/main/distro/installer
+After=systemd-user-sessions.service plymouth-quit-wait.service systemd-vconsole-setup.service
+Conflicts=getty@%i.service serial-getty@%i.service
+Before=getty.target
+ConditionPathExists=/dev/%I
+
+[Service]
+Type=idle
+ExecStart=/usr/libexec/alpha/alpha-live-installer
+Environment=TERM=linux
+StandardInput=tty
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/%I
+TTYReset=yes
+TTYVHangup=yes
+UtmpIdentifier=%I
+Restart=always
+RestartSec=1
+IgnoreSIGPIPE=no
+SendSIGHUP=yes
+
+[Install]
+WantedBy=getty.target

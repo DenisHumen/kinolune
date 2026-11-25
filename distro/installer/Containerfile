@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# Live environment of the Kinolune OS installer ISO (DIST-007).
+# image-builder turns this bootc container into a UEFI live ISO (`generic-iso`) and puts
+# the OS image itself (the "payload") into its containers-storage for an offline install:
+#
+#   distro/scripts/build-iso.sh            # builds the OS image, this image and the ISO
+#
+# See distro/installer/README.md ("Live-ISO") and docs/adr/0169-live-iso.md.
+#
+# Same pinned base as distro/Containerfile on purpose: squashfs stores identical files
+# once, so the payload's base layers cost (almost) nothing on top of this live system.
+# Keep the ARG in sync with distro/Containerfile (build-iso.sh passes the same value).
+ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:d440aea898005f376bbf0bbe06c216abdba68dcdb6dfa5cb0fa246cd03fa8d8a
+
+# alpha-installer: static Go binary built with the Go toolchain of the same base;
+# the module has no third-party dependencies, so the build needs no module proxy.
+FROM ${BASE_IMAGE} AS go-build
+# hadolint ignore=DL3041
+RUN dnf -y install --setopt=install_weak_deps=False golang && dnf clean all
+COPY installer/go.mod /src/installer/go.mod
+COPY installer/cmd/ /src/installer/cmd/
+COPY installer/internal/ /src/installer/internal/
+ARG ALPHA_OS_VERSION=0.0.0-dev
+ENV GOCACHE=/tmp/go-cache GOPATH=/tmp/go
+RUN cd /src/installer && \
+    CGO_ENABLED=0 GOTOOLCHAIN=local GOFLAGS=-trimpath \
+    go build -ldflags="-s -X main.version=${ALPHA_OS_VERSION}" -o /out/alpha-installer ./cmd/alpha-installer
+
+FROM ${BASE_IMAGE}
+
+# What the live system needs:
+#  - ISO tooling image-builder runs from this container (generic-iso contract): shim/grub
+#    cdboot EFI binaries, dracut-live (dmsquash-live), xorriso, squashfs-tools, isomd5sum;
+#  - alpha-installer at run time: sfdisk/wipefs (util-linux), mkfs.*, btrfs, podman, smartctl.
+# hadolint ignore=DL3041
+RUN set -eux; \
+    dnf -y install --setopt=install_weak_deps=False --setopt=tsflags=nodocs \
+        grub2-efi-x64-cdboot grub2-pc-modules shim-x64 dracut-live \
+        xorriso squashfs-tools isomd5sum python3 \
+        util-linux dosfstools e2fsprogs btrfs-progs podman smartmontools kbd kbd-misc nano; \
+    # Firmware the installer never needs (GPU, NPU, audio, WWAN). The installed OS keeps
+    # its own firmware: this only trims the live system.
+    rpm -e --nodeps nvidia-gpu-firmware amd-gpu-firmware intel-gpu-firmware intel-npu-firmware \
+        cirrus-audio-firmware intel-audio-firmware qcom-wwan-firmware tiwilink-firmware || true; \
+    dnf clean all; \
+    rm -rf /var/cache/dnf /var/lib/dnf /var/log/dnf* /var/log/hawkey.log; \
+    # No documentation and no translations of system tools in the live system; man pages
+    # and docs are of no use on an installer console. Our own texts are in the scripts.
+    rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/* /usr/share/gtk-doc; \
+    find /usr/share/locale -mindepth 1 -maxdepth 1 -type d ! -name 'ru*' ! -name 'uk*' ! -name 'en*' \
+        -exec rm -rf {} +; \
+    # generic-iso contract: shim and grub EFI binaries under /boot/efi/EFI/<vendor>.
+    mkdir -p /boot/efi && cp -ra /usr/lib/efi/*/*/EFI /boot/efi
+
+COPY --from=go-build /out/alpha-installer /usr/bin/alpha-installer
+COPY installer/live/ /
+COPY installer/examples/answers.json /usr/share/alpha/installer/answers.example.json
+COPY rootfs/usr/libexec/alpha/alpha-branding /usr/libexec/alpha/alpha-branding
+
+ARG ALPHA_OS_VERSION=0.0.0-dev
+RUN set -eux; \
+    chmod 0755 /usr/libexec/alpha/* /usr/bin/alpha-installer; \
+    # Kinolune OS name everywhere in the live system too (DIST-003), variant "Installer".
+    /usr/libexec/alpha/alpha-branding "${ALPHA_OS_VERSION}"; \
+    sed -i -e 's/^VARIANT=.*/VARIANT="Installer"/' -e 's/^VARIANT_ID=.*/VARIANT_ID=installer/' \
+        -e 's/^PRETTY_NAME=.*/PRETTY_NAME="Kinolune OS '"${ALPHA_OS_VERSION}"' Installer"/' \
+        /usr/lib/os-release; \
+    printf 'ALPHA_OS_VERSION=%s\n' "${ALPHA_OS_VERSION}" > /usr/share/alpha/installer/version; \
+    # Console font with Cyrillic (ru/uk texts on tty1) and a US keymap.
+    printf 'KEYMAP=us\nFONT=LatArCyrHeb-16\n' > /etc/vconsole.conf; \
+    # Our installer owns tty1 (and the serial console when it is the kernel console);
+    # no login prompts there. Other VTs keep getty: Alt+F2 gives a root shell for experts.
+    systemctl enable alpha-live-installer@tty1.service alpha-live-installer@ttyS0.service; \
+    # Fedora 45 draws the VTs with kmscon (kmsconvt@ttyN), which takes over the screen of
+    # tty1 with its own login; the installer needs the plain kernel VT there.
+    systemctl mask getty@tty1.service serial-getty@ttyS0.service kmsconvt@tty1.service; \
+    # Services of an installed bootc system that make no sense on a live ISO.
+    systemctl mask bootloader-update.service bootc-generic-growpart.service \
+        bootc-publish-rhsm-facts.service rpm-ostree-fix-shadow-mode.service \
+        bootc-fetch-apply-updates.timer bootc-fetch-apply-updates.service \
+        systemd-remount-fs.service; \
+    # Root without a password on the live system (local console only: sshd stays off);
+    # /root points into /var, which is empty in a bootc image: create its target.
+    passwd -d root; \
+    mkdir -p "$(realpath /root)"; \
+    systemctl disable sshd.service || true; \
+    # Initramfs that can boot the ISO: dmsquash-live finds the squashfs by its label.
+    kver="$(ls /usr/lib/modules)"; \
+    [ "$(echo "${kver}" | wc -w)" = 1 ] || { echo "expected exactly one kernel, got: ${kver}"; exit 1; }; \
+    env DRACUT_NO_XATTR=1 dracut --force --no-hostonly --reproducible \
+        "/usr/lib/modules/${kver}/initramfs.img" "${kver}"; \
+    rm -rf /var/log/* /var/cache/* /var/tmp/* /tmp/*
+
+LABEL org.opencontainers.image.title="Kinolune OS installer" \
+      org.opencontainers.image.description="Live environment of the Kinolune OS installer ISO, based on Fedora Linux" \
+      org.opencontainers.image.licenses="MPL-2.0" \
+      org.opencontainers.image.source="https://github.com/DenisHumen/kinolune"

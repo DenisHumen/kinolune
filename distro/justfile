@@ -18,6 +18,14 @@ installer-test:
 installer-vm-test:
     tests/vm-install.sh
 
+# Installer ISO: OS image + live installer image -> image-builder generic-iso, size < 1.9 GiB (~30 min)
+iso:
+    scripts/build-iso.sh
+
+# Boot the installer ISO in QEMU/OVMF up to the installer menu (serial console smoke test)
+iso-boot iso:
+    tests/iso-boot.sh {{iso}}
+
 # Update agent (alpha-updated) Go checks: gofmt, vet, tests on a fake bootc
 updated-test:
     cd updated && test -z "$(gofmt -l .)" && go vet ./... && go test -race ./...
