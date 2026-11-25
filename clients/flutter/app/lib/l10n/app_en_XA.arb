@@ -2336,5 +2336,11 @@
   "commonScreenErrorTitle": "[Šóɱéţĥíñĝ ŵéñţ ŵŕóñĝ óñ ţĥíš šçŕééñ··············]",
   "commonScreenErrorMessage": "[Ţĥé éŕŕóŕ íš šáṽéð íñ ţĥé áþþ ļóĝ. Ţŕý áĝáíñ óŕ ĝó ƀáçķ.·······················]",
   "commonScreenErrorRetry": "[Ţŕý áĝáíñ····]",
-  "commonScreenErrorBack": "[Ɓáçķ··]"
+  "commonScreenErrorBack": "[Ɓáçķ··]",
+  "twitchAccountRefresh": "[Ûþðáţé ñáɱé áñð áṽáţáŕ·········]",
+  "settingsTwitchAccountSignedOut": "[Ñóţ šíĝñéð íñ ţó Ţŵíţçĥ··········]",
+  "settingsTwitchAccountSignedOutHint": "[Šíĝñ íñ ţó šéé ļíṽé šţáţúš, ƒóļļóŵš áñð ýóúŕ áṽáţáŕ·····················]",
+  "settingsTwitchAccountSignOut": "[Šíĝñ óúţ····]",
+  "profilesAvatarFromTwitch": "[Åṽáţáŕ ƒŕóɱ Ţŵíţçĥ········]",
+  "profilesAvatarFromTwitchSubtitle": "[Ýóúŕ çóļóúŕ óŕ þíçţúŕé çóɱéš ƀáçķ ŵĥéñ ţĥíš íš óƒƒ óŕ ýóú šíĝñ óúţ óƒ Ţŵíţçĥ·······························]"
 }

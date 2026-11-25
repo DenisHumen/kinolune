@@ -378,7 +378,11 @@ class TwitchService extends ChangeNotifier {
   /// what is cached.
   Future<void> refreshAccount({bool force = false}) async {
     // One fetch at a time; a forced one waits and then asks again.
-    for (var running = _profileFetch; running != null; running = _profileFetch) {
+    for (
+      var running = _profileFetch;
+      running != null;
+      running = _profileFetch
+    ) {
       await running;
       if (!force) return;
     }

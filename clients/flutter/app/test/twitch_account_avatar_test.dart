@@ -164,16 +164,12 @@ void main() {
       expect(twitch.accountProfile, isNull);
       expect(left, '7999');
     });
-
   });
 
   group('profile avatar', () {
     test('set on the active profile, restored after sign-out', () async {
       final profiles = FakeProfiles.demo();
-      final services = await demoServices(
-        twitch: _helix(),
-        profiles: profiles,
-      );
+      final services = await demoServices(twitch: _helix(), profiles: profiles);
       await _signIn(services.twitch);
       final alex = AvatarRef.parse(await _avatar(profiles, 1));
       expect(alex.twitchUserId, '7999');
@@ -208,18 +204,12 @@ void main() {
           ),
         ],
       );
-      final services = await demoServices(
-        twitch: _helix(),
-        profiles: profiles,
-      );
+      final services = await demoServices(twitch: _helix(), profiles: profiles);
       await _signIn(services.twitch);
       expect(await _avatar(profiles, 1), 'photo:holiday');
 
       final kids = FakeProfiles.demo(kidActive: true);
-      final kidServices = await demoServices(
-        twitch: _helix(),
-        profiles: kids,
-      );
+      final kidServices = await demoServices(twitch: _helix(), profiles: kids);
       await _signIn(kidServices.twitch);
       expect(await _avatar(kids, 3), 'icon:1:2');
     });
@@ -238,7 +228,10 @@ void main() {
       );
       final photo = t.widget<RoundPhoto>(find.byType(RoundPhoto));
       expect(photo.url, 'demo:');
-      expect(find.byKey(const ValueKey('profile-avatar-twitch')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('profile-avatar-twitch')),
+        findsOneWidget,
+      );
     });
   });
 

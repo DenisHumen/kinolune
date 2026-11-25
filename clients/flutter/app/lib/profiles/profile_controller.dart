@@ -533,9 +533,7 @@ class ProfileController extends ChangeNotifier {
     final s = store;
     final p = _all.where((e) => e.id == id).firstOrNull;
     if (s == null || p == null || p.avatar == ref) return;
-    await _managed(
-      () => s.updateProfile(id, p.settings.copyWith(avatar: ref)),
-    );
+    await _managed(() => s.updateProfile(id, p.settings.copyWith(avatar: ref)));
     await _reload();
     notifyListeners();
   }
