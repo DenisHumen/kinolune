@@ -6,8 +6,8 @@
 # Maven Central answers bursts from shared GitHub runners with HTTP 429. Gradle
 # retries 429, 408, 5xx and timeouts, but by default only 3 times from 1 s; after
 # that it marks the repository "disabled due to earlier error" and the whole
-# build fails before compiling anything. Here: 7 attempts with exponential
-# backoff from 2 s (2+4+…+64 ≈ 2 min) and longer HTTP timeouts.
+# build fails before compiling anything. Here: 8 attempts with exponential
+# backoff from 2 s (2+4+…+128 ≈ 4 min worst case) and longer HTTP timeouts.
 #
 # Written to the Gradle user home (~/.gradle/gradle.properties), so it applies
 # to the Flutter wrapper, the AAR build and every included build, and never
@@ -29,11 +29,9 @@ fi
 
 {
   echo '# CI-013 network: retries with backoff and longer timeouts'
-  # Current names (NetworkOperationBackOffAndRetry; the wrappers here are 9.x).
-  echo 'systemProp.org.gradle.internal.network.retry.max.attempts=7'
-  echo 'systemProp.org.gradle.internal.network.retry.initial.backOff=2000'
-  # Older names, for any build still on an older wrapper.
-  echo 'systemProp.org.gradle.internal.repository.max.retries=7'
+  # Dependency resolution (ErrorHandlingModuleComponentRepository): attempts
+  # before the repository is disabled, and the first pause (doubled each time).
+  echo 'systemProp.org.gradle.internal.repository.max.tentatives=8'
   echo 'systemProp.org.gradle.internal.repository.initial.backoff=2000'
   echo 'systemProp.org.gradle.internal.http.connectionTimeout=60000'
   echo 'systemProp.org.gradle.internal.http.socketTimeout=120000'
