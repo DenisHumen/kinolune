@@ -42,9 +42,9 @@ class DiagnosticsExport {
     required this.shownPath,
     required this.name,
     required this.issueUrl,
-    String? folder,
+    this.savedFolder,
     this.shareUri,
-  }) : _folder = folder;
+  });
 
   /// The zip on disk.
   final String path;
@@ -53,13 +53,14 @@ class DiagnosticsExport {
   final String shownPath;
   final String name;
 
-  final String? _folder;
+  /// The folder the report was written to; null on Android (Downloads).
+  final String? savedFolder;
 
   /// The folder the report is in, as the user sees it (BUG-024): with the
   /// system's separators (`C:\Users\…\Downloads` on Windows), `Download`
   /// on Android.
   String get folder {
-    final f = _folder;
+    final f = savedFolder;
     if (f != null) return f;
     final cut = shownPath.lastIndexOf(RegExp(r'[/\\]'));
     return cut <= 0 ? shownPath : shownPath.substring(0, cut);
@@ -373,7 +374,7 @@ class Diagnostics extends ChangeNotifier {
         shownPath: shown,
         name: name,
         issueUrl: Uri.parse(url),
-        folder: folder,
+        savedFolder: folder,
         shareUri: shareUri,
       );
     } finally {
