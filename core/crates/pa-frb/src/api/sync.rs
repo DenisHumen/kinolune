@@ -807,6 +807,14 @@ impl CoreSync {
             .into())
     }
 
+    /// Own changes no other device has acknowledged yet (the LAN outbox):
+    /// «N изменений ждут на этом устройстве» while a sync channel is down
+    /// (UI-053). Folder sync has its own count in [`CoreFolderSync::pending`].
+    pub fn outbox_pending(&self) -> SyncResult<i64> {
+        let n = self.catalog.outbox_len().map_err(catalog_error)?;
+        Ok(i64::try_from(n).unwrap_or(i64::MAX))
+    }
+
     /// The user picks the source whose folder syncs this library with
     /// the other devices (`None` turns it off) and a first round runs at
     /// once. The choice stays until [`Self::set_folder_sync_auto`]. Works

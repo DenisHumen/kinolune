@@ -28,6 +28,86 @@ Progress pr(int pos, int dur) => Progress(
 );
 
 void main() {
+  group('showContinueTarget', () {
+    final e1 = ep('e1', 1, 1);
+    final e2 = ep('e2', 1, 2);
+    final e3 = ep('e3', 1, 3);
+    final e4 = ep('e4', 1, 4);
+    Progress at(String id, int pos, int minute, {bool watched = false}) =>
+        Progress(
+          itemId: id,
+          positionMs: pos,
+          durationMs: 120000,
+          updatedAt: DateTime(2026, 11, 21, 12, minute),
+          watched: watched,
+        );
+    List<ShowEpisode> show(Map<String, Progress> progress) => [
+      for (final e in [e1, e2, e3, e4])
+        ShowEpisode(item: e, progress: progress[e.id]),
+    ];
+    String? id(ShowContinueTarget? t) => t?.episode.item.id;
+
+    test('nothing played: the first episode from the start', () {
+      final t = showContinueTarget(show({}));
+      expect(id(t), 'e1');
+      expect(t!.resume, isFalse);
+      expect(showContinueTarget(const []), isNull);
+    });
+
+    test('a started episode resumes', () {
+      final t = showContinueTarget(
+        show({
+          'e1': at('e1', 120000, 1, watched: true),
+          'e2': at('e2', 60000, 2),
+        }),
+      );
+      expect(id(t), 'e2');
+      expect(t!.resume, isTrue);
+    });
+
+    test('after a finished episode: the next one', () {
+      final t = showContinueTarget(
+        show({'e3': at('e3', 120000, 3, watched: true)}),
+      );
+      expect(id(t), 'e4');
+      expect(t!.resume, isFalse);
+    });
+
+    // BUG-020: Space at the end restarted E3, which saved a few seconds
+    // over it; E3 stays watched, «Продолжить» goes to E4.
+    test('a stray small position over a watched episode: the next one', () {
+      for (final pos in [1000, 3000, 6000, 30000]) {
+        final t = showContinueTarget(
+          show({
+            'e2': at('e2', 120000, 2, watched: true),
+            'e3': at('e3', pos, 3, watched: true),
+          }),
+        );
+        expect(id(t), 'e4', reason: 'E3 at $pos ms');
+        expect(t!.resume, isFalse);
+      }
+    });
+
+    test('the next one resumes from its own position', () {
+      final t = showContinueTarget(
+        show({
+          'e3': at('e3', 6000, 4, watched: true),
+          'e4': at('e4', 50000, 3),
+        }),
+      );
+      expect(id(t), 'e4');
+      expect(t!.resume, isTrue);
+    });
+
+    test('the last episode watched and started again resumes', () {
+      final t = showContinueTarget(
+        show({'e4': at('e4', 30000, 4, watched: true)}),
+      );
+      expect(id(t), 'e4');
+      expect(t!.resume, isTrue);
+    });
+  });
+
   test('resumePositionMs follows the 2 %..95 % window', () {
     expect(resumePositionMs(null), 0);
     expect(resumePositionMs(pr(50000, 100000)), 50000);
