@@ -280,7 +280,11 @@ fn show_folder(rel: &str) -> String {
 pub(crate) fn local_path(uri: &str, rel: &str) -> Option<String> {
     let root = uri::file_uri_to_path(uri)?;
     // BUG-022: one name at a time, so Windows gets backslashes throughout.
-    Some(pa_vfs::host::join_relative(&root, rel).to_string_lossy().into_owned())
+    Some(
+        pa_vfs::host::join_relative(&root, rel)
+            .to_string_lossy()
+            .into_owned(),
+    )
 }
 
 /// `files.path` is a `VfsPath` (`/Movies/x.mkv`); items carry it without the

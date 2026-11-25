@@ -242,7 +242,8 @@ impl Offline {
     /// folder.
     pub fn set_folder(&self, dir: &Path) -> Result<(), Error> {
         // BUG-022: the app may pass `C:\Users\me\Kinolune/downloads/offline`.
-        let dir = &pa_vfs::host::native(dir.to_path_buf());
+        let dir = pa_vfs::host::native(dir.to_path_buf());
+        let dir = dir.as_path();
         if let Ok(current) = self.inner.storage.target(TARGET) {
             if current.path == dir {
                 return Ok(());

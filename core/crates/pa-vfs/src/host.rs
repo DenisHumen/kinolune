@@ -101,7 +101,10 @@ mod tests {
             r"C:\Users\me\Kinolune\downloads\offline"
         );
         // UNC share mounted as a local folder.
-        assert_eq!(native_separators_for("//nas/media/Films", true), r"\\nas\media\Films");
+        assert_eq!(
+            native_separators_for("//nas/media/Films", true),
+            r"\\nas\media\Films"
+        );
     }
 
     #[test]
@@ -123,7 +126,10 @@ mod tests {
             ),
             r"C:\Users\me\library\Movies\Charge (2022)\Charge (2022) - part1.mkv"
         );
-        assert_eq!(join_relative_for(r"C:\", "Movies/a.mkv", true), r"C:\Movies\a.mkv");
+        assert_eq!(
+            join_relative_for(r"C:\", "Movies/a.mkv", true),
+            r"C:\Movies\a.mkv"
+        );
         assert_eq!(join_relative_for("C:/lib", "", true), r"C:\lib");
     }
 
@@ -149,12 +155,24 @@ mod tests {
     fn windows_host_paths() {
         let root = host_path("C:/Users/me/library");
         assert_eq!(root.to_str(), Some(r"C:\Users\me\library"));
-        let file = join_relative(Path::new("C:/Users/me/library"), "/Movies/Charge (2022)/a.mkv");
-        assert_eq!(file.to_str(), Some(r"C:\Users\me\library\Movies\Charge (2022)\a.mkv"));
+        let file = join_relative(
+            Path::new("C:/Users/me/library"),
+            "/Movies/Charge (2022)/a.mkv",
+        );
+        assert_eq!(
+            file.to_str(),
+            Some(r"C:\Users\me\library\Movies\Charge (2022)\a.mkv")
+        );
         // Same file as the mixed form the old code produced: an existing
         // library keeps matching its files.
-        assert_eq!(file, PathBuf::from(r"C:/Users/me/library\Movies/Charge (2022)/a.mkv"));
+        assert_eq!(
+            file,
+            PathBuf::from(r"C:/Users/me/library\Movies/Charge (2022)/a.mkv")
+        );
         let downloads = join_relative(Path::new(r"C:\Users\me\Kinolune/downloads"), "offline");
-        assert_eq!(downloads.to_str(), Some(r"C:\Users\me\Kinolune\downloads\offline"));
+        assert_eq!(
+            downloads.to_str(),
+            Some(r"C:\Users\me\Kinolune\downloads\offline")
+        );
     }
 }
