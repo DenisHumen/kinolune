@@ -4,7 +4,7 @@
 
 Аудиодекодер `FfmpegAudioRenderer` для плеера Media3 на Android (TrueHD, DTS/DTS-HD, E-AC-3, AC-3 и всё, что
 умеет FFmpeg) поверх **нашего LGPL FFmpeg** из [`tools/ffmpeg`](../ffmpeg/README.md). Решение и обоснование —
-ADR-NNNN.
+ADR-0163.
 
 | Файл | Назначение |
 |---|---|

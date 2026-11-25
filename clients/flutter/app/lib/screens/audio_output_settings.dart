@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// «Звук: авто / всегда декодировать» (PLAY-AND-004, ADR-NNNN): Dolby and
+// «Звук: авто / всегда декодировать» (PLAY-AND-004, ADR-0163): Dolby and
 // DTS go untouched to a receiver that takes them over HDMI, or are always
 // decoded to PCM. Android only: there the player asks the HDMI output what
 // it takes (desktop passthrough is not wired yet).

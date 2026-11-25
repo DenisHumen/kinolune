@@ -533,7 +533,7 @@ PLAY-AND-005, ADR-0147. Нужны: ТВ-приставка с HDMI (Chromecast 
 
 ### Звук: passthrough и декодирование (Android)
 
-PLAY-AND-004, ADR-NNNN. Нужны: ТВ-приставка (Nvidia Shield, Chromecast with Google TV) с AV-ресивером или саундбаром по HDMI/eARC, который показывает формат на экране или дисплее; телефон или приставка без passthrough (встроенные динамики, обычный телевизор без ARC); файлы с дорожками Dolby TrueHD + Atmos, E-AC-3 + Atmos (JOC), AC-3 5.1, DTS, DTS-HD MA. Формат смотреть на дисплее ресивера и в статистике плеера («Путь звука»). Плеер приложения 0.x — media_kit (mpv `audio-spdif`), плеер Media3 — временное приложение с `pa_player_android` (как в разделах выше). Ручной порядок — [android-audio-passthrough-checklist.md](android-audio-passthrough-checklist.md).
+PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chromecast with Google TV) с AV-ресивером или саундбаром по HDMI/eARC, который показывает формат на экране или дисплее; телефон или приставка без passthrough (встроенные динамики, обычный телевизор без ARC); файлы с дорожками Dolby TrueHD + Atmos, E-AC-3 + Atmos (JOC), AC-3 5.1, DTS, DTS-HD MA. Формат смотреть на дисплее ресивера и в статистике плеера («Путь звука»). Плеер приложения 0.x — media_kit (mpv `audio-spdif`), плеер Media3 — временное приложение с `pa_player_android` (как в разделах выше). Ручной порядок — [android-audio-passthrough-checklist.md](android-audio-passthrough-checklist.md).
 
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
 |---|---|---|---|---|---|---|---|---|---|

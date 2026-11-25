@@ -2,7 +2,7 @@
 
 # Чек-лист: passthrough звука на Android (PLAY-AND-004)
 
-Строки каталога — PLAY-170…174 и SET-160 ([test-catalog.md](test-catalog.md)), решение — ADR-NNNN. Займёт 20–30 минут.
+Строки каталога — PLAY-170…174 и SET-160 ([test-catalog.md](test-catalog.md)), решение — ADR-0163. Займёт 20–30 минут.
 
 ## Что нужно
 

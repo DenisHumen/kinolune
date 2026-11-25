@@ -10,7 +10,7 @@ import androidx.media3.exoplayer.audio.ForwardingAudioSink
 import dev.projectalpha.audio.AudioOutputMode
 
 /**
- * «Звук» for the Media3 engine (PLAY-AND-004, ADR-NNNN); read by the audio sink on the playback thread, so a change
+ * «Звук» for the Media3 engine (PLAY-AND-004, ADR-0163); read by the audio sink on the playback thread, so a change
  * applies from the next audio format (the next item, track or seek that re-creates the `AudioTrack`).
  */
 class AudioOutputPolicy {

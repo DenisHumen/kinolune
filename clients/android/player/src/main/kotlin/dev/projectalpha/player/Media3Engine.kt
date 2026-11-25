@@ -66,7 +66,7 @@ import dev.projectalpha.display.FrameRateMatch
  * - HDR, Dolby Vision and frame rate (PLAY-AND-005, ADR-0147): [setDisplayOptions] sets Media3's seamless
  *   `Surface.setFrameRate` and native DV vs the base layer ([DynamicRangePolicy]); [onVideoFormat] tells the window
  *   owner the video's rate and size for the display mode switch (`DisplayModeMatcher`).
- * - Sound (PLAY-AND-004, ADR-NNNN): passthrough of AC-3/E-AC-3/TrueHD/DTS by the HDMI `AudioCapabilities`, the FFmpeg
+ * - Sound (PLAY-AND-004, ADR-0163): passthrough of AC-3/E-AC-3/TrueHD/DTS by the HDMI `AudioCapabilities`, the FFmpeg
  *   extension for what the device cannot decode, «всегда декодировать» ([setAudioOutputMode]); the stats report
  *   what the `AudioTrack` got ([audioBitstream]).
  *

@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Звук на Android — passthrough по HDMI и FFmpeg-расширение Media3
+# ADR-0163: Звук на Android — passthrough по HDMI и FFmpeg-расширение Media3
 
 - **Статус:** Принят
 - **Дата:** 2026-11-25
