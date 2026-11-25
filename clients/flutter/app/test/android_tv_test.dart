@@ -76,7 +76,7 @@ void main() {
         'kinolune://item/a/b',
         'kinolune://search?q=%20',
         'kinolune://other/1',
-        'kinolune://twitch/live/x',
+        'kinolune://twitch/clip/x',
       ]) {
         expect(AppLink.parse(bad), isNull, reason: bad);
       }

@@ -168,9 +168,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
     final meta = [
       if (item.year != null) '${item.year}',
-      formatRuntime(l, details.runtimeMs ?? item.durationMs),
+      // UI-056: a started movie «всего 2 ч 28 мин · осталось 40 мин».
+      if (progress != null)
+        formatMovieProgress(
+          l,
+          progress,
+          totalMs: details.runtimeMs ?? item.durationMs,
+        )
+      else
+        formatRuntime(l, details.runtimeMs ?? item.durationMs),
       if (details.genres.isNotEmpty) details.genres.take(3).join(', '),
-      if (progress != null) formatRemaining(l, progress),
     ].where((s) => s.isNotEmpty).join('  ·  ');
     final badges = techBadges(details.tech, _defaultVersion);
 
