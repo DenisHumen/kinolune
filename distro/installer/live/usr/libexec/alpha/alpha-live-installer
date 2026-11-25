@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MPL-2.0
+# Text-mode entry of the Kinolune OS installer ISO (DIST-007). Runs on tty1 (and on the
+# serial console) instead of a login prompt, see alpha-live-installer@.service.
+#
+# Until the full-screen installer (TUI, DIST-006) exists, this menu drives
+# `alpha-installer` with an answer file: show disks, find or write the file, check the
+# plan, install. Everything else (shell, reboot) is one key away.
+set -uo pipefail
+
+VERSION="$(sed -n 's/^ALPHA_OS_VERSION=//p' /usr/share/alpha/installer/version 2>/dev/null)"
+EXAMPLE=/usr/share/alpha/installer/answers.example.json
+DOCS=https://github.com/DenisHumen/kinolune/tree/main/distro/installer
+ANSWERS="${ALPHA_ANSWERS:-/root/answers.json}"
+MEDIA_DIR=/run/alpha-live/media
+LOCK=/run/alpha-live/install.lock
+LANG_FILE=/run/alpha-live/language
+mkdir -p /run/alpha-live "$(realpath /root 2>/dev/null || echo /root)"
+export LANG=C.UTF-8
+
+# --- texts: en, uk, ru ---------------------------------------------------------------------
+declare -A T
+t() { printf '%s' "${T[${UI_LANG}.$1]:-${T[en.$1]}}"; }
+
+T[en.intro]="The full-screen installer is coming in the next version. For now Kinolune OS is
+installed from an answer file: a small JSON file with the disk, host name, user and
+network. Example: ${EXAMPLE}
+Field reference: ${DOCS}"
+T[uk.intro]="Повноекранний інсталятор з'явиться в наступній версії. Поки що Kinolune OS
+встановлюється за файлом відповідей: невеликий JSON із диском, ім'ям хоста, користувачем
+і мережею. Приклад: ${EXAMPLE}
+Опис полів: ${DOCS}"
+T[ru.intro]="Полноэкранный установщик появится в следующей версии. Пока Kinolune OS
+ставится по файлу ответов: небольшой JSON с диском, именем хоста, пользователем и сетью.
+Пример: ${EXAMPLE}
+Описание полей: ${DOCS}"
+T[en.title]="installer"; T[uk.title]="інсталятор"; T[ru.title]="установщик"
+T[en.answers]="Answer file"; T[uk.answers]="Файл відповідей"; T[ru.answers]="Файл ответов"
+T[en.none]="not chosen yet"; T[uk.none]="ще не вибрано"; T[ru.none]="ещё не выбран"
+T[en.m1]="Show disks"; T[uk.m1]="Показати диски"; T[ru.m1]="Показать диски"
+T[en.m2]="Find an answer file on a USB stick (kinolune-answers.json or answers.json)"
+T[uk.m2]="Знайти файл відповідей на флешці (kinolune-answers.json або answers.json)"
+T[ru.m2]="Найти файл ответов на флешке (kinolune-answers.json или answers.json)"
+T[en.m3]="Write an answer file from the example (nano editor)"
+T[uk.m3]="Написати файл відповідей із прикладу (редактор nano)"
+T[ru.m3]="Написать файл ответов из примера (редактор nano)"
+T[en.m4]="Check the answer file: installation plan, nothing is written"
+T[uk.m4]="Перевірити файл відповідей: план встановлення, нічого не записується"
+T[ru.m4]="Проверить файл ответов: план установки, ничего не записывается"
+T[en.m5]="Install Kinolune OS from the answer file"
+T[uk.m5]="Встановити Kinolune OS за файлом відповідей"
+T[ru.m5]="Установить Kinolune OS по файлу ответов"
+T[en.m6]="Command line (type exit to come back)"
+T[uk.m6]="Командний рядок (exit — повернутися)"
+T[ru.m6]="Командная строка (exit — вернуться)"
+T[en.m7]="Reboot"; T[uk.m7]="Перезавантажити"; T[ru.m7]="Перезагрузить"
+T[en.m8]="Power off"; T[uk.m8]="Вимкнути"; T[ru.m8]="Выключить"
+T[en.choose]="Choose an action [1-8]: "
+T[uk.choose]="Виберіть дію [1-8]: "
+T[ru.choose]="Выберите действие [1-8]: "
+T[en.enter]="Press Enter to go back to the menu"
+T[uk.enter]="Натисніть Enter, щоб повернутися до меню"
+T[ru.enter]="Нажмите Enter, чтобы вернуться в меню"
+T[en.nofile]="No answer file yet: find one on a USB stick (2) or write one (3)."
+T[uk.nofile]="Файлу відповідей ще немає: знайдіть його на флешці (2) або напишіть (3)."
+T[ru.nofile]="Файла ответов ещё нет: найдите его на флешке (2) или напишите (3)."
+T[en.found]="Found and copied to"; T[uk.found]="Знайдено й скопійовано в"; T[ru.found]="Найден и скопирован в"
+T[en.notfound]="No answer file found on the connected drives."
+T[uk.notfound]="На підключених дисках файл відповідей не знайдено."
+T[ru.notfound]="На подключённых дисках файл ответов не найден."
+T[en.which]="Several files found, enter the number: "
+T[uk.which]="Знайдено кілька файлів, введіть номер: "
+T[ru.which]="Найдено несколько файлов, введите номер: "
+T[en.busy]="An installation is already running on another console."
+T[uk.busy]="Встановлення вже йде на іншій консолі."
+T[ru.busy]="Установка уже идёт на другой консоли."
+T[en.done]="Kinolune OS is installed. Remove the USB stick and press Enter to reboot."
+T[uk.done]="Kinolune OS встановлено. Вийміть флешку й натисніть Enter для перезавантаження."
+T[ru.done]="Kinolune OS установлена. Извлеките флешку и нажмите Enter для перезагрузки."
+T[en.failed]="The installation did not finish, see the messages above. The disk may be partly written."
+T[uk.failed]="Встановлення не завершилося, див. повідомлення вище. Диск міг бути частково записаний."
+T[ru.failed]="Установка не завершилась, см. сообщения выше. Диск мог быть частично записан."
+T[en.payload]="Warning: the OS image is missing from this ISO, offline installation is impossible."
+T[uk.payload]="Увага: образу ОС немає на цьому ISO, офлайн-встановлення неможливе."
+T[ru.payload]="Внимание: образа ОС нет на этом ISO, офлайн-установка невозможна."
+
+pause() { printf '\n%s ' "$(t enter)"; read -r _ || true; }
+
+choose_language() {
+    if [[ -s "${LANG_FILE}" ]]; then UI_LANG="$(cat "${LANG_FILE}")"; return; fi
+    clear 2>/dev/null || true
+    printf '\n  Kinolune OS %s\n\n' "${VERSION}"
+    printf '  1) English\n  2) Українська\n  3) Русский\n\n'
+    printf 'Language / Мова / Язык [1-3]: '
+    local c
+    read -r c || c=1
+    case "${c}" in 2) UI_LANG=uk ;; 3) UI_LANG=ru ;; *) UI_LANG=en ;; esac
+    echo "${UI_LANG}" > "${LANG_FILE}"
+}
+
+# The device the live system booted from (never offered for answer files or installs).
+boot_device() {
+    local src
+    src="$(findmnt -no SOURCE /run/initramfs/live 2>/dev/null)" || return 0
+    lsblk -no PKNAME "${src}" 2>/dev/null | head -n1
+}
+
+find_answers() {
+    local boot dev fstype mnt f found=()
+    boot="$(boot_device)"
+    mkdir -p "${MEDIA_DIR}"
+    while read -r dev fstype; do
+        [[ -n "${fstype}" && "${fstype}" != swap && "${fstype}" != iso9660 && "${fstype}" != squashfs ]] || continue
+        [[ -z "${boot}" || "$(lsblk -no PKNAME "${dev}" 2>/dev/null | head -n1)" != "${boot}" ]] || continue
+        findmnt -rno TARGET -S "${dev}" >/dev/null 2>&1 && continue
+        mnt="${MEDIA_DIR}/$(basename "${dev}")"
+        mkdir -p "${mnt}"
+        mount -o ro "${dev}" "${mnt}" 2>/dev/null || { rmdir "${mnt}"; continue; }
+        for f in kinolune-answers.json answers.json; do
+            [[ -f "${mnt}/${f}" ]] && found+=("${mnt}/${f}")
+        done
+    done < <(lsblk -rpno NAME,FSTYPE)
+    if (( ${#found[@]} == 0 )); then
+        echo "$(t notfound)"
+    else
+        local pick=0 i
+        if (( ${#found[@]} > 1 )); then
+            for i in "${!found[@]}"; do printf '  %d) %s\n' "$((i + 1))" "${found[$i]}"; done
+            printf '%s' "$(t which)"
+            read -r i || i=1
+            [[ "${i}" =~ ^[0-9]+$ ]] && (( i >= 1 && i <= ${#found[@]} )) && pick=$((i - 1))
+        fi
+        install -m 0600 "${found[$pick]}" "${ANSWERS}"
+        echo "$(t found) ${ANSWERS}: ${found[$pick]}"
+    fi
+    for mnt in "${MEDIA_DIR}"/*; do
+        [[ -d "${mnt}" ]] && { umount "${mnt}" 2>/dev/null; rmdir "${mnt}" 2>/dev/null; }
+    done
+    return 0
+}
+
+need_answers() {
+    [[ -s "${ANSWERS}" ]] && return 0
+    echo "$(t nofile)"
+    return 1
+}
+
+do_install() {
+    need_answers || return 0
+    exec 9> "${LOCK}"
+    if ! flock -n 9; then echo "$(t busy)"; return 0; fi
+    # alpha-installer shows the plan and asks to type the disk name before wiping it.
+    if alpha-installer install --answers "${ANSWERS}"; then
+        printf '\n%s ' "$(t done)"
+        read -r _ || true
+        systemctl reboot
+    else
+        echo
+        echo "$(t failed)"
+    fi
+    exec 9>&-
+}
+
+payload_check() {
+    # The offline OS image (--bootc-installer-payload-ref) lives in containers-storage.
+    [[ -n "$(podman images -q 2>/dev/null)" ]] || echo "$(t payload)"
+}
+
+choose_language
+while true; do
+    clear 2>/dev/null || true
+    printf '\n  Kinolune OS %s - %s\n\n' "${VERSION}" "$(t title)"
+    printf '%s\n\n' "$(t intro)"
+    payload_check
+    if [[ -s "${ANSWERS}" ]]; then a="${ANSWERS}"; else a="$(t none)"; fi
+    printf '%s: %s\n\n' "$(t answers)" "${a}"
+    for i in 1 2 3 4 5 6 7 8; do printf '  %d) %s\n' "${i}" "$(t "m${i}")"; done
+    printf '\n%s' "$(t choose)"
+    read -r choice || { sleep 1; continue; }
+    echo
+    case "${choice}" in
+        1) alpha-installer disks --all; pause ;;
+        2) find_answers; pause ;;
+        3) [[ -s "${ANSWERS}" ]] || install -m 0600 "${EXAMPLE}" "${ANSWERS}"
+           nano "${ANSWERS}" ;;
+        4) need_answers && alpha-installer install --answers "${ANSWERS}" --dry-run; pause ;;
+        5) do_install; pause ;;
+        6) bash -l || true ;;
+        7) systemctl reboot ;;
+        8) systemctl poweroff ;;
+    esac
+done
