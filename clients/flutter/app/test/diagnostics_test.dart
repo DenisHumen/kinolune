@@ -353,10 +353,7 @@ void main() {
         ),
         'Fedora Linux 41 (kernel 6.11.4-301.fc41.x86_64)',
       );
-      expect(
-        friendlyOsVersion('linux', '6.1.0 #1'),
-        'Linux (kernel 6.1.0)',
-      );
+      expect(friendlyOsVersion('linux', '6.1.0 #1'), 'Linux (kernel 6.1.0)');
       expect(friendlyOsVersion('android', '5.15.0'), '5.15.0');
     });
 
@@ -391,10 +388,10 @@ void main() {
   });
 
   test('desktop reveal commands', () {
-    expect(
-      revealCommand('windows', r'C:\Users\A\Downloads\r.zip', 'x'),
-      ['explorer.exe', r'/select,C:\Users\A\Downloads\r.zip'],
-    );
+    expect(revealCommand('windows', r'C:\Users\A\Downloads\r.zip', 'x'), [
+      'explorer.exe',
+      r'/select,C:\Users\A\Downloads\r.zip',
+    ]);
     expect(revealCommand('macos', '/Users/a/Downloads/r.zip', 'x'), [
       'open',
       '-R',

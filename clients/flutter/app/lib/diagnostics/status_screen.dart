@@ -312,11 +312,7 @@ List<(String, String, String)> statusVersionRows(
       l.statusVersionSqlite,
       engines['sqlite'] ?? l.statusVersionUnknown,
     ),
-    (
-      'platform',
-      l.statusVersionPlatform,
-      currentOsVersion(),
-    ),
+    ('platform', l.statusVersionPlatform, currentOsVersion()),
   ];
 }
 

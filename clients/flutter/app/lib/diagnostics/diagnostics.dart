@@ -400,8 +400,7 @@ Map<String, String> diagnosticsVersions(BuildInfo b) {
   final os = currentOsVersion();
   return {
     'app': '${b.appVersion} (${b.flavor})',
-    if (b.capabilities.isNotEmpty)
-      'app_capabilities': b.capabilities.join(' '),
+    if (b.capabilities.isNotEmpty) 'app_capabilities': b.capabilities.join(' '),
     if (b.coreVersion != null)
       'core': '${b.coreVersion} (${b.coreFlavor ?? '?'})',
     if (b.coreCapabilities?.isNotEmpty ?? false)
@@ -433,11 +432,7 @@ String diagnosticsTimeZone(DateTime t) {
 /// * macOS: `Version 15.1 (Build 24B83)` → `macOS 15.1 (Build 24B83)`.
 /// * Linux: the distribution from `/etc/os-release` ([linuxOsRelease]) and
 ///   the kernel: `Ubuntu 24.04.1 LTS (kernel 6.8.0-49-generic)`.
-String friendlyOsVersion(
-  String os,
-  String version, {
-  String? linuxOsRelease,
-}) {
+String friendlyOsVersion(String os, String version, {String? linuxOsRelease}) {
   final v = version.trim();
   switch (os) {
     case 'windows':

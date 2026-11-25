@@ -196,11 +196,7 @@ Future<void> showDiagnosticsSaved(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: theme.textTheme.labelMedium),
-          SelectableText(
-            value,
-            key: key,
-            style: theme.textTheme.bodyMedium,
-          ),
+          SelectableText(value, key: key, style: theme.textTheme.bodyMedium),
         ],
       ),
     );
