@@ -88,9 +88,19 @@ check_services() {
     for svc in alpha-media alpha-admin alpha-updated smb wsdd avahi-daemon firewalld chronyd; do
         vm systemctl is-active --quiet "${svc}" || die "service ${svc} is not active"
     done
-    for port in 8487 80 7091; do
+    for port in 8487 80; do
         vm "curl -fsS http://127.0.0.1:${port}/health" >/dev/null || die "no /health on :${port}"
     done
+    # alpha-updated (DIST-009) answers only on its unix socket, root:alpha-admin 0660.
+    vm "curl -fsS --unix-socket /run/alpha-updated/api.sock http://localhost/healthz" >/dev/null \
+        || die "alpha-updated does not answer on its socket"
+    vm "curl -fsS --unix-socket /run/alpha-updated/api.sock http://localhost/v1/status | grep -q '\"booted\"'" \
+        || die "alpha-updated status has no booted deployment"
+    [[ "$(vm stat -c '%a %U %G' /run/alpha-updated/api.sock)" == "660 root alpha-admin" ]] \
+        || die "alpha-updated socket permissions are wrong"
+    # This scenario drives bootc by hand: keep the agent from checking or
+    # downloading at the same time (it starts again on the next boot).
+    vm systemctl stop alpha-updated.service
     vm "ss -ltn | grep -q ':445 '" || die "smbd is not listening on 445"
     [[ "$(vm firewall-cmd --get-default-zone)" == home ]] || die "firewalld default zone is not home"
     vm "systemctl is-enabled bootc-fetch-apply-updates.timer | grep -qx masked" \

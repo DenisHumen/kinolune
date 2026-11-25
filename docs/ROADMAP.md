@@ -1655,10 +1655,10 @@ project_alpha/
   - Что: OVMF с Secure Boot и swtpm; установка по файлу ответов на виртуальный NVMe и 3 HDD → проверки по SSH (`bootc status`, health-эндпоинты, `smbclient`).
   - deps: DIST-007 · size: M · parallel: yes · веха: M8 · ref: 05 §6.2 (test)
   - done when: сценарий зелёный на каждом PR в `distro/`.
-- [ ] **DIST-009** `alpha-updated`: агент обновлений
+- [x] **DIST-009** `alpha-updated`: агент обновлений
   - Что: check, download-only, apply, rollback через bootc; статус `bootc status --format=json`; API на unix-сокете (GET и POST update, rollback, настройки channel, auto и окна обслуживания); отключение `bootc-fetch-apply-updates.timer`.
   - deps: DIST-002 · size: M · parallel: yes · веха: M8 · ref: 05 §4.1–4.2
-  - done when: go-тесты на моке bootc; ручная проверка на VM.
+  - done when: go-тесты на моке bootc; ручная проверка на VM. Сделано: Go-демон `distro/updated` (только stdlib): check / `--download-only` / `--from-downloaded` + reboot / `switch` канала / rollback, статус из `bootc status --format=json`; API на `/run/alpha-updated/api.sock` (`root:alpha-admin 0660`, socket-юнит, аудит по `SO_PEERCRED`); настройки channel / auto / окно в `/var/lib/alpha/updated`; планировщик окна с вето медиасервера (`GET https://127.0.0.1:8487/api/v1/system/activity`, SRV-019, пин SHA-256 сертификата сервера; сомнение = отложить); таймер bootc замаскирован; тесты на fake bootc и через сокет; ADR-0164. Ручная проверка на VM — ожидает (чек-лист в `distro/updated/README.md`).
 - [ ] **DIST-010** Снапшоты `/var` и откат состояния
   - Что: read-only снапшот `@var` перед apply, хранение 3 последних, маркер для отката `@var` при откате ОС; совместимость с expand→contract миграциями (LIB-002).
   - deps: DIST-009, LIB-002 · size: M · parallel: yes · веха: M8 · ref: 05 §4.2 п.6, §2.4

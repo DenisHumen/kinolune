@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
-# Go checks for the NAS OS installer (DIST-004+): gofmt, vet, unit tests on
-# recorded lsblk/udev fixtures. Nothing here touches real disks.
+# Go checks for the NAS OS Go modules: the installer (DIST-004+, unit tests on
+# recorded lsblk/udev fixtures) and the update agent alpha-updated (DIST-009,
+# tests on a fake bootc). Nothing here touches real disks or bootc.
 
 name: Distro Go
 
@@ -12,11 +13,13 @@ on:
     types: [opened, reopened, ready_for_review]
     paths:
       - "distro/installer/**"
+      - "distro/updated/**"
       - ".github/workflows/distro-go.yml"
   push:
     branches: [main]
     paths:
       - "distro/installer/**"
+      - "distro/updated/**"
 
 permissions:
   contents: read
@@ -40,3 +43,22 @@ jobs:
         run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - run: go vet ./...
       - run: go test ./...
+
+  updated:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: distro/updated
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: distro/updated/go.mod
+          cache-dependency-path: distro/updated/go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - run: go test -race ./...

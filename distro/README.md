@@ -18,16 +18,18 @@
 | `tests/signature-policy.sh` | DIST-002: устройство отклоняет неподписанный образ |
 | `scripts/run-vm.sh` | запуск диска в QEMU/KVM (2 vCPU, 3 GiB, SSH на `127.0.0.1:22522`, `VM_UEFI=1` для OVMF) |
 | `installer/` | `alpha-installer` (Go): пока только обнаружение дисков (DIST-004), см. [installer/README.md](installer/README.md) |
+| `updated/` | `alpha-updated` (Go): агент обновлений — check, download-only, apply, rollback через bootc, API на unix-сокете, окно обслуживания (DIST-009), см. [updated/README.md](updated/README.md) |
 | `tests/vm-switch-rollback.sh` | сценарий фазы 0: switch → rollback → upgrade → rollback → digest-пин и возврат на тег |
 | `.work/` | локальные артефакты (диски, ключи SSH, логи); в git не попадает |
 
 ## Что в образе
 
-- **Наши сервисы — заглушки** (`/usr/libexec/alpha/alpha-stub`, Python): `alpha-media` (:8487), `alpha-admin` (:80), `alpha-updated` (:7091, наружу не открыт). Каждая отвечает `GET /health` и `/healthz` JSON-ом с версией образа. Юниты с `DynamicUser=yes` и `ProtectSystem=strict`.
+- **`alpha-media` и `alpha-admin` пока заглушки** (`/usr/libexec/alpha/alpha-stub`, Python): `alpha-media` (:8487), `alpha-admin` (:80). Каждая отвечает `GET /health` и `/healthz` JSON-ом с версией образа. Юниты с `DynamicUser=yes` и `ProtectSystem=strict`.
+- **`alpha-updated` — настоящий агент обновлений** (Go, DIST-009): бинарник `/usr/libexec/alpha/alpha-updated` собирается в стадии `go-build` `Containerfile`, API — только на unix-сокете `/run/alpha-updated/api.sock` (`root:alpha-admin 0660`, `alpha-updated.socket`), состояние — `/var/lib/alpha/updated`. Подробно — [updated/README.md](updated/README.md).
 - **Samba**: SMB3, `vfs_fruit` для macOS, шара `Media` → `/var/srv/media` (гостевое чтение). **wsdd** (Windows), **Avahi** + nss-mdns (`<hostname>.local`).
 - **firewalld**: зона по умолчанию `home`; открыты samba, mdns, ws-discovery, http, https, 8487/tcp. (ssh и dhcpv6-client остаются из стандартной зоны `home` — на прототипе SSH нужен для тестов; выключение по умолчанию — в DIST-013.)
 - **smartd**, **chronyd**, **greenboot** (проверки появятся в DIST-011), **Cockpit** установлен, `cockpit.socket` выключен.
-- `bootc-fetch-apply-updates.timer` **замаскирован**: обновлениями будет управлять `alpha-updated` (DIST-009).
+- `bootc-fetch-apply-updates.timer` и его `.service` **замаскированы**: обновлениями управляет `alpha-updated` (DIST-009) — скачивает в фоне, ставит в окне обслуживания и не перезагружает NAS во время просмотра.
 - Версия образа — `/usr/share/alpha/version` (`ALPHA_OS_VERSION`, build-arg).
 
 ## Сборка
@@ -49,7 +51,7 @@ distro/tests/vm-switch-rollback.sh          # ~10 минут; KEEP=1 — ост�
 
 Сценарий поднимает локальный реестр `registry:2` на `127.0.0.1:5000` (VM видит хост как `10.0.2.2`), собирает v1 и v2, ставит **стоковую** базу на raw-диск, загружает её в QEMU и по SSH проверяет:
 
-1. `bootc switch 10.0.2.2:5000/alpha-os:dev` → загружен v1, сервисы живы, `/health` отвечает, smbd слушает 445, зона firewalld `home`, таймер замаскирован;
+1. `bootc switch 10.0.2.2:5000/alpha-os:dev` → загружен v1, сервисы живы, `/health` отвечает, `alpha-updated` отвечает на своём сокете (`660 root alpha-admin`), smbd слушает 445, зона firewalld `home`, таймер замаскирован; дальше агент на время сценария останавливается, чтобы не трогать bootc параллельно;
 2. `bootc rollback` → снова стоковая база;
 3. `bootc rollback` → снова v1;
 4. в реестр под тем же тегом публикуется v2, `bootc upgrade --check` и `bootc upgrade` → загружен v2;
@@ -105,7 +107,7 @@ Workflow `.github/workflows/distro.yml`:
 
 ## Ограничения прототипа
 
-- Нет брендинга (DIST-003), нет настоящих сервисов (DIST-009, DIST-013), нет health-check-ов greenboot (DIST-011).
+- Нет брендинга (DIST-003), `alpha-admin` и медиасервер — заглушки (DIST-013), нет health-check-ов greenboot (DIST-011). Вето перезагрузки — адрес медиасервера `/api/v1/system/activity` (SRV-019) по HTTPS с пиннингом сертификата.
 - Пакеты не залочены по версиям (lockfile — отдельной задачей).
 - Офлайн-обновления с USB (`oci-archive`) политикой пока отклоняются: проверку подписи для них решим вместе с офлайн-обновлением.
 - Проверено только в QEMU/KVM; железо (Intel N100, AMD APU, `vainfo`, QSV/VAAPI) — отдельно.
