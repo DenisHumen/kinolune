@@ -26,10 +26,10 @@ case "${VERSION}" in
 esac
 
 # os-release(5). Accent colour lune.400 #49D1D8 (design/brand/README.md).
+# VERSION_ID is the release of the base (dnf, bootc and image builders read it), the
+# version of Kinolune OS itself is VERSION / IMAGE_VERSION. No comment lines in the file:
+# image-builder (osbuild/images, DIST-007) rejects any line without "=".
 cat > /usr/lib/os-release <<EOF
-# ${NAME}: NAS OS of the Kinolune project, based on Fedora Linux ${BASE_VERSION_ID}.
-# VERSION_ID is the release of the base (dnf, bootc and image builders read it),
-# the version of ${NAME} itself is VERSION / IMAGE_VERSION.
 NAME="${NAME}"
 VERSION="${VERSION}"
 ID=kinolune-os
