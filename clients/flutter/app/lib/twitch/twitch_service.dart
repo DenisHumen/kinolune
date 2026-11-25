@@ -376,11 +376,19 @@ class TwitchService extends ChangeNotifier {
   /// [accountProfileMaxAge] or [force]d. A sign-in Twitch no longer
   /// accepts (401 after a failed refresh) signs out. Other errors keep
   /// what is cached.
-  Future<void> refreshAccount({bool force = false}) {
-    final running = _profileFetch;
-    if (running != null) return running;
-    final f = _refreshAccount(force).whenComplete(() => _profileFetch = null);
-    return _profileFetch = f;
+  Future<void> refreshAccount({bool force = false}) async {
+    // One fetch at a time; a forced one waits and then asks again.
+    while (_profileFetch case final running?) {
+      await running;
+      if (!force) return;
+    }
+    final f = _refreshAccount(force);
+    _profileFetch = f;
+    try {
+      await f;
+    } finally {
+      if (identical(_profileFetch, f)) _profileFetch = null;
+    }
   }
 
   Future<void> _refreshAccount(bool force) async {

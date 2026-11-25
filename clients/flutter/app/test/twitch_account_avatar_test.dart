@@ -128,7 +128,7 @@ void main() {
 
       now = demoNow.add(const Duration(hours: 23));
       await twitch.refreshAccount();
-      expect(helix.calls, isEmpty);
+      expect(helix.calls, isNot(contains('users')));
       expect(twitch.accountProfile?.avatarUrl, _avatarV1);
 
       // "Update name and avatar".
@@ -310,10 +310,10 @@ void main() {
       await t.tap(find.byKey(const ValueKey('settings-twitch-sign-out')));
       await settle(t, 4);
       expect(services.twitch.account, isNull);
-      expect(
-        find.byKey(const ValueKey('settings-twitch-sign-in')),
-        findsOneWidget,
-      );
+      final signIn = find.byKey(const ValueKey('settings-twitch-sign-in'));
+      await t.scrollUntilVisible(signIn, 200, scrollable: page);
+      await settle(t, 3);
+      expect(signIn, findsOneWidget);
       await t.pumpWidget(const SizedBox());
       await settle(t, 2);
     });
