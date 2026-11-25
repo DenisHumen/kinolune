@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: MPL-2.0
+title: "[Announcement] "
+body:
+  - type: textarea
+    id: announcement
+    attributes:
+      label: Announcement / Объявление
+      description: Maintainer-only updates, releases, and project news. / Новости и релизы от сопровождающих.
+    validations:
+      required: true

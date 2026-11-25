@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MPL-2.0
+title: "[Show and tell] "
+body:
+  - type: textarea
+    id: made
+    attributes:
+      label: What did you make or try? / Что вы сделали или попробовали?
+      description: Share a setup, experiment, workflow, or contribution. / Расскажите о настройке, эксперименте, процессе или вкладе.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: How did it go? / Как прошло?
+      description: What worked, and what would you change? / Что сработало и что вы бы изменили?
+    validations:
+      required: true

@@ -18,6 +18,25 @@
 
 Нет подходящей задачи, но есть идея или ошибка — откройте issue по шаблону (ошибка, проблема воспроизведения, неверное распознавание, предложение) или тему в [Discussions](https://github.com/DenisHumen/kinolune/discussions).
 
+### Discussions: от идеи до ROADMAP
+
+- **Q&A** — вопросы об установке и использовании; перед публикацией проверьте руководство и похожие обсуждения.
+- **Ideas** — опишите проблему и предложение. Реакции показывают интерес сообщества; для выбора из нескольких вариантов используйте **Polls**.
+- **Ошибки распознавания** — укажите версию, платформу, обезличенное имя файла, ожидаемый и фактический результат. Не публикуйте полный путь, имя пользователя, закрытую ссылку или личное медиа.
+- **Show and tell** — поделитесь настройкой, экспериментом или результатом.
+- **Announcements** — новости и релизы публикуют сопровождающие.
+
+Путь идеи: обсуждение → сбор отзывов и, если нужно, голосование → решение сопровождающего → задача с критериями и зависимостями в `docs/ROADMAP.md`. Сопровождающий оставляет ссылку на задачу в обсуждении и обновляет её статус при старте и завершении работы. Реакции и голоса помогают понять спрос, но не обещают включение функции.
+
+## Process: from discussion to ROADMAP
+
+- **Q&A** is for setup and usage questions; search the user guide and existing discussions first.
+- **Ideas** is for a problem and a proposal. Reactions show interest; use **Polls** to choose between clear alternatives.
+- **Recognition errors** should include the version, platform, anonymized filename, expected match, and actual result. Never post full paths, usernames, private links, or personal media.
+- **Show and tell** is for setups, experiments, and results. **Announcements** are maintainer-only.
+
+Flow: discussion → feedback and an optional poll → maintainer decision → a task with acceptance criteria and dependencies in `docs/ROADMAP.md`. The maintainer links the task from the discussion and updates its status when work starts and finishes. Votes inform prioritization; they do not promise implementation.
+
 ## Процесс: одна задача — одна ветка — один worktree
 
 ```bash

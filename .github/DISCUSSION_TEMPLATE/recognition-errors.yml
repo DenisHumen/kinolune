@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MPL-2.0
+title: "[Recognition] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe a recognition mistake. Do not include full file paths, usernames, passwords, tokens, or private media links.
+        Опишите ошибку распознавания. Не указывайте полные пути, имена пользователей, пароли, токены и личные ссылки.
+  - type: input
+    id: version
+    attributes:
+      label: Kinolune version and platform / Версия Kinolune и платформа
+      placeholder: "0.1.0-alpha · Linux"
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Anonymized file or folder name / Обезличенное имя файла или папки
+      description: Remove personal names and parent folders. / Удалите личные имена и родительские папки.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected match / Ожидаемое совпадение
+      description: The title or ID Kinolune should have found. / Название или ID, которое должна была найти Kinolune.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What Kinolune found / Что нашла Kinolune
+      description: Include the review reason or confidence shown in the app. / Укажите причину проверки или уверенность из приложения.
+    validations:
+      required: true

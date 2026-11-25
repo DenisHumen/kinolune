@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MPL-2.0
+title: "[Q&A] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing discussions and the user guide first. / Сначала проверьте руководство и похожие обсуждения.
+        Do not post passwords, tokens, private URLs, or personal file paths. / Не публикуйте пароли, токены, личные ссылки и пути к файлам.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question / Вопрос
+      description: What are you trying to do, and where are you stuck? / Что вы хотите сделать и на чём остановились?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / Контекст
+      description: Kinolune version, platform, and steps already tried. / Версия Kinolune, платформа и уже выполненные шаги.
+    validations:
+      required: true

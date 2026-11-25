@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: MPL-2.0
+title: "[Idea] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are open for community feedback. Use Polls when clear alternatives are ready for a vote.
+        Идеи открыты для отзывов сообщества. Для голосования по готовым вариантам используйте Polls.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Проблема
+      description: What is difficult or missing today? / Чего не хватает или что неудобно сейчас?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal / Предложение
+      description: What would you like Kinolune to do? / Что должна делать Kinolune?
+    validations:
+      required: true
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Who benefits? / Кому поможет?
+      description: Which users or situations does this help? / Каким пользователям или сценариям это поможет?
+    validations:
+      required: false
