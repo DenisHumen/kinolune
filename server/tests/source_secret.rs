@@ -94,6 +94,7 @@ async fn connect(addr: SocketAddr, device: &str) -> Ws {
             cursor: None,
             head: None,
             nonce: None,
+            vv: None,
         }),
     )
     .await;
