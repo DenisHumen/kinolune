@@ -23,7 +23,7 @@ use utoipa::{OpenApi, ToSchema};
 pub const API_MAJOR: u32 = 1;
 
 /// Minor version: grows with additive changes within [`API_MAJOR`].
-pub const API_MINOR: u32 = 0;
+pub const API_MINOR: u32 = 1;
 
 /// `info.version` of the spec: `"<major>.<minor>"`.
 pub fn api_version() -> String {
@@ -44,6 +44,7 @@ pub fn api_version() -> String {
         (name = "server", description = "Liveness and versions"),
         (name = "pairing", description = "Device family: pairing and revocation (SYNC-005)"),
         (name = "sync", description = "Sync protocol over WebSocket (docs/api/sync-protocol.md)"),
+        (name = "system", description = "The machine the server runs on: activity for OS updates (SRV-019)"),
     )
 )]
 pub(crate) struct ApiDoc;
@@ -63,6 +64,24 @@ pub fn openapi_json() -> String {
         .expect("the OpenAPI document serializes");
     json.push('\n');
     json
+}
+
+/// What the server is doing that a reboot must not interrupt (SRV-019).
+///
+/// The OS update agent postpones an update and a reboot while `busy` is
+/// true or `sessions` is above zero.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ActivityReport {
+    /// Something is running that a reboot would interrupt.
+    pub busy: bool,
+    /// Playback sessions: devices playing (`pb.update` `playing` within its
+    /// TTL) or streams served by the server, whichever is more.
+    #[schema(minimum = 0)]
+    pub sessions: u32,
+    /// The main reason when busy: `playback`, `recording` or `scan`
+    /// (in this order of precedence); empty when idle. New reasons may be
+    /// added.
+    pub reason: String,
 }
 
 /// Error body of the API endpoints (status codes 4xx and 5xx).

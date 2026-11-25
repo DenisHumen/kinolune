@@ -71,6 +71,10 @@ pub fn scenarios() -> Vec<(&'static str, Vec<Call>)> {
             "DELETE /api/v1/devices/{id}",
             vec![call("DELETE", "/api/v1/devices/nobody", 404)],
         ),
+        (
+            "GET /api/v1/system/activity",
+            vec![call("GET", "/api/v1/system/activity", 200)],
+        ),
     ]
 }
 

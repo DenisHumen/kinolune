@@ -19,6 +19,7 @@
 //! shutdown future resolves, lets in-flight requests finish, withdraws the
 //! announcement, closes sync connections and checkpoints the databases.
 
+pub mod activity;
 pub mod announce;
 pub mod api;
 pub mod config;
@@ -156,6 +157,7 @@ pub struct Server {
     listener: TcpListener,
     library: Library,
     hub: sync::Hub,
+    activity: activity::Activity,
     tls: Option<tls::TlsIdentity>,
     discovery: config::DiscoveryConfig,
     mdns: MdnsConfig,
@@ -229,6 +231,7 @@ impl Server {
             listener,
             library,
             hub,
+            activity: activity::Activity::default(),
             tls,
             discovery: config.discovery.clone(),
             mdns: MdnsConfig::default(),
@@ -269,6 +272,12 @@ impl Server {
     /// The sync hub.
     pub fn hub(&self) -> &sync::Hub {
         &self.hub
+    }
+
+    /// Running work that a reboot must not interrupt (SRV-019): streams,
+    /// recordings and scans hold a guard from [`activity::Activity::begin`].
+    pub fn activity(&self) -> &activity::Activity {
+        &self.activity
     }
 
     /// Starts the mDNS announcement unless it is off or pointless (loopback
@@ -315,7 +324,7 @@ impl Server {
         let announcer = self.announce(addr).await;
         let scheme = if self.tls.is_some() { "https" } else { "http" };
         tracing::info!(%addr, scheme, version = VERSION, "listening");
-        let app = http::router(self.library.clone(), self.hub.clone());
+        let app = http::router(self.library.clone(), self.hub.clone(), self.activity.clone());
         let hub = self.hub.clone();
         let shutdown = async move {
             shutdown.await;

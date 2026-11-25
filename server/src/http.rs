@@ -28,6 +28,7 @@ use crate::tls::TlsListener;
 use crate::api::{
     ApiDoc, ApiError, ApiVersion, DbHealth, DeviceInfo, Devices, Health, InviteResponse, Status,
 };
+use crate::activity::Activity;
 use crate::pairing::Pairing;
 use crate::sync::Hub;
 use crate::{Library, SERVICE, VERSION};
@@ -53,6 +54,13 @@ impl Connected<IncomingStream<'_, TlsListener>> for PeerAddr {
 pub(crate) struct AppState {
     library: Library,
     hub: Hub,
+    activity: Activity,
+}
+
+impl FromRef<AppState> for Activity {
+    fn from_ref(state: &AppState) -> Self {
+        state.activity.clone()
+    }
 }
 
 impl FromRef<AppState> for Library {
@@ -83,12 +91,17 @@ pub(crate) fn api_router() -> OpenApiRouter<AppState> {
         .routes(routes!(invite))
         .routes(routes!(devices))
         .routes(routes!(revoke))
+        .routes(routes!(crate::activity::system_activity))
 }
 
-pub(crate) fn router(library: Library, hub: Hub) -> Router {
+pub(crate) fn router(library: Library, hub: Hub, activity: Activity) -> Router {
     let (router, _spec) = api_router().split_for_parts();
     router
-        .with_state(AppState { library, hub })
+        .with_state(AppState {
+            library,
+            hub,
+            activity,
+        })
         .layer(middleware::from_fn(log_request))
 }
 
