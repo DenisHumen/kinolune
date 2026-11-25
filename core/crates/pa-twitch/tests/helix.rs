@@ -440,6 +440,46 @@ async fn categories_top_lookup_and_search() {
 }
 
 #[tokio::test]
+async fn top_categories_follow_the_cursor_without_duplicates() {
+    // TWI-034: the browse grid loads pages; Helix lists "float", so a
+    // category may come again on the next page.
+    let h = harness();
+    h.transport
+        .push_fixture(fx!("games_top"))
+        .push_fixture(fx!("games_top_last"));
+
+    let all = collect_pages(100, |after| {
+        let client = &h.client;
+        async move { client.get_top_categories(Some(2), after.as_ref()).await }
+    })
+    .await
+    .unwrap();
+    let ids: Vec<&str> = all.iter().map(|c| c.id.as_str()).collect();
+    assert_eq!(ids, ["509658", "1229", "33214"]);
+    assert_eq!(
+        h.urls(),
+        [
+            "games/top?first=2",
+            "games/top?first=2&after=eyJzIjoyLCJkIjpmYWxzZSwidCI6dHJ1ZX0%3D"
+        ]
+    );
+}
+
+#[tokio::test]
+async fn http_429_with_retry_after_only_waits_that_long() {
+    // No Ratelimit-* headers: the Retry-After seconds decide the wait.
+    let h = harness();
+    h.transport
+        .push_fixture(fx!("rate_limited_retry_after"))
+        .push_fixture(fx!("games_top"));
+
+    let top = h.client.get_top_categories(Some(2), None).await.unwrap();
+    assert_eq!(top.items.len(), 2);
+    assert_eq!(h.clock.sleeps(), [Duration::from_secs(3)]);
+    assert_eq!(h.transport.requests().len(), 2);
+}
+
+#[tokio::test]
 async fn categories_by_name() {
     let h = harness();
     h.transport.push_fixture(fx!("games"));

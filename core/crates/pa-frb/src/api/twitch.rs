@@ -178,6 +178,8 @@ pub struct CoreTwitchStream {
     pub started_at_ms: Option<i64>,
     /// Preview frame template with `{width}`/`{height}`.
     pub thumbnail_url: Option<String>,
+    /// Broadcast language, ISO 639-1 (`other` when Twitch does not know).
+    pub language: Option<String>,
 }
 
 /// A VOD (archive, highlight or upload).
@@ -254,6 +256,21 @@ pub struct CoreTwitchCategory {
     pub name: String,
     /// Template with `{width}`/`{height}`.
     pub box_art_url: Option<String>,
+}
+
+/// A page of `games/top` (TWI-034): the next cursor is `None` on the last
+/// page.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreTwitchCategoryPage {
+    pub items: Vec<CoreTwitchCategory>,
+    pub cursor: Option<String>,
+}
+
+/// A page of live streams of a category (TWI-034), most viewers first.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreTwitchStreamPage {
+    pub items: Vec<CoreTwitchStream>,
+    pub cursor: Option<String>,
 }
 
 /// A favourite channel stored in the library (synced by `pa-sync`).
@@ -395,6 +412,7 @@ fn stream_of(s: &tw::Stream) -> CoreTwitchStream {
         viewer_count: signed(s.viewer_count),
         started_at_ms: tw::parse_rfc3339_ms(&s.started_at),
         thumbnail_url: non_empty(&s.thumbnail_url),
+        language: non_empty(&s.language),
     }
 }
 
@@ -882,9 +900,72 @@ impl CoreTwitch {
                     .await
             }
         })?;
+        self.remember_categories(&page.items);
+        Ok(page.items.iter().map(category_of).collect())
+    }
+
+    /// The most watched categories now (`GET /games/top`, TWI-034), one
+    /// page; pass the previous page's `cursor` as `after` for the next.
+    pub fn top_categories(
+        &self,
+        limit: u32,
+        after: Option<String>,
+    ) -> TwitchResult<CoreTwitchCategoryPage> {
+        let page = self.call(|h| {
+            let after = after.clone().filter(|a| !a.is_empty()).map(tw::Cursor);
+            async move {
+                h.get_top_categories(Some(limit.clamp(1, 100)), after.as_ref())
+                    .await
+            }
+        })?;
+        self.remember_categories(&page.items);
+        Ok(CoreTwitchCategoryPage {
+            items: page.items.iter().map(category_of).collect(),
+            cursor: page.next.map(|c| c.0),
+        })
+    }
+
+    /// Live streams of a category (`GET /streams?game_id=`, TWI-034), most
+    /// viewers first, one page. `language` is an ISO 639-1 code of the
+    /// broadcast language (`None` or empty: every language).
+    pub fn category_streams(
+        &self,
+        game_id: String,
+        language: Option<String>,
+        limit: u32,
+        after: Option<String>,
+    ) -> TwitchResult<CoreTwitchStreamPage> {
+        if game_id.trim().is_empty() {
+            return Err(TwitchApiError::new(
+                TwitchErrorKind::Invalid,
+                "empty category id",
+            ));
+        }
+        let q = tw::StreamsQuery {
+            game_ids: vec![game_id],
+            languages: language.filter(|l| !l.is_empty()).into_iter().collect(),
+            first: Some(limit.clamp(1, 100)),
+            after: after.filter(|a| !a.is_empty()).map(tw::Cursor),
+            ..tw::StreamsQuery::default()
+        };
+        let page = self.call(|h| {
+            let q = q.clone();
+            async move { h.get_streams(&q).await }
+        })?;
+        let mut items: Vec<CoreTwitchStream> = page.items.iter().map(stream_of).collect();
+        // Helix sorts by viewers already; keep it so within the page even
+        // when counts moved while it was built.
+        items.sort_by(|a, b| b.viewer_count.cmp(&a.viewer_count));
+        Ok(CoreTwitchStreamPage {
+            items,
+            cursor: page.next.map(|c| c.0),
+        })
+    }
+
+    fn remember_categories(&self, categories: &[tw::Category]) {
         let now = now_ms();
         let conn = self.db();
-        for c in &page.items {
+        for c in categories {
             let _ = lt::upsert_category(
                 &conn,
                 &lt::Category {
@@ -896,7 +977,6 @@ impl CoreTwitch {
                 now,
             );
         }
-        Ok(page.items.iter().map(category_of).collect())
     }
 
     // ----- local (no network) --------------------------------------------------
@@ -1403,6 +1483,113 @@ mod tests {
         assert_eq!(t.cached_videos("7001".into(), 10).unwrap().len(), 1);
         assert!(t.cached_user("7001".into()).unwrap().is_some());
         assert!(t.chapters("9001".into()).unwrap().is_empty());
+    }
+
+    // TWI-034: made-up categories and streams.
+    const TOP_P1: &str = r#"{"status":200,"body":{"data":[
+        {"id":"501","name":"Starfall Tactics","box_art_url":"https://img.test/501-{width}x{height}.jpg","igdb_id":""},
+        {"id":"502","name":"Pocket Garden","box_art_url":"https://img.test/502-{width}x{height}.jpg","igdb_id":"77"}],
+        "pagination":{"cursor":"top-page-2"}}}"#;
+    const TOP_P2: &str = r#"{"status":200,"body":{"data":[
+        {"id":"503","name":"Talk & Tea","box_art_url":"","igdb_id":""}],
+        "pagination":{}}}"#;
+    const CATEGORY_STREAMS: &str = r#"{"status":200,"body":{"data":[
+        {"id":"6001","user_id":"7004","user_login":"novamarsh","user_name":"NovaMarsh","game_id":"501",
+         "game_name":"Starfall Tactics","type":"live","title":"Small one","viewer_count":90,
+         "started_at":"2026-11-25T18:00:00Z","language":"uk","thumbnail_url":"https://img.test/{width}x{height}.jpg",
+         "tags":[],"is_mature":false},
+        {"id":"6002","user_id":"7001","user_login":"pixelheron","user_name":"PixelHeron","game_id":"501",
+         "game_name":"Starfall Tactics","type":"live","title":"Big one","viewer_count":1800,
+         "started_at":"2026-11-25T17:00:00Z","language":"uk","thumbnail_url":"","tags":[],"is_mature":false}],
+        "pagination":{"cursor":"streams-page-2"}}}"#;
+    const RATE_LIMITED_FAR: &str = r#"{"status":429,"headers":{"Retry-After":"600"},
+        "body":{"error":"Too Many Requests","status":429,"message":""}}"#;
+
+    fn urls(transport: &FixtureTransport) -> Vec<String> {
+        transport
+            .requests()
+            .into_iter()
+            .map(|r| r.url.replace("https://helix.test/helix/", ""))
+            .collect()
+    }
+
+    #[test]
+    fn top_categories_page_with_cursors() {
+        let transport = Arc::new(FixtureTransport::new());
+        transport.push_fixture(TOP_P1).push_fixture(TOP_P2);
+        let t = core(transport.clone());
+        let first = t.top_categories(2, None).unwrap();
+        assert_eq!(first.items.len(), 2);
+        assert_eq!(first.items[0].name, "Starfall Tactics");
+        assert_eq!(first.cursor.as_deref(), Some("top-page-2"));
+        let second = t.top_categories(2, first.cursor).unwrap();
+        assert_eq!(second.items[0].game_id, "503");
+        assert_eq!(second.items[0].box_art_url, None);
+        assert_eq!(second.cursor, None);
+        assert_eq!(
+            urls(&transport),
+            ["games/top?first=2", "games/top?first=2&after=top-page-2"]
+        );
+        // Known to the library cache (chapters and search use the names).
+        let cat = lt::category(&t.db(), "502").unwrap().unwrap();
+        assert_eq!(cat.name, "Pocket Garden");
+    }
+
+    #[test]
+    fn category_streams_by_language_most_viewers_first() {
+        let transport = Arc::new(FixtureTransport::new());
+        transport
+            .push_fixture(CATEGORY_STREAMS)
+            .push_fixture(CATEGORY_STREAMS);
+        let t = core(transport.clone());
+        let page = t
+            .category_streams("501".into(), Some("uk".into()), 30, None)
+            .unwrap();
+        assert_eq!(page.items[0].user_login, "pixelheron");
+        assert_eq!(page.items[0].viewer_count, 1800);
+        assert_eq!(page.items[0].thumbnail_url, None);
+        assert_eq!(page.items[0].language.as_deref(), Some("uk"));
+        assert_eq!(page.items[1].viewer_count, 90);
+        assert_eq!(page.cursor.as_deref(), Some("streams-page-2"));
+        // "All languages": no language filter; the next page by cursor.
+        t.category_streams("501".into(), None, 30, page.cursor)
+            .unwrap();
+        assert_eq!(
+            urls(&transport),
+            [
+                "streams?game_id=501&language=uk&first=30",
+                "streams?game_id=501&first=30&after=streams-page-2"
+            ]
+        );
+        let err = t.category_streams(" ".into(), None, 30, None).unwrap_err();
+        assert_eq!(err.kind, TwitchErrorKind::Invalid);
+    }
+
+    #[test]
+    fn rate_limit_far_ahead_is_reported_not_waited() {
+        let transport = Arc::new(FixtureTransport::new());
+        transport.push_fixture(RATE_LIMITED_FAR);
+        let t = core(transport.clone());
+        let err = t.top_categories(40, None).unwrap_err();
+        assert_eq!(err.kind, TwitchErrorKind::RateLimited);
+        assert_eq!(err.code, "rate_limited");
+        assert_eq!(transport.requests().len(), 1);
+    }
+
+    #[test]
+    fn discovery_needs_a_client_id() {
+        let conn = pa_library::open_in_memory().unwrap();
+        let t = CoreTwitch::with_helix(conn, None).unwrap();
+        assert_eq!(
+            t.top_categories(40, None).unwrap_err().kind,
+            TwitchErrorKind::NotConfigured
+        );
+        assert_eq!(
+            t.category_streams("501".into(), None, 30, None)
+                .unwrap_err()
+                .kind,
+            TwitchErrorKind::NotConfigured
+        );
     }
 
     #[test]
