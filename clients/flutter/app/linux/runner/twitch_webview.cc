@@ -3,10 +3,22 @@
 // TWI-029 (ADR-0144): the official Twitch embed on Linux in WebKitGTK.
 //
 // Flutter on Linux has no platform views, so the web view is a GTK widget
-// over the Flutter view: the window's child is a GtkOverlay whose main
-// child is the FlView, and the web view is an overlay child placed at the
-// rectangle Dart reports (`rect`, logical pixels of the Flutter view, which
-// are GTK's). Dart hides it while another route (a dialog) is on top.
+// over the Flutter view, placed at the rectangle Dart reports (`rect`,
+// logical pixels of the Flutter view, which are GTK's). Dart hides it while
+// another route (a dialog) is on top.
+//
+// * X11: the window's child is a GtkOverlay whose main child is the FlView,
+//   and the web view is an overlay child.
+// * Wayland (BUG-028): Flutter 3.50 draws the FlView into its own
+//   wl_subsurface (FlViewRendererSubsurface), which the compositor stacks
+//   above the window's surface, so an overlay child stays hidden under
+//   Flutter's frame: the player area was black on GNOME and KDE. There the
+//   web view lives in a transient GTK_WINDOW_POPUP without a grab, which
+//   GTK 3 maps as a wl_subsurface of the window. A new subsurface goes on
+//   top of its siblings, and the popup is mapped after Flutter's surface
+//   (and again on every show), so the web view is above Flutter. It moves
+//   with the window; keys stay with the window (Flutter handles Escape,
+//   Space, F and arrows), clicks reach the player.
 //
 // WebKitGTK (LGPL-2.1/BSD) is the system's: libwebkit2gtk-4.1 (GTK 3, like
 // the app), or the older 4.0 ABI, opened with dlopen. Nothing links to it,
@@ -27,6 +39,9 @@
 
 #include <dlfcn.h>
 #include <gdk/gdkkeysyms.h>
+#ifdef GDK_WINDOWING_WAYLAND
+#include <gdk/gdkwayland.h>
+#endif
 
 #include <string.h>
 
@@ -78,6 +93,8 @@ struct State {
   GtkOverlay* overlay = nullptr;
   FlView* view = nullptr;
   GtkWidget* web_view = nullptr;
+  // Wayland: the popup (a subsurface of the window) that holds web_view.
+  GtkWidget* popup = nullptr;
   gchar* base_url = nullptr;
   gchar* html = nullptr;
   GdkRectangle rect = {0, 0, 0, 0};
@@ -179,7 +196,13 @@ void destroy_web_view() {
   state.web_view = nullptr;
   g_signal_handlers_disconnect_matched(view, G_SIGNAL_MATCH_DATA, 0, 0,
                                        nullptr, nullptr, &state);
-  gtk_widget_destroy(view);
+  if (state.popup != nullptr) {
+    GtkWidget* popup = state.popup;
+    state.popup = nullptr;
+    gtk_widget_destroy(popup);  // and the web view in it
+  } else {
+    gtk_widget_destroy(view);
+  }
   if (state.fullscreen) {
     state.fullscreen = FALSE;
     GtkWidget* top = gtk_widget_get_toplevel(GTK_WIDGET(state.overlay));
@@ -193,14 +216,61 @@ void destroy_web_view() {
   gtk_widget_grab_focus(GTK_WIDGET(state.view));
 }
 
+// Wayland: the popup at the rectangle, in the coordinates of the window's
+// surface (a subsurface's position is relative to its parent's surface,
+// client-side decorations included).
+void place_popup(gboolean show) {
+  if (!show) {
+    gtk_widget_hide(state.popup);
+    return;
+  }
+  GtkWidget* top = gtk_widget_get_toplevel(GTK_WIDGET(state.view));
+  gint x = state.rect.x;
+  gint y = state.rect.y;
+  if (GTK_IS_WINDOW(top)) {
+    gtk_widget_translate_coordinates(GTK_WIDGET(state.view), top,
+                                     state.rect.x, state.rect.y, &x, &y);
+    GdkWindow* window = gtk_widget_get_window(top);
+    if (window != nullptr) {
+      gint ox = 0;
+      gint oy = 0;
+      gdk_window_get_origin(window, &ox, &oy);
+      x += ox;
+      y += oy;
+    }
+  }
+  gtk_widget_set_size_request(state.web_view, state.rect.width,
+                              state.rect.height);
+  gtk_window_resize(GTK_WINDOW(state.popup), state.rect.width,
+                    state.rect.height);
+  gtk_window_move(GTK_WINDOW(state.popup), x, y);
+  if (!gtk_widget_get_visible(state.popup)) {
+    // Mapped now, its subsurface goes on top of Flutter's.
+    gtk_widget_show(state.popup);
+  }
+}
+
 void apply_rect() {
   if (state.web_view == nullptr) {
     return;
   }
   const gboolean show =
       state.visible && state.rect.width > 0 && state.rect.height > 0;
+  if (state.popup != nullptr) {
+    place_popup(show);
+    return;
+  }
   gtk_widget_set_visible(state.web_view, show);
   gtk_widget_queue_resize(GTK_WIDGET(state.overlay));
+}
+
+// The Flutter view moved inside the window (fullscreen drops the window's
+// decorations): the popup follows.
+void overlay_allocate_cb(GtkWidget* widget, GdkRectangle* allocation,
+                         gpointer data) {
+  if (state.popup != nullptr) {
+    apply_rect();
+  }
 }
 
 gboolean get_child_position_cb(GtkOverlay* overlay, GtkWidget* widget,
@@ -260,8 +330,20 @@ void load_changed_cb(GtkWidget* view, int event, gpointer data) {
   webkit.load_html(view, state.html, state.base_url);
 }
 
+// The window of the Flutter view.
+GtkWindow* main_window() {
+  GtkWidget* top = gtk_widget_get_toplevel(GTK_WIDGET(state.overlay));
+  return GTK_IS_WINDOW(top) ? GTK_WINDOW(top) : nullptr;
+}
+
 gboolean enter_fullscreen_cb(GtkWidget* view, gpointer data) {
   state.fullscreen = TRUE;
+  GtkWindow* window = main_window();
+  if (state.popup != nullptr && window != nullptr) {
+    // WebKit fullscreens the popup, which a popup cannot be: the window
+    // goes fullscreen and Dart gives the player the whole of it.
+    gtk_window_fullscreen(window);
+  }
   g_autoptr(FlValue) v = fl_value_new_bool(TRUE);
   invoke("fullscreen", v);
   return FALSE;  // WebKit fullscreens the window itself.
@@ -269,6 +351,10 @@ gboolean enter_fullscreen_cb(GtkWidget* view, gpointer data) {
 
 gboolean leave_fullscreen_cb(GtkWidget* view, gpointer data) {
   state.fullscreen = FALSE;
+  GtkWindow* window = main_window();
+  if (state.popup != nullptr && window != nullptr) {
+    gtk_window_unfullscreen(window);
+  }
   g_autoptr(FlValue) v = fl_value_new_bool(FALSE);
   invoke("fullscreen", v);
   return FALSE;
@@ -325,7 +411,23 @@ bool create_web_view(const gchar* html, const gchar* base_url) {
   state.web_view = view;
   state.base_url = g_strdup(base_url);
   state.html = g_strdup(html);
-  gtk_overlay_add_overlay(state.overlay, view);
+  GtkWindow* window = main_window();
+  if (window != nullptr &&
+      twitch_webview_use_subsurface(
+          gtk_widget_get_display(GTK_WIDGET(window)))) {
+    // BUG-028: a subsurface above Flutter's (see the top of the file).
+    GtkWidget* popup = gtk_window_new(GTK_WINDOW_POPUP);
+    gtk_window_set_transient_for(GTK_WINDOW(popup), window);
+    gtk_window_set_decorated(GTK_WINDOW(popup), FALSE);
+    gtk_window_set_accept_focus(GTK_WINDOW(popup), FALSE);
+    gtk_window_set_skip_taskbar_hint(GTK_WINDOW(popup), TRUE);
+    gtk_container_add(GTK_CONTAINER(popup), view);
+    gtk_widget_show(view);
+    state.popup = popup;
+    g_message("Twitch embed: WebKitGTK in a subsurface (Wayland)");
+  } else {
+    gtk_overlay_add_overlay(state.overlay, view);
+  }
   apply_rect();
   webkit.load_html(view, html, base_url);
   return true;
@@ -396,11 +498,29 @@ void method_cb(FlMethodChannel* channel, FlMethodCall* call, gpointer data) {
 
 }  // namespace
 
+bool twitch_webview_use_subsurface(GdkDisplay* display) {
+  // Escape hatch for checks: overlay | subsurface.
+  const gchar* layer = g_getenv("KINOLUNE_TWITCH_WEBKIT_LAYER");
+  if (g_strcmp0(layer, "overlay") == 0) {
+    return false;
+  }
+  if (g_strcmp0(layer, "subsurface") == 0) {
+    return true;
+  }
+#ifdef GDK_WINDOWING_WAYLAND
+  return display != nullptr && GDK_IS_WAYLAND_DISPLAY(display);
+#else
+  return false;
+#endif
+}
+
 void twitch_webview_register(FlView* view, GtkOverlay* overlay) {
   state.view = view;
   state.overlay = overlay;
   g_signal_connect(overlay, "get-child-position",
                    G_CALLBACK(get_child_position_cb), &state);
+  g_signal_connect(overlay, "size-allocate", G_CALLBACK(overlay_allocate_cb),
+                   &state);
   g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
   state.channel = fl_method_channel_new(
       fl_engine_get_binary_messenger(fl_view_get_engine(view)), kChannel,
