@@ -110,7 +110,7 @@ useradd -r svc
 for u in anna boris carla locked svc; do echo "${u}:${pass}" | chpasswd; done
 usermod -L locked
 mkfs.btrfs -q -f -L media /dev/vdb
-# A stand-in for alpha-updated's API socket (DIST-009 is not in this image yet).
+# A stand-in for alpha-updated's API socket, only when the image has no real agent (DIST-009).
 mkdir -p /run/alpha-updated
 cat > /run/alpha-updated/fake.py <<'PY'
 import grp, http.server, json, os, socketserver
@@ -140,7 +140,9 @@ os.chown(SOCK, 0, grp.getgrnam("alpha-admin").gr_gid)
 os.chmod(SOCK, 0o660)
 srv.serve_forever()
 PY
-systemd-run --quiet --unit=fake-alpha-updated python3 /run/alpha-updated/fake.py
+if [ ! -S /run/alpha-updated/api.sock ]; then
+    systemd-run --quiet --unit=fake-alpha-updated python3 /run/alpha-updated/fake.py
+fi
 for i in $(seq 1 20); do [ -S /run/alpha-updated/api.sock ] && break; sleep 0.5; done
 EOF
 log "OK test users, data disk and a fake alpha-updated socket in place"

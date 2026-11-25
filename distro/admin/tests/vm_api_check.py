@@ -209,8 +209,9 @@ def main_checks():
     expect(code, 200, "update proxy", body)
     code, body, _ = admin.call("PUT", "/api/v1/system/update/settings", {"window": "02:00-04:00"})
     expect(code, 200, "update settings", body)
-    seen = sh("cat /run/alpha-updated/requests.log")
-    if "GET /v1/update" not in seen or 'PUT /v1/settings {"window": "02:00-04:00"}' not in seen.replace('":"', '": "'):
+    # With the fake agent (no DIST-009 in the image) also check what it received.
+    seen = sh("cat /run/alpha-updated/requests.log 2>/dev/null")
+    if seen and "GET /v1/update" not in seen or 'PUT /v1/settings {"window": "02:00-04:00"}' not in seen.replace('":"', '": "'):
         fail(f"update agent saw: {seen}")
     ok("update API proxied to the unix socket /run/alpha-updated/api.sock")
 
