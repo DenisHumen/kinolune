@@ -174,7 +174,7 @@ fn copy_from_row(r: &Row<'_>) -> pa_library::rusqlite::Result<OfflineCopy> {
         size_bytes: u64::try_from(r.get::<_, i64>(5)?).unwrap_or(0),
         watched_at_ms: r.get(6)?,
         created_at_ms: r.get(7)?,
-        folder: PathBuf::from(target).join(rel),
+        folder: pa_vfs::host::join_relative(Path::new(&target), &rel),
     })
 }
 
@@ -241,6 +241,8 @@ impl Offline {
     /// kept free). It cannot move while copies or downloads use the old
     /// folder.
     pub fn set_folder(&self, dir: &Path) -> Result<(), Error> {
+        // BUG-022: the app may pass `C:\Users\me\Kinolune/downloads/offline`.
+        let dir = &pa_vfs::host::native(dir.to_path_buf());
         if let Ok(current) = self.inner.storage.target(TARGET) {
             if current.path == dir {
                 return Ok(());
@@ -261,8 +263,14 @@ impl Offline {
         Ok(())
     }
 
+    /// The folder copies go to, with native separators (a folder saved
+    /// before BUG-022 may mix `\` and `/` on Windows).
     pub fn folder(&self) -> Option<PathBuf> {
-        self.inner.storage.target(TARGET).ok().map(|t| t.path)
+        self.inner
+            .storage
+            .target(TARGET)
+            .ok()
+            .map(|t| pa_vfs::host::native(t.path))
     }
 
     /// Wi-Fi (unmetered) only for new downloads and those not finished;
