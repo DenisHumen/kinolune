@@ -1,6 +1,6 @@
 # Политика секретов
 
-> Задача REPO-009. Связано: [SECURITY.md](../../SECURITY.md), [ADR-0004](../adr/0004-no-project-servers-local-sync.md) (своих серверов нет), [ADR-0005](../adr/0005-license-mpl2-dco.md), [условия провайдеров](../legal/providers.md), ROADMAP §0.3 п.10.
+> Задача REPO-009. Связано: [SECURITY.md](../../.github/SECURITY.md), [ADR-0004](../adr/0004-no-project-servers-local-sync.md) (своих серверов нет), [ADR-0005](../adr/0005-license-mpl2-dco.md), [условия провайдеров](../legal/providers.md), ROADMAP §0.3 п.10.
 
 Репозиторий публичный. Любая строка, попавшая в git, считается опубликованной навсегда: удаление коммита не помогает, ключ нужно отзывать.
 
@@ -90,14 +90,14 @@ XDG_DATA_HOME="$(mktemp -d)" dbus-run-session -- sh -c \
   pre-commit install
   ```
   Ручная проверка всего дерева: `pre-commit run --all-files`.
-- **CI:** job `gitleaks` в [`hygiene.yml`](../../.github/workflows/hygiene.yml) сканирует все коммиты PR, а на `main` — всю историю. Конфигурация и allowlist — [`.gitleaks.toml`](../../.gitleaks.toml) (заглушки вида `changeme` разрешены).
+- **CI:** job `gitleaks` в [`hygiene.yml`](../../.github/workflows/hygiene.yml) сканирует все коммиты PR, а на `main` — всю историю. Конфигурация и allowlist — [`.github/gitleaks/gitleaks.toml`](../../.github/gitleaks/gitleaks.toml), разобранные ложные срабатывания — [`.github/gitleaks/.gitleaksignore`](../../.github/gitleaks/.gitleaksignore) (заглушки вида `changeme` разрешены).
 - **GitHub:** secret scanning и push protection в настройках репозитория (Settings → Code security) — включает владелец; push protection отклоняет `git push` с ключом известного провайдера ещё до попадания в репозиторий.
 
-Ложное срабатывание: замените значение на заглушку или, если это действительно не секрет (тестовый вектор, публичный ключ), добавьте узкое правило в allowlist `.gitleaks.toml` с комментарием в PR. Комментарий `gitleaks:allow` в строке тоже работает, но его увидит ревьюер.
+Ложное срабатывание: замените значение на заглушку или, если это действительно не секрет (тестовый вектор, публичный ключ), добавьте узкое правило в allowlist `.github/gitleaks/gitleaks.toml` с комментарием в PR. Комментарий `gitleaks:allow` в строке тоже работает, но его увидит ревьюер.
 
 ## Если секрет утёк
 
 1. **Сразу отзовите или смените ключ** у провайдера — это главное, история git вторична.
-2. Сообщите владельцу приватно (Security → Report a vulnerability, см. [SECURITY.md](../../SECURITY.md)).
+2. Сообщите владельцу приватно (Security → Report a vulnerability, см. [SECURITY.md](../../.github/SECURITY.md)).
 3. Замените ключ в Secrets окружения или в `.env.local`.
 4. Переписывать историю `main` (`git filter-repo`) имеет смысл только вместе с отзывом ключа и только по решению владельца.

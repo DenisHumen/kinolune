@@ -19,8 +19,8 @@ just bootstrap run --skip android,flutter   # Windows: -Skip android,flutter
 | Файл | Что закрепляет |
 |---|---|
 | `rust-toolchain.toml` | Rust (ставит rustup) |
-| `mise.toml` | Flutter (вместе с Dart), JDK, Go, Node, `just`, `cargo-ndk`, `cargo-nextest` (ставит [mise](https://mise.jdx.dev)) |
-| `.xcode-version` | Xcode для Apple-таргетов (проверяется только на macOS; ставить через `xcodes`) |
+| `.config/mise.toml` | Flutter (вместе с Dart), JDK, Go, Node, `just`, `cargo-ndk`, `cargo-nextest` (ставит [mise](https://mise.jdx.dev)) |
+| `.config/xcode-version` | Xcode для Apple-таргетов (проверяется только на macOS; ставить через `xcodes`) |
 | `tools/bootstrap/versions.env` | mise, Android cmdline-tools (с SHA-256), пакеты Android SDK (platform, build-tools, NDK), минимальные версии Python и git |
 
 Обновление версии — правка одного из этих файлов в отдельном PR, затем `just bootstrap` и
@@ -33,9 +33,9 @@ just bootstrap run --skip android,flutter   # Windows: -Skip android,flutter
 | Системные пакеты (git, git-lfs, компилятор C, cmake, ninja, Python ≥ 3.10; на Linux — GTK 3 и libmpv для Flutter-десктопа) | проверка + команда `apt`/`dnf`/`pacman` | проверка + `brew` | проверка + `winget`, MSVC Build Tools |
 | Rust из `rust-toolchain.toml` | `rustup toolchain install` | так же | так же |
 | mise | ставится в `~/.local/bin` (с проверкой SHA-256) | команда `brew install mise` | команда `winget` |
-| `mise install` по `mise.toml` | да | да | да |
+| `mise install` по `.config/mise.toml` | да | да | да |
 | Android SDK | cmdline-tools в `$ANDROID_HOME` (по умолчанию `~/Android/Sdk`), затем `sdkmanager --install` | только проверка и подсказки | только проверка и подсказки |
-| Xcode по `.xcode-version` | — | проверка | — |
+| Xcode по `.config/xcode-version` | — | проверка | — |
 
 **Лицензии Android SDK** скрипт не принимает за вас: если они не приняты, он попросит
 выполнить `sdkmanager --licenses` и прочитать их самому, после чего повторный

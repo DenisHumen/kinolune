@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: MPL-2.0
-"""Loads and validates tests/media/manifest.toml (shared by generate/verify/fetch)."""
+"""Loads and validates tools/qa/media/manifest.toml (shared by generate/verify/fetch)."""
 
 from __future__ import annotations
 
 import tomllib
 from pathlib import Path
 
-MANIFEST = Path(__file__).resolve().parents[3] / "tests" / "media" / "manifest.toml"
+MANIFEST = Path(__file__).resolve().parent / "manifest.toml"
 
 ENTRY_KEYS = {"id", "path", "source", "recipe", "what", "used_by", "licence", "attribution",
               "url", "size", "sha256", "expect", "streams", "text"}

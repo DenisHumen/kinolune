@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MPL-2.0
-//! `pa-probe` against the QA-002 test media (`tests/media/manifest.toml`).
+//! `pa-probe` against the QA-002 test media (`tools/qa/media/manifest.toml`).
 //!
 //! Needs our LGPL FFmpeg build and the generated media set:
 //!
 //! ```text
-//! just tests::media                                   # tests/media/synthetic
+//! just tests::media                                   # tools/qa/media/synthetic
 //! PA_FFMPEG_LIB_DIR=tools/ffmpeg/out/linux-x86_64/lib cargo test -p pa-probe --test media
 //! ```
 //!
-//! `PA_TEST_MEDIA_DIR` overrides the media root (default `tests/media`).
+//! `PA_TEST_MEDIA_DIR` overrides the media root (default `tools/qa/media`).
 //! Without FFmpeg or the media the tests are skipped.
 
 use std::path::{Path, PathBuf};
@@ -28,7 +28,7 @@ fn repo_root() -> PathBuf {
 
 fn media_root() -> PathBuf {
     std::env::var_os("PA_TEST_MEDIA_DIR")
-        .map_or_else(|| repo_root().join("tests/media"), PathBuf::from)
+        .map_or_else(|| repo_root().join("tools/qa/media"), PathBuf::from)
 }
 
 /// FFmpeg and the synthetic media set, or `None` (test skipped).
@@ -50,7 +50,7 @@ fn setup() -> Option<(Ffmpeg, PathBuf)> {
 }
 
 fn manifest() -> Vec<Value> {
-    let text = std::fs::read_to_string(repo_root().join("tests/media/manifest.toml")).unwrap();
+    let text = std::fs::read_to_string(repo_root().join("tools/qa/media/manifest.toml")).unwrap();
     let doc: Value = toml::from_str(&text).unwrap();
     doc["file"].as_array().unwrap().clone()
 }

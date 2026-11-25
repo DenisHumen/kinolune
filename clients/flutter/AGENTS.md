@@ -6,7 +6,7 @@
 
 - **Что здесь:** приложение для Android, Android TV, iOS, iPadOS, macOS, Windows, Linux (ADR-0002) и его пакеты в `packages/`. Для релиза 0.1 раскладка и API зафиксированы в [docs/dev/release-0.1-contract.md](../../docs/dev/release-0.1-contract.md): приложение `app/`, пакеты `packages/pa_library/` (чистый Dart), `packages/pa_player/` (media_kit, ADR-0012). Владельцы — по таблице контракта и ROADMAP §0.4.
 - **Флейворы** `store` и `full` (ADR-0007, CORE-013, [docs/dev/flavors.md](../../docs/dev/flavors.md)): Dart — `--dart-define=KINOLUNE_FLAVOR=store|full` (`lib/flavor.dart`), Rust-ядро — переменная окружения `CARGO_KINOLUNE_FLAVOR=store|full` для хука `pa_core`. Задавайте обе одинаково; по умолчанию обе `store`. Проверяйте оба флейвора.
-- **Инструменты:** Flutter stable (версию закрепит REPO-008, `mise.toml`); для Android — Android SDK и JDK; для Linux — `clang`, `cmake`, `ninja`, `pkg-config`, `libgtk-3-dev`, для media_kit — `libmpv-dev` или наш libmpv (`app/tool/native_libs.sh`, см. ниже).
+- **Инструменты:** Flutter stable (версию закрепит REPO-008, `.config/mise.toml`); для Android — Android SDK и JDK; для Linux — `clang`, `cmake`, `ninja`, `pkg-config`, `libgtk-3-dev`, для media_kit — `libmpv-dev` или наш libmpv (`app/tool/native_libs.sh`, см. ниже).
 
 ## Сборка и тесты
 

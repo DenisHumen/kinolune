@@ -45,8 +45,8 @@ path = [
   "Cargo.lock",
   "tools/qa/media/hdrmeta/Cargo.lock",
   "**/pubspec.lock",
-  ".xcode-version",
-  "mise.toml",
+  ".config/xcode-version",
+  ".config/mise.toml",
   "**/.metadata",
 ]
 precedence = "closest"
@@ -55,7 +55,7 @@ SPDX-License-Identifier = "MPL-2.0"
 
 # Contributor Covenant 2.1 text (Organization for Ethical Source), CC-BY-4.0.
 [[annotations]]
-path = "CODE_OF_CONDUCT.md"
+path = ".github/CODE_OF_CONDUCT.md"
 precedence = "override"
 SPDX-FileCopyrightText = [
   "2014-2021 Coraline Ada Ehmke and Contributor Covenant contributors",
@@ -63,33 +63,21 @@ SPDX-FileCopyrightText = [
 ]
 SPDX-License-Identifier = "CC-BY-4.0"
 
-# Flutter-generated platform scaffolding in spikes (`flutter create` templates,
-# generated plugin registrants, default launcher icons, Gradle wrapper config).
+# Flutter-generated platform scaffolding of the desktop-player spike
+# (`flutter create` templates, generated plugin registrants).
 # Template code is BSD-3-Clause by The Flutter Authors; our edits are MPL-2.0.
 [[annotations]]
 path = [
-  "spikes/*/analysis_options.yaml",
-  "spikes/*/android/build.gradle.kts",
-  "spikes/*/android/settings.gradle.kts",
-  "spikes/*/android/gradle.properties",
-  "spikes/*/android/gradle/wrapper/gradle-wrapper.properties",
-  "spikes/*/android/app/build.gradle.kts",
-  "spikes/*/android/app/src/debug/AndroidManifest.xml",
-  "spikes/*/android/app/src/profile/AndroidManifest.xml",
-  "spikes/*/android/app/src/main/res/drawable/launch_background.xml",
-  "spikes/*/android/app/src/main/res/drawable-v21/launch_background.xml",
-  "spikes/*/android/app/src/main/res/mipmap-*/ic_launcher.png",
-  "spikes/*/android/app/src/main/res/values/styles.xml",
-  "spikes/*/android/app/src/main/res/values-night/styles.xml",
-  "spikes/*/linux/CMakeLists.txt",
-  "spikes/*/linux/flutter/CMakeLists.txt",
-  "spikes/*/linux/flutter/generated_plugin_registrant.cc",
-  "spikes/*/linux/flutter/generated_plugin_registrant.h",
-  "spikes/*/linux/flutter/generated_plugins.cmake",
-  "spikes/*/linux/runner/CMakeLists.txt",
-  "spikes/*/linux/runner/main.cc",
-  "spikes/*/linux/runner/my_application.cc",
-  "spikes/*/linux/runner/my_application.h",
+  "tools/desktop-player-spike/analysis_options.yaml",
+  "tools/desktop-player-spike/linux/CMakeLists.txt",
+  "tools/desktop-player-spike/linux/flutter/CMakeLists.txt",
+  "tools/desktop-player-spike/linux/flutter/generated_plugin_registrant.cc",
+  "tools/desktop-player-spike/linux/flutter/generated_plugin_registrant.h",
+  "tools/desktop-player-spike/linux/flutter/generated_plugins.cmake",
+  "tools/desktop-player-spike/linux/runner/CMakeLists.txt",
+  "tools/desktop-player-spike/linux/runner/main.cc",
+  "tools/desktop-player-spike/linux/runner/my_application.cc",
+  "tools/desktop-player-spike/linux/runner/my_application.h",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = ["2014 The Flutter Authors", "project_alpha contributors"]
@@ -177,7 +165,7 @@ SPDX-FileCopyrightText = "project_alpha contributors"
 SPDX-License-Identifier = "MPL-2.0"
 
 # Flutter-generated platform scaffolding of package example apps
-# (`flutter create`; same terms as the spikes above).
+# (`flutter create`; same terms as the desktop-player spike above).
 [[annotations]]
 path = [
   "clients/flutter/packages/*/example/android/**",

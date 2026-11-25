@@ -85,7 +85,7 @@ if (-not (Have rustup)) {
 }
 
 # --- 3. mise ----------------------------------------------------------------
-Step 'mise.toml (Flutter, JDK, Go, Node, just, cargo-ndk, nextest)'
+Step '.config/mise.toml (Flutter, JDK, Go, Node, just, cargo-ndk, nextest)'
 if (-not (Have mise)) {
     Fail 'mise missing'
     Todo "winget install --id jdx.mise -e --version $($V['MISE_VERSION'])"
@@ -94,7 +94,7 @@ if (-not (Have mise)) {
     Ok "mise $((& mise --version) -split ' ' | Select-Object -First 1)"
     Push-Location $Root
     if (-not $Check) {
-        & mise trust --quiet (Join-Path $Root 'mise.toml')
+        & mise trust --quiet (Join-Path $Root '.config/mise.toml')
         if ($Skip -contains 'flutter') {
             & mise install java go node just cargo:cargo-ndk cargo:cargo-nextest
         } else { & mise install }
@@ -102,8 +102,8 @@ if (-not (Have mise)) {
     $missing = @(& mise ls --current --missing --no-header 2>$null | ForEach-Object { ($_ -split '\s+')[0] } |
         Where-Object { $_ -and -not ($_ -eq 'flutter' -and $Skip -contains 'flutter') })
     Pop-Location
-    if ($missing.Count -eq 0) { Ok 'all mise.toml tools installed' } else {
-        $missing | ForEach-Object { Fail "$_ (mise.toml) not installed" }
+    if ($missing.Count -eq 0) { Ok 'all .config/mise.toml tools installed' } else {
+        $missing | ForEach-Object { Fail "$_ (.config/mise.toml) not installed" }
         Todo 'mise install'
     }
 }

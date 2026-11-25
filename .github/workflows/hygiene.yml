@@ -55,7 +55,8 @@ jobs:
         run: |
           # PR: only the PR's commits; push/dispatch: the whole history.
           if [ -n "$BASE" ]; then range="$BASE..$HEAD"; else range="--all"; fi
-          "$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --no-banner \
+          "$RUNNER_TEMP/gitleaks" git --config .github/gitleaks/gitleaks.toml \
+            --gitleaks-ignore-path .github/gitleaks/.gitleaksignore --redact --no-banner \
             --log-opts="$range" .
 
   exec-bits:
@@ -88,5 +89,5 @@ jobs:
             --accept 200,206,429
             --exclude '^https://github\.com/DenisHumen/kinolune/(actions|security)'
             --exclude '^https://img\.shields\.io/'
-            README.md README.en.md CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md AGENTS.md CLAUDE.md
+            README.md README.en.md .github/CONTRIBUTING.md .github/SECURITY.md .github/CODE_OF_CONDUCT.md AGENTS.md .claude/CLAUDE.md
           fail: true

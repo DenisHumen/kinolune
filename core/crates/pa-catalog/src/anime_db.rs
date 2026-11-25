@@ -2,7 +2,7 @@
 //! anime-offline-database on the device (META-030).
 //!
 //! - **Bundled.** The app ships the derived ODbL bundle
-//!   (`data/anime-mappings/build.sh`, zstd) and passes its path; it is read
+//!   (`tools/anime-mappings/build.sh`, zstd) and passes its path; it is read
 //!   in place, never modified.
 //! - **Updated.** Once a day [`AnimeDb::refresh`] asks GitHub for the
 //!   latest upstream release and installs it only if it is newer than what

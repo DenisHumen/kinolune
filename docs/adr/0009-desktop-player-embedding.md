@@ -3,7 +3,7 @@
 - **Статус:** Предложен
 - **Дата:** 2026-11-13
 - **Решают:** владелец проекта
-- **Связано:** `PLAY-DSK-001` (спайк), `PLAY-DSK-002`…`PLAY-DSK-005`, `PLAY-002`, `PLAY-003`, ADR-0003, `docs/research/02` §2.2, §2.3, §2.8; спайк — [`spikes/desktop-player/`](../../spikes/desktop-player/), замеры — [`results/2026-11-13-linux-intel-uhd630.md`](../../spikes/desktop-player/results/2026-11-13-linux-intel-uhd630.md)
+- **Связано:** `PLAY-DSK-001` (спайк), `PLAY-DSK-002`…`PLAY-DSK-005`, `PLAY-002`, `PLAY-003`, ADR-0003, `docs/research/02` §2.2, §2.3, §2.8; спайк — [`tools/desktop-player-spike/`](../../tools/desktop-player-spike/), замеры — [`results/2026-11-13-linux-intel-uhd630.md`](../../tools/desktop-player-spike/results/2026-11-13-linux-intel-uhd630.md)
 
 ## Контекст и проблема
 
@@ -34,7 +34,7 @@
 ## Что показал спайк (Linux)
 
 Окружение: Flutter 3.50.0 (Impeller, GLES), libmpv 0.41.0, Intel UHD 630 + VAAPI, headless sway (Wayland + XWayland) и Xvfb.
-Полная таблица — в [`results/`](../../spikes/desktop-player/results/2026-11-13-linux-intel-uhd630.md).
+Полная таблица — в [`results/`](../../tools/desktop-player-spike/results/2026-11-13-linux-intel-uhd630.md).
 
 | | Texture, Wayland | Texture, X11 (XWayland) | Native, X11 (`--wid`) | Native, Wayland |
 |---|---|---|---|---|
@@ -138,6 +138,6 @@ render-поток на плеер; явные `vo`-параметры тон-м�
 ## Ссылки
 
 - `docs/research/02-client-stack-playback.md` §2.2, §2.3, §2.8
-- Спайк: `spikes/desktop-player/` (README — инструкция и список ловушек)
+- Спайк: `tools/desktop-player-spike/` (README — инструкция и список ловушек)
 - mpv: `libmpv/render.h`, `libmpv/render_gl.h` (render API: только OpenGL и SW), опция `--wid`
 - Flutter Linux embedder: `FlTextureGL`, `FlTextureRegistrar`

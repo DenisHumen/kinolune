@@ -51,8 +51,7 @@ updates:
 
   - package-ecosystem: pub
     directories:
-      - /spikes/android-player
-      - /spikes/desktop-player
+      - /tools/desktop-player-spike
     schedule:
       interval: weekly
       day: monday
@@ -69,7 +68,6 @@ updates:
 
   - package-ecosystem: gradle
     directories:
-      - /spikes/android-player/android
       - /core/crates/pa-ffi/jvm-smoke
     schedule:
       interval: weekly
@@ -102,12 +100,12 @@ updates:
         patterns: ["*"]
 
   # Base images of the FFmpeg build container, the distro Containerfile and
-  # the desktop-player spike.
+  # the desktop-player spike (tools/desktop-player-spike).
   - package-ecosystem: docker
     directories:
       - /distro
       - /tools/ffmpeg/docker
-      - /spikes/desktop-player/docker
+      - /tools/desktop-player-spike/docker
     schedule:
       interval: weekly
       day: monday

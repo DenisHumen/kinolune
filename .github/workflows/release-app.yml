@@ -179,7 +179,7 @@ jobs:
         # bundle + upstream LICENSE into the app assets (~3 MB, zstd).
         run: |
           rustup toolchain install
-          data/anime-mappings/build.sh "$RUNNER_TEMP/anime-db"
+          tools/anime-mappings/build.sh "$RUNNER_TEMP/anime-db"
           install -m 644 "$RUNNER_TEMP/anime-db/anime-offline-ids.jsonl.zst" \
             "$RUNNER_TEMP/anime-db/LICENSE.anime-offline-database" "$APP_DIR/assets/anime-db/"
       - name: flutter build linux
@@ -330,7 +330,7 @@ jobs:
       - name: Bundled anime database (META-030, ODbL)
         run: |
           rustup toolchain install
-          data/anime-mappings/build.sh "$RUNNER_TEMP/anime-db"
+          tools/anime-mappings/build.sh "$RUNNER_TEMP/anime-db"
           install -m 644 "$RUNNER_TEMP/anime-db/anime-offline-ids.jsonl.zst" \
             "$RUNNER_TEMP/anime-db/LICENSE.anime-offline-database" "$APP_DIR/assets/anime-db/"
       - name: flutter build apk (split per ABI + universal)

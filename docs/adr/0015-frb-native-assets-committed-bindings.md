@@ -33,7 +33,7 @@ ADR-0001 выбрал flutter_rust_bridge (FRB) для Dart и пакет `clien
 - Крейт `core/crates/pa-frb` (член workspace по глобу) — фасад ядра для Dart; модули `src/api/<domain>.rs`. Swift и Kotlin по-прежнему идут через `pa-ffi` (UniFFI).
 - Пакет `pa_core` — чистый Dart-пакет (без зависимости от Flutter) с `hook/build.dart`, который собирает `pa-frb` через `rustup run <channel> cargo build --target <triple>`. Каналу нужен `rust-toolchain.toml` рядом с крейтом: `core/crates/pa-frb/rust-toolchain.toml` с тем же `channel`, что и корневой, и списком целей. Совпадение каналов проверяет CI (`pa-core.yml`).
 - Сгенерированные файлы `core/crates/pa-frb/src/frb_generated.rs` и `clients/flutter/packages/pa_core/lib/src/rust/**` **коммитятся** (исключение из правила ADR-0001, как и файлы для Xcode). Генерация — `just core frb`, проверка — `just core frb-check` (job `bindings` в `pa-core.yml`). `rustfmt` их не трогает (`#[rustfmt::skip]`), `dart analyze` исключает.
-- Версия FRB закреплена точно (`=2.13.0` в Cargo, `2.13.0` в pubspec и `mise.toml`); обновлять все три вместе.
+- Версия FRB закреплена точно (`=2.13.0` в Cargo, `2.13.0` в pubspec и `.config/mise.toml`); обновлять все три вместе.
 
 ### Последствия
 

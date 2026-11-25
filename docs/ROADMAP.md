@@ -75,20 +75,20 @@ project_alpha/
 ├── design/               # токены DTCG, иконки, бренд, иллюстрации (Git LFS)
 ├── packaging/            # flatpak, AUR, winget, MSIX, DMG, F-Droid, Docker, nfpm
 ├── config/               # публичные удалённые конфиги (twitch/remote-config.json и т. п.)
-├── tools/                # ffmpeg-сборка, bindings, recognition-eval, roadmap-скрипты
-├── tests/                # e2e, тестовые медиа (LFS), фикстуры
-├── site/                 # сайт (GitHub Pages) — или отдельный репо по DEC-001
+├── tools/                # ffmpeg-сборка, bindings, recognition-eval, roadmap, qa (тестовые медиа, e2e), anime-mappings
 └── docs/                 # research, adr, api, dev, user, legal, STRATEGY, ROADMAP
 ```
 
+Служебные файлы корня (REPO-014, `docs/dev/repo-layout.md`): `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md` и gitleaks — в `.github/`; `CLAUDE.md` — в `.claude/`; `mise.toml` и `xcode-version` — в `.config/`; `deny.toml` — в `.cargo/`; корневой justfile — `.justfile`. Сайт (SITE-001) — в `docs/site/` или отдельном репозитории по DEC-001.
+
 | Workstream | Владеет каталогами |
 |---|---|
-| REPO | корневые конфиги (`.editorconfig`, `rust-toolchain.toml`, `mise.toml`, `.gitattributes`), `.github/` кроме `workflows/` и `FUNDING.yml`, `.devcontainer/`, `tools/roadmap/`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `AGENTS.md` |
+| REPO | корневые конфиги (`.editorconfig`, `rust-toolchain.toml`, `.config/`, `.gitattributes`, `.justfile`), `.github/` кроме `workflows/` и `FUNDING.yml` (вкл. `.github/CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `gitleaks/`), `.devcontainer/`, `.claude/CLAUDE.md`, `tools/roadmap/`, `AGENTS.md` |
 | CI | `.github/workflows/`, `tools/ci/` |
 | CORE | `core/crates/{pa-model,pa-runtime,pa-secrets,pa-log,pa-jobs,pa-ffi}`, `clients/flutter/packages/pa_core/`, `tools/bindings/` |
 | NET | `core/crates/{pa-vfs,pa-proxy,pa-discovery,pa-remote}`, `third_party/{libsmb2,libnfs}/` |
 | LIB | `core/crates/{pa-library,pa-scanner,pa-probe}` (вкл. `migrations/`) |
-| META | `core/crates/{pa-recognition,pa-metadata}`, `tools/recognition-eval/`, `data/anime-mappings/` |
+| META | `core/crates/{pa-recognition,pa-metadata}`, `tools/recognition-eval/`, `tools/anime-mappings/` |
 | PLAY | `core/crates/pa-playback`, `tools/ffmpeg/`, `third_party/{ffmpeg,mpv,libass}/` (скрипты и патчи) |
 | PLAY-AND | `clients/android/player/`, `clients/flutter/packages/pa_player_android/` |
 | PLAY-APL | `clients/apple/AlphaPlayerKit/`, `clients/flutter/packages/pa_player_apple/` |
@@ -102,10 +102,10 @@ project_alpha/
 | DIST | `distro/` |
 | DSN | `design/`, `clients/flutter/lib/design/generated/` (только генерация) |
 | PKG | `packaging/` |
-| QA | `tests/`, `tools/qa/` |
+| QA | `tools/qa/` (вкл. тестовые медиа `tools/qa/media/`) |
 | DOC | `docs/{adr,dev,user}/` |
 | LEGAL | `docs/legal/`, `LICENSES/`, `THIRD_PARTY_NOTICES*` |
-| SITE | `site/` |
+| SITE | `docs/site/` (появится в SITE-001) или отдельный репозиторий по DEC-001 |
 | COMM | `README*.md`, `.github/FUNDING.yml`, `.github/DISCUSSION_TEMPLATE/` |
 | EXT | `clients/apple/WatchApp/`, `clients/apple/VisionApp/` |
 | SOC | `clients/flutter/app/lib/features/social/`, социальные сервисы бэкенда Kinolune+ (SUB-024) |
@@ -117,7 +117,7 @@ project_alpha/
 |---|---|
 | `Cargo.toml` (корень) | `members`: глобы `core/crates/*`, `tools/crates/*` и явные пути (`tools/recognition-eval`; `server` добавляется задачей, создающей `server/Cargo.toml`). Новый крейт в `core/crates/` или `tools/crates/` корень не трогает, крейт в другом месте — добавляет одну строку в `members`. Новая зависимость — одна строка в `[workspace.dependencies]`, по алфавиту. Конфликт решать объединением строк |
 | `Cargo.lock` | Не править руками. При конфликте взять версию `main` и выполнить `cargo check --workspace` |
-| `justfile` (корень) | Только строки `mod <area> '<path>/justfile'`. Рецепты — в justfile своей области |
+| `.justfile` (корень) | Только строки `mod <area> '<path>/justfile'`. Рецепты — в justfile своей области |
 | `core/crates/pa-ffi/src/lib.rs` | Каждый домен экспортируется своим модулем `src/<domain>.rs`. В `lib.rs` добавляется одна строка `mod` |
 | `core/crates/pa-library/migrations/` | Имя файла: `YYYYMMDDHHMM_<ID>_<slug>.sql` — номера не конфликтуют. Только expand→contract (LIB-002) |
 | `clients/flutter/pubspec.yaml` | Зависимости — по алфавиту, одна строка. Конфликт — объединение |
@@ -197,7 +197,7 @@ project_alpha/
 ### 3.1. REPO — репозиторий и governance
 
 - [x] **REPO-001** Каркас монорепо
-  - Что: каталоги по §0.4; корневой `Cargo.toml` (workspace, `members` по глобу, `[workspace.dependencies]`), `rust-toolchain.toml`, `.editorconfig`, `.gitignore`, `.gitattributes` (LFS для `design/**`, `tests/media/**`), корневой `justfile` только с `mod`-строками, `.env.example`.
+  - Что: каталоги по §0.4; корневой `Cargo.toml` (workspace, `members` по глобу, `[workspace.dependencies]`), `rust-toolchain.toml`, `.editorconfig`, `.gitignore`, `.gitattributes` (LFS для `design/**`, `tools/qa/media/**`), корневой `justfile` только с `mod`-строками, `.env.example`.
   - deps: — · size: S · parallel: no · веха: M0 · ref: S §7, 04 §4.1
   - done when: `just --list` показывает модули; `cargo metadata` проходит на пустом workspace; `git lfs track` настроен.
 - [x] **REPO-002** LICENSE, SPDX-заголовки и REUSE
@@ -248,10 +248,10 @@ project_alpha/
   - Что: обновления cargo, pub, gradle, swiftpm, gomod, github-actions; группировка по экосистемам; auto-merge только для patch-обновлений dev-зависимостей.
   - deps: CI-001 · size: S · parallel: yes · веха: M0 · ref: 04 §5.3
   - done when: приходят сгруппированные PR, и CI на них проходит.
-- [ ] **REPO-014** Аккуратная структура репозитория (в работе 2026-11-25, «тихое окно»)
+- [x] **REPO-014** Аккуратная структура репозитория
   - Что: запрос владельца 2026-11-19 — в корне меньше папок и файлов, главная GitHub выглядит аккуратно, ничего не ломается. План и ограничения — `docs/dev/repo-layout.md`: `CODE_OF_CONDUCT`/`CONTRIBUTING`/`SECURITY` → `.github/`, `CLAUDE.md` → `.claude/`, конфиги gitleaks/deny/mise/xcode → `.github/` и `.config/`, `justfile` → `.justfile`, убрать `site/` и `spikes/` (история в git), `data/` и `tests/` → `tools/`; `config/` не трогать (адрес вшит в выпущенные сборки); README с баннером, бейджами и скриншотом, «About» и social preview. Переносы через `git mv` в «тихое окно» без открытых PR агентов.
   - deps: — · size: M · parallel: no · веха: M10 · ref: docs/dev/repo-layout.md
-  - done when: в корне ≤ 10 видимых папок и ≤ 10 видимых файлов; полный CI, пробный релиз (`release-app.yml` dry run), `just bootstrap` в чистом клоне, `reuse lint`, проверка ссылок — зелёные; вкладки GitHub и `raw.githubusercontent.com/.../main/config/...` работают.
+  - done when: в корне ≤ 10 видимых папок и ≤ 10 видимых файлов; полный CI, пробный релиз (`release-app.yml` dry run), `just bootstrap` в чистом клоне, `reuse lint`, проверка ссылок — зелёные; вкладки GitHub и `raw.githubusercontent.com/.../main/config/...` работают. Сделано 2026-11-25 (ADR-NNNN, `docs/dev/repo-layout.md`): в корне 10 видимых папок и 8 видимых файлов. Перенесено через `git mv`: `CODE_OF_CONDUCT`/`CONTRIBUTING`/`SECURITY` → `.github/`, `CLAUDE.md` → `.claude/`, gitleaks → `.github/gitleaks/`, `deny.toml` → `.cargo/deny.toml` (cargo-deny находит его сам, в отличие от `.config/`), `mise.toml` и `xcode-version` → `.config/`, `justfile` → `.justfile`, `data/anime-mappings` → `tools/anime-mappings`, `tests/` → `tools/qa/` (модуль `just tests::…` не переименован), `spikes/desktop-player` → `tools/desktop-player-spike` (ещё нужен для headless-проверки `pa_player` и скриншотов); удалены `site/` и `spikes/android-player` (история git, ссылка в ADR-0008). Оставлены намеренно: `config/` (адрес в выпущенных сборках), Cargo workspace в корне, `AGENTS.md`, `.pre-commit-config.yaml`, `.env.example`. README: логотип, бейджи, скриншоты, блоки «Скачать», «Участвовать», «Пожертвовать». Проверено на сервере: `just --list`, `cargo metadata`/`check`/`fmt`/`deny`, `reuse lint`, roadmap lint, check_catalog, `flutter analyze`, `go vet`, actionlint, ссылки. Не проверено: полный CI, пробный релиз, вкладки GitHub после слияния, «About» и social preview (владелец).
 - [x] **REPO-015** Живая страница прогресса в ветке `progress`
   - Что: запрос владельца 2026-11-20 — отдельная страница с прогресс-баром и статусом каждой задачи: не начато, в работе (открытый PR с `[ID]` или веткой `тип/ID-…`), сделано, но не проверено (проверки задачи в `docs/qa/test-catalog.md` не все ✅), готово. `roadmap.py page --out DIR` пишет `index.html` (без внешних ресурсов, светлая и тёмная тема, телефон, фильтр и поиск) и `README.md` (GitHub и мобильное приложение); workflow `progress.yml` обновляет orphan-ветку `progress` после push в `main`, событий PR, по расписанию и вручную, только при изменении содержимого. `main` не трогается.
   - deps: REPO-012 · size: M · parallel: yes · веха: M0 · ref: tools/roadmap/README.md
@@ -621,7 +621,7 @@ project_alpha/
   - deps: META-005 · size: L · parallel: yes · веха: M2 · ref: 03 §4.2 [4]
   - done when: на корпусе ≥ 90 % верных кандидатов попадают в топ-10 без внешних запросов.
 - [x] **META-008** Встроенные маппинги аниме
-  - Что: по `docs/legal/anime-mappings.md` — в бандле только производная база из anime-offline-database (ODbL, с атрибуцией, сама под ODbL, воспроизводимая сборка `data/anime-mappings/build.sh`); Anime-Lists XML и Fribb `anime-list-full.json` (без лицензии) не встраиваются и не зеркалятся — приложение скачивает их с upstream прямо на устройство (зашитые URL, ETag, не чаще раза в сутки, проверка целостности и SHA-256, локальный кэш, атомарная замена); слияние слоёв только в памяти устройства; резервный форк — только для anime-offline-database.
+  - Что: по `docs/legal/anime-mappings.md` — в бандле только производная база из anime-offline-database (ODbL, с атрибуцией, сама под ODbL, воспроизводимая сборка `tools/anime-mappings/build.sh`); Anime-Lists XML и Fribb `anime-list-full.json` (без лицензии) не встраиваются и не зеркалятся — приложение скачивает их с upstream прямо на устройство (зашитые URL, ETag, не чаще раза в сутки, проверка целостности и SHA-256, локальный кэш, атомарная замена); слияние слоёв только в памяти устройства; резервный форк — только для anime-offline-database.
   - deps: REPO-001, LEGAL-003 · size: M · parallel: yes · веха: M2 · ref: S §3, 03 §3.2, §9 п.3
   - done when: офлайн-тест маппинга AniDB ↔ TVDB ↔ TMDB на рукописных фикстурах (без копий Anime-Lists/Fribb); обновление применяется атомарно; в репозитории и бандле нет данных без лицензии.
 - [x] **META-009** Трейт Provider и клиент TMDB
@@ -825,7 +825,7 @@ project_alpha/
 ### 3.8. PLAY-AND — плеер Android и Android TV
 
 - [x] **PLAY-AND-001** Спайк: встраивание плеера во Flutter без потери HDR
-  - Что: в `spikes/android-player` сравнить PlatformView (SurfaceView, Hybrid Composition) и отдельную Activity с нативным SurfaceView; проверить HDR10, DV и AFR на Shield или Chromecast GTV; оверлей OSD на Flutter или нативный.
+  - Что: в `spikes/android-player` (удалён в REPO-014, история git на коммите `2800dc05`) сравнить PlatformView (SurfaceView, Hybrid Composition) и отдельную Activity с нативным SurfaceView; проверить HDR10, DV и AFR на Shield или Chromecast GTV; оверлей OSD на Flutter или нативный.
   - deps: — · size: M · parallel: yes · веха: M0 · ref: 02 §1.3, §2.8
   - done when: ADR-0008 с замерами и выбранным вариантом.
 - [x] **PLAY-AND-002** Плагин `pa_player_android` на Media3
@@ -902,7 +902,7 @@ project_alpha/
   - deps: PLAY-DSK-002 · size: M · parallel: yes · веха: M10 · ref: 02 §2.7
   - done when: 23.976-контент переключает монитор на 24 Гц и возвращает частоту после выхода.
 - [ ] **PLAY-DSK-009** Замеры спайка libmpv на Windows, macOS и реальном Linux-композиторе
-  - Что: повторить методику `spikes/desktop-player` (метрики `SPIKE_RESULT`) на Windows 11 (ANGLE/DXGI-текстура и дочерний HWND), macOS (`CVPixelBuffer` и `NSView` под прозрачным `FlutterView`) и на GNOME/KDE Wayland с реальным монитором; дописать таблицы в ADR-0009.
+  - Что: повторить методику `tools/desktop-player-spike` (метрики `SPIKE_RESULT`) на Windows 11 (ANGLE/DXGI-текстура и дочерний HWND), macOS (`CVPixelBuffer` и `NSView` под прозрачным `FlutterView`) и на GNOME/KDE Wayland с реальным монитором; дописать таблицы в ADR-0009.
   - deps: PLAY-DSK-001 · size: M · parallel: yes · веха: M1 · ref: ADR-0009, 02 §2.8
   - done when: в ADR-0009 есть замеры для Windows, macOS и Wayland на реальном композиторе; подтверждено или опровергнуто, что Flutter-OSD работает поверх `NSView` на macOS.
 
@@ -1959,7 +1959,7 @@ project_alpha/
   - deps: REPO-001 · size: S · parallel: yes · веха: M0 · ref: 04 §4, 01 §4.10 п.5
   - done when: документ принят; ссылка в CONTRIBUTING.
 - [x] **QA-002** Тестовые медиа-сэмплы
-  - Что: `tests/media/` в LFS, только свободные лицензии: Blender Open Movies; синтетические сэмплы ffmpeg (все контейнеры и кодеки, HDR10, HDR10+, HLG, DV-метаданные, многоканальное аудио); субтитры ASS, PGS, VobSub; gapless-альбом; манифест с лицензиями.
+  - Что: `tools/qa/media/` в LFS, только свободные лицензии: Blender Open Movies; синтетические сэмплы ffmpeg (все контейнеры и кодеки, HDR10, HDR10+, HLG, DV-метаданные, многоканальное аудио); субтитры ASS, PGS, VobSub; gapless-альбом; манифест с лицензиями.
   - deps: REPO-001 · size: M · parallel: yes · веха: M0 · ref: 01 §5.2, 02 §2
   - done when: манифест описывает каждый файл и его лицензию; общий размер набора меньше 2 ГБ.
 - [ ] **QA-003** Матрица воспроизведения (smoke)

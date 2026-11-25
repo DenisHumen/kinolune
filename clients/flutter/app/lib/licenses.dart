@@ -59,7 +59,7 @@ Stream<LicenseEntry> _appLicenses() async* {
     'its contents under the Database Contents License v1.0 '
     '(https://opendatacommons.org/licenses/dbcl/1-0/). '
     '$kAppName ships a derived database built from it '
-    '(data/anime-mappings/build.sh in $kRepoUrl), which is itself under the '
+    '(tools/anime-mappings/build.sh in $kRepoUrl), which is itself under the '
     'ODbL v1.0; the app updates it from the upstream releases. Upstream: '
     '$kAnimeOfflineDatabaseUrl and '
     'https://github.com/manami-project/anime-offline-database.\n\n'

@@ -156,8 +156,8 @@ else
     fi
 fi
 
-# --- 3. mise-managed tools (mise.toml) --------------------------------------
-step "mise.toml (Flutter, JDK, Go, Node, just, cargo-ndk, nextest)"
+# --- 3. mise-managed tools (.config/mise.toml) ------------------------------
+step ".config/mise.toml (Flutter, JDK, Go, Node, just, cargo-ndk, nextest)"
 [ -d "$HOME/.local/bin" ] && PATH="$HOME/.local/bin:$PATH"
 install_mise() {
     local arch sum url tmp
@@ -187,7 +187,7 @@ if ! have mise; then
 else
     ok "mise $(mise --version 2>/dev/null | awk '{print $1}')"
     if [ "$MODE" = install ]; then
-        mise trust --quiet "$ROOT/mise.toml"
+        mise trust --quiet "$ROOT/.config/mise.toml"
         if skipped flutter; then
             (cd "$ROOT" && mise install java go node just cargo:cargo-ndk cargo:cargo-nextest)
         else
@@ -197,9 +197,9 @@ else
     MISSING_TOOLS="$(cd "$ROOT" && mise ls --current --missing --no-header 2>/dev/null | awk '{print $1}' | tr '\n' ' ')"
     for t in $MISSING_TOOLS; do
         if [ "$t" = flutter ] && skipped flutter; then continue; fi
-        fail "$t (mise.toml) not installed"
+        fail "$t (.config/mise.toml) not installed"
     done
-    [ -z "$MISSING_TOOLS" ] && ok "all mise.toml tools installed"
+    [ -z "$MISSING_TOOLS" ] && ok "all .config/mise.toml tools installed"
     [ -n "$MISSING_TOOLS" ] && todo "cd $(basename "$ROOT") && mise install"
 fi
 
@@ -243,11 +243,11 @@ fi
 # --- 5. Xcode (macOS only) --------------------------------------------------
 if [ "$OS" = Darwin ]; then
     step "Xcode"
-    WANT="$(tr -d '[:space:]' < "$ROOT/.xcode-version")"
+    WANT="$(tr -d '[:space:]' < "$ROOT/.config/xcode-version")"
     if have xcodebuild && HAVE_X="$(xcodebuild -version 2>/dev/null | awk 'NR==1{print $2}')"; then
         case "$HAVE_X" in
             "$WANT"*) ok "Xcode $HAVE_X" ;;
-            *) warn "Xcode $HAVE_X, project pins $WANT (.xcode-version); use xcodes or xcode-select" ;;
+            *) warn "Xcode $HAVE_X, project pins $WANT (.config/xcode-version); use xcodes or xcode-select" ;;
         esac
     else
         warn "Xcode not installed (needed only for Apple targets; pinned $WANT)"

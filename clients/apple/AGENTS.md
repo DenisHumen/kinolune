@@ -5,7 +5,7 @@
 Общие правила — в корневом [AGENTS.md](../../AGENTS.md).
 
 - **Что здесь:** Swift-пакеты и приложения: `AlphaPlayerKit/` (плеер, PLAY-APL), `TVApp/` (tvOS на SwiftUI, TV), `AudioKit/` (MUS), CarPlay. Ядро подключается как SwiftPM-пакет `PACore` (xcframework из `tools/bindings/`, CORE-003). Решения: ADR-0002, ADR-0003.
-- **Нужна macOS** с Xcode (версия закрепляется в `.xcode-version`, REPO-008). На Linux эти цели не собираются — не пытайтесь, отметьте в PR как непроверенное.
+- **Нужна macOS** с Xcode (версия закрепляется в `.config/xcode-version`, REPO-008). На Linux эти цели не собираются — не пытайтесь, отметьте в PR как непроверенное.
 
 ## Сборка и тесты
 

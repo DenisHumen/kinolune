@@ -199,9 +199,9 @@ stage_assets() {
     echo "== Шрифты (design/scripts/fonts-fetch.mjs)"
     node design/scripts/fonts-fetch.mjs
     [ -f design/flutter/pa_design/fonts/InterVariable.ttf ] || { echo "ОШИБКА: Inter не скачан"; return 1; }
-    echo "== База аниме (data/anime-mappings/build.sh, META-030)"
+    echo "== База аниме (tools/anime-mappings/build.sh, META-030)"
     rustup toolchain install >/dev/null
-    CARGO_TARGET_DIR="$CACHE/cargo-target/anime-db" data/anime-mappings/build.sh "$RUN/anime-db"
+    CARGO_TARGET_DIR="$CACHE/cargo-target/anime-db" tools/anime-mappings/build.sh "$RUN/anime-db"
     install -m 644 "$RUN/anime-db/anime-offline-ids.jsonl.zst" \
         "$RUN/anime-db/LICENSE.anime-offline-database" "$APP_DIR/assets/anime-db/"
 }

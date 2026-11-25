@@ -190,7 +190,7 @@ fn rejects_non_odbl_upstream() {
 /// Opt-in check against real upstream files the developer downloaded
 /// locally (never committed): set `PA_ANIME_MAPPINGS_REAL_DIR` to a directory
 /// with `anime-list-master.xml`, `anime-list-full.json` and the bundle
-/// `anime-offline-ids.jsonl` from `data/anime-mappings/build.sh`, then run
+/// `anime-offline-ids.jsonl` from `tools/anime-mappings/build.sh`, then run
 /// `cargo test -p pa-anime-mappings -- --ignored`.
 #[test]
 #[ignore = "needs locally downloaded upstream files"]

@@ -9,7 +9,7 @@ series are (almost all) public-domain or Creative Commons works, so TMDB
 posters in screenshots are of free works; anime and music names are made up.
 The content of every file is a test pattern + tone.
 
-    python3 tools/qa/media/library.py [--out tests/media/library] [--seconds 30] [--unique]
+    python3 tools/qa/media/library.py [--out tools/qa/media/library] [--seconds 30] [--unique]
 
 Every video file is the same tiny H.264/AAC clip (hard-linked when possible),
 so the whole tree is a few MB; with --unique every file gets its own bytes
@@ -26,7 +26,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[3]
+HERE = Path(__file__).resolve().parent
 # `nice` keeps a shared build machine responsive; Windows has none.
 FF = [*(["nice", "-n", "10"] if shutil.which("nice") else []), "ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "error", "-y"]
 
@@ -93,7 +93,7 @@ def place(src: Path, dest: Path) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", type=Path, default=REPO / "tests" / "media" / "library")
+    ap.add_argument("--out", type=Path, default=HERE / "library")
     ap.add_argument("--seconds", type=int, default=30, help="length of every video clip")
     ap.add_argument("--clean", action="store_true", help="delete --out first")
     ap.add_argument("--unique", action="store_true",

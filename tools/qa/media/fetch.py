@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MPL-2.0
-"""Downloads the external (freely licensed) samples listed in tests/media/manifest.toml.
+"""Downloads the external (freely licensed) samples listed in tools/qa/media/manifest.toml.
 
 Each file is checked against `size` and, when pinned, `sha256`. Files that are
 already present and valid are skipped. `--pin` records the sha256 of files
@@ -22,7 +22,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import manifest as mf  # noqa: E402
 
-ROOT = HERE.parents[2] / "tests" / "media"
+ROOT = HERE
 USER_AGENT = "project_alpha-test-media-fetch/1"
 
 

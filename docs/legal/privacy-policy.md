@@ -96,7 +96,7 @@
 
 ### 9. Безопасность
 
-Секреты хранятся в системном защищённом хранилище (§3). Запросы к внешним сервисам идут по HTTPS там, где сервис его поддерживает. Удалённый доступ к серверу по умолчанию выключен и использует шифрование. Об уязвимостях сообщайте по [SECURITY.md](../../SECURITY.md).
+Секреты хранятся в системном защищённом хранилище (§3). Запросы к внешним сервисам идут по HTTPS там, где сервис его поддерживает. Удалённый доступ к серверу по умолчанию выключен и использует шифрование. Об уязвимостях сообщайте по [SECURITY.md](../../.github/SECURITY.md).
 
 ### 10. Ваши права
 
@@ -203,7 +203,7 @@ The app is not directed specifically at children and collects no personal data f
 
 ### 9. Security
 
-Secrets are kept in OS secure storage (§3). Requests to external services use HTTPS where the service supports it. Remote access to your server is off by default and encrypted. Report vulnerabilities as described in [SECURITY.md](../../SECURITY.md).
+Secrets are kept in OS secure storage (§3). Requests to external services use HTTPS where the service supports it. Remote access to your server is off by default and encrypted. Report vulnerabilities as described in [SECURITY.md](../../.github/SECURITY.md).
 
 ### 10. Your rights
 

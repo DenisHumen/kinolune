@@ -6,7 +6,7 @@
 //! PA_FFMPEG_LIB_DIR=tools/ffmpeg/out/linux-x86_64/lib cargo test -p pa-trickplay --test generate
 //! ```
 //!
-//! `PA_TEST_MEDIA_DIR` overrides the media root (default `tests/media`).
+//! `PA_TEST_MEDIA_DIR` overrides the media root (default `tools/qa/media`).
 //! Without FFmpeg or the media the tests are skipped.
 
 use std::path::{Path, PathBuf};
@@ -42,7 +42,7 @@ fn setup() -> Option<(&'static Ffmpeg, PathBuf)> {
     }
     let ffmpeg = Ffmpeg::shared().expect("FFmpeg from PA_FFMPEG_LIB_DIR");
     let root = std::env::var_os("PA_TEST_MEDIA_DIR").map_or_else(
-        || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../tests/media"),
+        || Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../tools/qa/media"),
         PathBuf::from,
     );
     let synthetic = root.join("synthetic");

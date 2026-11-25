@@ -1,39 +1,57 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# Kinolune
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="design/brand/export/logo/lockup-dark.png">
+    <img alt="Kinolune" src="design/brand/export/logo/lockup-light.png" width="420">
+  </picture>
+</p>
 
-[![Rust](https://github.com/DenisHumen/kinolune/actions/workflows/rust.yml/badge.svg)](https://github.com/DenisHumen/kinolune/actions/workflows/rust.yml)
-[![Hygiene](https://github.com/DenisHumen/kinolune/actions/workflows/hygiene.yml/badge.svg)](https://github.com/DenisHumen/kinolune/actions/workflows/hygiene.yml)
-[![DCO](https://github.com/DenisHumen/kinolune/actions/workflows/dco.yml/badge.svg)](https://github.com/DenisHumen/kinolune/actions/workflows/dco.yml)
-[![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSE)
+<p align="center"><b>Свободный медиаплеер для дома: фильмы, сериалы, аниме, музыка и Twitch на всех ваших устройствах — без облака и аккаунтов.</b></p>
 
-**Русский** · [English](README.en.md)
+<p align="center">
+  <a href="LICENSE"><img alt="Лицензия MPL-2.0" src="https://img.shields.io/badge/license-MPL--2.0-blue.svg"></a>
+  <a href="https://github.com/DenisHumen/kinolune/actions/workflows/rust.yml"><img alt="Rust" src="https://github.com/DenisHumen/kinolune/actions/workflows/rust.yml/badge.svg"></a>
+  <a href="https://github.com/DenisHumen/kinolune/actions/workflows/flutter.yml"><img alt="Flutter" src="https://github.com/DenisHumen/kinolune/actions/workflows/flutter.yml/badge.svg"></a>
+  <a href="https://github.com/DenisHumen/kinolune/actions/workflows/hygiene.yml"><img alt="Hygiene" src="https://github.com/DenisHumen/kinolune/actions/workflows/hygiene.yml/badge.svg"></a>
+  <a href="https://github.com/DenisHumen/kinolune/releases"><img alt="Последний релиз" src="https://img.shields.io/github/v/release/DenisHumen/kinolune?include_prereleases&amp;label=release"></a>
+  <img alt="Платформы" src="https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Android-informational">
+</p>
 
-Свободный медиаплеер для всех платформ — Linux, macOS, Windows, iOS/iPadOS, Android/Android TV, Apple TV. Название продукта — **Kinolune** (ADR-0011), репозиторий — `DenisHumen/kinolune` (до 2026-11-15 — `project_alpha`; старые ссылки GitHub перенаправляет).
+<p align="center"><b>Русский</b> · <a href="README.en.md">English</a></p>
+
+<p align="center">
+  <img alt="Главный экран Kinolune на компьютере" src="docs/screenshots/0.1/desktop-home.png" width="640">
+</p>
+<p align="center">
+  <img alt="Kinolune на телефоне" src="docs/screenshots/0.1/phone-home.png" height="300">
+  &nbsp;
+  <img alt="Kinolune на телевизоре" src="docs/screenshots/0.1/tv-home.png" height="300">
+</p>
+
+<sub>На скриншотах — демо-медиатека с собственными обложками-заглушками, без чужого арта.</sub>
+
+## Возможности
 
 - библиотека фильмов, сериалов и аниме с точным распознаванием по именам файлов и папок;
 - воспроизведение почти любых форматов, HDR/Dolby Vision, passthrough звука;
-- источники: локальные папки, SMB, NFS, WebDAV, Plex/Jellyfin/Emby, собственный медиасервер;
+- источники: локальные папки, SMB, NFS, WebDAV, облака, Plex/Jellyfin/Emby, собственный медиасервер;
 - музыкальный плеер (mp3, flac, alac, opus, dsd…), gapless, тексты песен;
 - удобный клиент Twitch: эфиры с чатом, записи, избранные стримеры;
 - продолжение просмотра на любом устройстве — без облака, всё локально;
 - собственный NAS-дистрибутив Linux с простым установщиком и RAID.
 
-Никаких серверов и аккаунтов проекта: приложение работает у вас, запросы к TMDB и другим сервисам идут прямо с устройства, телеметрии нет. Проект живёт на добровольные пожертвования.
+Никаких серверов и аккаунтов проекта: приложение работает у вас, запросы к TMDB и другим сервисам идут прямо с устройства, телеметрии нет. Название — **Kinolune** (ADR-0011); до 2026-11-15 репозиторий назывался `project_alpha`, старые ссылки GitHub перенаправляет.
 
 ## Статус
 
-🚧 **Ранняя разработка, готовых сборок пока нет.** Идёт веха M0 (каркас репозитория, CI, ядро на Rust) и подготовка **релиза 0.1** для Linux-десктопа и Android: локальные папки и SMB, распознавание, медиатека с постерами, плеер, «Продолжить просмотр», базовый музыкальный плеер ([ADR-0011](docs/adr/0011-maintainer-decisions-release-0-1.md), [контракт 0.1](docs/dev/release-0.1-contract.md)).
-
-Текущее состояние работ — [docs/STATUS.md](docs/STATUS.md), полный план — [docs/ROADMAP.md](docs/ROADMAP.md).
-
-Скриншоты появятся вместе с первым релизом (только собственные материалы и открытые тестовые медиа, без чужого арта).
+🚧 **Ранние альфа-версии** для Linux, Windows, macOS и Android. Текущее состояние работ — [docs/STATUS.md](docs/STATUS.md), полный план — [docs/ROADMAP.md](docs/ROADMAP.md), живой прогресс по задачам — [ветка `progress`](https://github.com/DenisHumen/kinolune/blob/progress/README.md).
 
 ## Скачать
 
-Сборки будут публиковаться в [GitHub Releases](https://github.com/DenisHumen/kinolune/releases) этого репозитория. Первый релиз — 0.1 (Linux: tar.gz и AppImage; Android: APK).
+Сборки — в [GitHub Releases](https://github.com/DenisHumen/kinolune/releases): Linux (`.deb`, `.rpm`, AppImage), Windows (установщик), macOS (`.dmg`), Android (APK).
 
-## Установка на Linux
+### Установка на Linux
 
 Ubuntu 24.04+, Debian 13+, Linux Mint 22+:
 
@@ -51,7 +69,25 @@ sudo dnf install kinolune
 
 Дальше Kinolune обновляется вместе с системой (`sudo apt upgrade`, `sudo dnf upgrade`). Файлы `.deb` и `.rpm` из релиза при установке добавляют этот же репозиторий.
 
-## Поддержать проект
+## Участвовать
+
+Pull request'ы приветствуются — см. [CONTRIBUTING](.github/CONTRIBUTING.md) и [кодекс поведения](.github/CODE_OF_CONDUCT.md). AI-агентам — [AGENTS.md](AGENTS.md). Вопросы и идеи — в [Discussions](https://github.com/DenisHumen/kinolune/discussions). Уязвимости — только приватно, см. [SECURITY](.github/SECURITY.md).
+
+Где что лежит:
+
+| Каталог | Что внутри |
+|---|---|
+| [`core/`](core/) | ядро на Rust: источники, распознавание, медиатека, синхронизация |
+| [`clients/`](clients/) | Flutter-приложение и нативные плееры (Android, Apple, десктоп) |
+| [`server/`](server/) | медиасервер |
+| [`distro/`](distro/) | Kinolune OS — NAS-дистрибутив |
+| [`packaging/`](packaging/) | пакеты и установщики |
+| [`design/`](design/) | бренд, токены, иконки |
+| [`config/`](config/) | подписанный удалённый конфиг |
+| [`tools/`](tools/) | сборка библиотек, релизы, QA и тестовые медиа, roadmap |
+| [`docs/`](docs/) | документация, ADR, планы |
+
+## Пожертвовать
 
 Площадки для пожертвований ещё подключаются; когда они появятся, ссылки будут здесь и на кнопке **Sponsor** репозитория. Уже сейчас очень помогают отчёты об ошибках, примеры неверного распознавания и pull request'ы.
 
@@ -64,10 +100,6 @@ sudo dnf install kinolune
 - [docs/dev/architecture.md](docs/dev/architecture.md) — архитектура для разработчиков
 - [docs/research/](docs/research/) — исследования
 - [docs/legal/privacy-policy.md](docs/legal/privacy-policy.md) — политика конфиденциальности
-
-## Участие
-
-Pull request'ы приветствуются — см. [CONTRIBUTING.md](CONTRIBUTING.md) и [кодекс поведения](CODE_OF_CONDUCT.md). AI-агентам — [AGENTS.md](AGENTS.md). Вопросы и идеи — в [Discussions](https://github.com/DenisHumen/kinolune/discussions). Уязвимости — только приватно, см. [SECURITY.md](SECURITY.md).
 
 ## Лицензия
 

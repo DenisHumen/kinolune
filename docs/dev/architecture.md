@@ -294,7 +294,7 @@ sequenceDiagram
 - **Единица распознавания — группа файлов**, а не файл; каждый матч хранит уверенность и «почему» ([03 §4.1](../research/03-metadata-recognition.md)). Ручное исправление становится правилом папки `FolderRule` (M2).
 - **ed2k-хэш** (полное чтение файла) в режиме A по умолчанию не считается — только на сервере ([03 §4.2](../research/03-metadata-recognition.md)).
 - **Метаданные запрашиваются напрямую** с устройства: ключ проекта по умолчанию плюс поле «свой ключ» (DEC-008, [ADR-0004](../adr/0004-no-project-servers-local-sync.md)). Условия провайдеров и TTL кэша — [docs/legal/providers.md](../legal/providers.md).
-- **Маппинги аниме** — встроенный снапшот в `data/anime-mappings/`, обновляется с GitHub ([docs/legal/anime-mappings.md](../legal/anime-mappings.md)).
+- **Маппинги аниме** — встроенный снапшот в `tools/anime-mappings/`, обновляется с GitHub ([docs/legal/anime-mappings.md](../legal/anime-mappings.md)).
 - **Ключ медиа для синхронизации** — внешний ID (TMDB/TVDB/IMDb + сезон/серия) или `content_fingerprint`, а не путь: одна и та же серия по разным путям на разных устройствах — один ключ.
 
 ---
@@ -319,7 +319,7 @@ flowchart TB
 
 - Выбор движка «Auto»: основной движок, если он может сыграть файл с учётом HDR/DV; иначе запасной; пользователь может выбрать вручную ([ADR-0003](../adr/0003-native-player-surfaces-engines.md), [02 §2.8](../research/02-client-stack-playback.md)).
 - HDR/DV и AFR через Flutter `Texture` невозможны — поэтому поверхность всегда нативная, а Flutter рисует только OSD.
-- Статус встраивания: ADR-0008 и ADR-0009 — **предложены**, ждут замеров на реальном Android TV и на Windows/macOS. Спайки — `spikes/android-player/`, `spikes/desktop-player/`.
+- Статус встраивания: ADR-0008 и ADR-0009 — **предложены**, ждут замеров на реальном Android TV и на Windows/macOS. Спайки — `spikes/android-player/` (удалён в REPO-014, история git на коммите `2800dc05`) и `tools/desktop-player-spike/`.
 
 ---
 

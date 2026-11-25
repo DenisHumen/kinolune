@@ -24,7 +24,7 @@ cargo run -p pa-eval -- compare --baseline baselines/main.json --current report.
 
 ```bash
 # recall@k локального индекса названий, без провайдеров
-cargo run -p pa-eval -- candidates --anime data/anime-mappings/dist/anime-offline-ids.jsonl \
+cargo run -p pa-eval -- candidates --anime tools/anime-mappings/dist/anime-offline-ids.jsonl \
     --catalog tools/recognition-eval/baselines/v0/title-catalog.jsonl \
     --json candidates.json --md candidates.md corpus/train.jsonl corpus/dev.jsonl
 ```
