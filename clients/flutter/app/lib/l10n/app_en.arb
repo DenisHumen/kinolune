@@ -8154,5 +8154,36 @@
   "commonScreenErrorBack": "Back",
   "@commonScreenErrorBack": {
     "description": "BUG-026: leaves the failed screen."
+  },
+  "formatTotal": "{time} total",
+  "@formatTotal": {
+    "description": "UI-056: total runtime of a show, a season or a movie, e.g. «21 h 40 min total».",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "formatLeft": "{time} left",
+  "@formatLeft": {
+    "description": "UI-056: time left to watch of a show, a season or a movie.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "formatAllWatched": "watched",
+  "@formatAllWatched": {
+    "description": "UI-056: instead of the time left when every episode is watched."
+  },
+  "formatHours": "{hours, plural, one{{hours} h} other{{hours} h}}",
+  "@formatHours": {
+    "description": "UI-056: a runtime in whole hours (from 100 h on, or with no minutes).",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
   }
 }

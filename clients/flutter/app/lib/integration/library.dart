@@ -119,6 +119,8 @@ export 'package:pa_library/pa_library.dart'
         LibraryEpisodes,
         ShowEpisode,
         ShowEpisodes,
+        RuntimeTotal,
+        ShowRuntime,
         orderEpisodes,
         // MUS-018 audiobooks
         Audiobook,

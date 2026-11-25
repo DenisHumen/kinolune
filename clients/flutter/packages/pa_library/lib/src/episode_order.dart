@@ -58,7 +58,16 @@ class ShowEpisodes {
     required this.order,
     required this.available,
     required this.episodes,
-  });
+    ShowRuntime? runtime,
+  }) : _runtime = runtime;
+
+  /// From the core (UI-056); null: summed here from [episodes].
+  final ShowRuntime? _runtime;
+
+  /// Total runtime and time left of the show and of each season (UI-056).
+  /// The core sums them in one query; libraries without it add up the
+  /// episodes here ([ShowRuntime.of]).
+  ShowRuntime get runtime => _runtime ?? ShowRuntime.of(episodes);
 
   static const empty = ShowEpisodes(
     order: EpisodeOrder.tmdb,
@@ -80,6 +89,147 @@ class ShowEpisodes {
 
   List<ShowEpisode> inSeason(int season) =>
       episodes.where((e) => (e.item.season ?? 1) == season).toList();
+}
+
+/// Runtime of a season or a whole show (UI-056).
+class RuntimeTotal {
+  /// Episodes in the library.
+  final int episodes;
+
+  /// Of them, watched.
+  final int watched;
+
+  /// Sum of the episode durations.
+  final int totalMs;
+
+  /// What is left to watch: unwatched episodes whole, the rest of started
+  /// ones.
+  final int remainingMs;
+
+  /// A duration in [totalMs] is a metadata runtime or unknown: «≈».
+  final bool estimated;
+
+  /// The same for an unwatched episode, in [remainingMs].
+  final bool remainingEstimated;
+
+  const RuntimeTotal({
+    this.episodes = 0,
+    this.watched = 0,
+    this.totalMs = 0,
+    this.remainingMs = 0,
+    this.estimated = false,
+    this.remainingEstimated = false,
+  });
+
+  static const empty = RuntimeTotal();
+
+  /// Every episode is watched: «просмотрено» instead of the time left.
+  bool get allWatched => episodes > 0 && watched == episodes;
+
+  /// Nothing watched or started: the time left is the total.
+  bool get untouched => watched == 0 && remainingMs >= totalMs;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RuntimeTotal &&
+      other.episodes == episodes &&
+      other.watched == watched &&
+      other.totalMs == totalMs &&
+      other.remainingMs == remainingMs &&
+      other.estimated == estimated &&
+      other.remainingEstimated == remainingEstimated;
+
+  @override
+  int get hashCode => Object.hash(
+    episodes,
+    watched,
+    totalMs,
+    remainingMs,
+    estimated,
+    remainingEstimated,
+  );
+
+  @override
+  String toString() =>
+      'RuntimeTotal($watched/$episodes, ${totalMs}ms, ${remainingMs}ms left'
+      '${estimated ? ', ≈' : ''})';
+}
+
+/// Runtime of a show: the regular seasons together, and each season tab.
+class ShowRuntime {
+  /// All regular seasons; specials (season 0) are not in it.
+  final RuntimeTotal show;
+
+  /// By season number in the episode order (0 = specials).
+  final Map<int, RuntimeTotal> seasons;
+
+  const ShowRuntime({required this.show, this.seasons = const {}});
+
+  static const empty = ShowRuntime(show: RuntimeTotal.empty);
+
+  RuntimeTotal season(int s) => seasons[s] ?? RuntimeTotal.empty;
+
+  /// Sums [episodes] like the core does (`pa-catalog` runtime): the
+  /// duration of the file (none: ≈), LIB-011 thresholds for a started
+  /// episode (below 2 % not started, from 95 % watched).
+  factory ShowRuntime.of(List<ShowEpisode> episodes) {
+    final seasons = <int, _Sum>{};
+    final show = _Sum();
+    for (final e in episodes) {
+      final s = e.item.season ?? 1;
+      seasons.putIfAbsent(s, _Sum.new).add(e);
+      if (s != 0) show.add(e);
+    }
+    return ShowRuntime(
+      show: show.total,
+      seasons: {for (final MapEntry(:key, :value) in seasons.entries) key: value.total},
+    );
+  }
+}
+
+class _Sum {
+  int episodes = 0;
+  int watched = 0;
+  int totalMs = 0;
+  int remainingMs = 0;
+  bool estimated = false;
+  bool remainingEstimated = false;
+
+  void add(ShowEpisode e) {
+    final d = e.item.durationMs ?? 0;
+    final exact = d > 0;
+    episodes++;
+    totalMs += d;
+    estimated |= !exact;
+    if (e.watched) {
+      watched++;
+      return;
+    }
+    remainingEstimated |= !exact;
+    if (!exact) return;
+    final p = e.progress;
+    final position = p?.positionMs ?? 0;
+    if (position <= 0) {
+      remainingMs += d;
+      return;
+    }
+    final base = (p?.durationMs ?? 0) > 0 ? p!.durationMs : d;
+    final done = position / base;
+    if (done < 0.02) {
+      remainingMs += d;
+    } else if (done < 0.95) {
+      remainingMs += (d * (1 - done)).round().clamp(0, d);
+    }
+  }
+
+  RuntimeTotal get total => RuntimeTotal(
+    episodes: episodes,
+    watched: watched,
+    totalMs: totalMs,
+    remainingMs: remainingMs,
+    estimated: estimated,
+    remainingEstimated: remainingEstimated,
+  );
 }
 
 /// A library that numbers episodes in other orders and stores the choice

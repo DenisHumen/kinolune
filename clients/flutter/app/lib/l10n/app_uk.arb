@@ -2336,5 +2336,9 @@
   "commonScreenErrorTitle": "На цьому екрані щось пішло не так",
   "commonScreenErrorMessage": "Помилку записано в журнал застосунку. Повторіть або поверніться назад.",
   "commonScreenErrorRetry": "Повторити",
-  "commonScreenErrorBack": "Назад"
+  "commonScreenErrorBack": "Назад",
+  "formatTotal": "усього {time}",
+  "formatLeft": "залишилося {time}",
+  "formatAllWatched": "переглянуто",
+  "formatHours": "{hours, plural, one{{hours} год} few{{hours} год} many{{hours} год} other{{hours} год}}"
 }
