@@ -82,7 +82,7 @@ use pa_metadata::tmdb::{
 };
 use pa_recognition::parse::MediaHint;
 use pa_recognition::score::pair;
-use pa_recognition::title::{TitleIndex, TitleQuery, TitleRecord, WorkKind};
+use pa_recognition::title::{MatchTier, TitleIndex, TitleQuery, TitleRecord, WorkKind};
 use pa_scanner::CancelToken;
 use serde_json::json;
 
@@ -975,6 +975,20 @@ struct Ranked {
     scores: Vec<f64>,
 }
 
+/// Largest gap between the file's year and the year of a movie with
+/// exactly its title that is still the same movie when no other work has
+/// that title (BUG-023): premiere against wide or local release.
+const YEAR_SLACK: u64 = 2;
+
+/// The title tier names the work's title itself: the same words up to
+/// punctuation, case, articles or spacing.
+fn same_title(tier: MatchTier) -> bool {
+    matches!(
+        tier,
+        MatchTier::Exact | MatchTier::Loose | MatchTier::Compact
+    )
+}
+
 /// Ranks `records` for `work`: title tiers, year ±1 and kind from the local
 /// title index, plus the META-014 pair features of the work's files against
 /// each record (duration against runtime, written episodes against the
@@ -993,16 +1007,27 @@ fn rank_all(work: &WorkQuery, records: &[TitleRecord]) -> Option<Ranked> {
         .map(|c| (c.record, index.record(c.record)))
         .collect();
     let relative = pair::relative(&evidence, &pairs);
+    // Records whose title is the work's title itself (not a head, a
+    // fuzzy or a partial match): more than one is a remake or a
+    // same-named work (BUG-023).
+    let same_titled = candidates.iter().filter(|c| same_title(c.tier)).count();
     // (candidate, title score, score with pair features)
     let scored: Vec<_> = candidates
         .into_iter()
         .map(|c| {
             let mut score = f64::from(c.score);
-            // A movie of another year is another movie (remakes).
+            // A movie of another year is another movie (remakes). The
+            // only work with exactly the file's title, a year or two off,
+            // is the same movie dated by another release (`Plan 9 from
+            // Outer Space (1959)`: premiere 1957, wide release 1959;
+            // BUG-023): the title index's year penalty is enough.
             let record = index.record(c.record);
             if work.kind == "movie"
                 && let (Some(a), Some(b)) = (work.year, record.year)
                 && a.abs_diff(i64::from(b)) > 1
+                && !(a.abs_diff(i64::from(b)) <= YEAR_SLACK
+                    && same_title(c.tier)
+                    && same_titled == 1)
             {
                 score *= 0.8;
             }
