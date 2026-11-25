@@ -1,0 +1,48 @@
+$ cat /etc/os-release
+# Kinolune OS: NAS OS of the Kinolune project, based on Fedora Linux 45.
+# VERSION_ID is the release of the base (dnf, bootc and image builders read it),
+# the version of Kinolune OS itself is VERSION / IMAGE_VERSION.
+NAME="Kinolune OS"
+VERSION="0.1.0-dev.20261125"
+ID=kinolune-os
+ID_LIKE=fedora
+VERSION_ID=45
+VERSION_CODENAME=""
+PRETTY_NAME="Kinolune OS 0.1.0-dev.20261125"
+RELEASE_TYPE=development
+VARIANT="NAS"
+VARIANT_ID=nas
+IMAGE_ID=kinolune-os
+IMAGE_VERSION="0.1.0-dev.20261125"
+ANSI_COLOR="0;38;2;73;209;216"
+LOGO=kinolune-logo-icon
+DEFAULT_HOSTNAME="kinolune"
+HOME_URL="https://github.com/DenisHumen/kinolune"
+DOCUMENTATION_URL="https://github.com/DenisHumen/kinolune/tree/main/distro"
+SUPPORT_URL="https://github.com/DenisHumen/kinolune/discussions"
+BUG_REPORT_URL="https://github.com/DenisHumen/kinolune/issues"
+
+$ cat /etc/system-release
+Kinolune OS release 0.1.0-dev.20261125
+
+$ cat /etc/issue
+\S
+Kernel \r on \m (\l)
+
+
+$ cat /etc/issue.net
+Kinolune OS 0.1.0-dev.20261125
+
+$ cat /usr/lib/motd.d/10-kinolune-os
+
+  Kinolune OS 0.1.0-dev.20261125 - based on Fedora Linux 45
+  Docs: https://github.com/DenisHumen/kinolune/tree/main/distro
+
+
+$ hostnamectl-style default: kinolune
+$ rpm -E %fedora
+45
+$ ls -l /etc/system-release /etc/redhat-release /etc/fedora-release
+lrwxrwxrwx 2 root root 25 Jan  1  1970 /etc/fedora-release -> ../usr/lib/fedora-release
+lrwxrwxrwx 3 root root 14 Jan  1  1970 /etc/redhat-release -> fedora-release
+/etc/system-release -> ../usr/lib/kinolune-release

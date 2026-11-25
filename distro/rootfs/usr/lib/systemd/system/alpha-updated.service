@@ -1,23 +1,34 @@
 # SPDX-License-Identifier: MPL-2.0
-# Phase-0 placeholder (DIST-001): replaced by the real alpha-updated (DIST-009) later.
-# The real agent will listen on a unix socket; the stub port is not opened in firewalld.
+# Update agent of the NAS OS (DIST-009): check, download-only, apply and
+# rollback with bootc; reboots only in the maintenance window when the media
+# server is idle. API: JSON over /run/alpha-updated/api.sock (alpha-updated.socket).
+# Replaces bootc-fetch-apply-updates.timer, which is masked in the image.
 [Unit]
-Description=project_alpha update agent (stub)
-Documentation=https://github.com/DenisHumen/kinolune/tree/main/distro
-After=network-online.target
+Description=NAS OS update agent (alpha-updated)
+Documentation=https://github.com/DenisHumen/kinolune/tree/main/distro/updated
+Requires=alpha-updated.socket
+After=alpha-updated.socket network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/libexec/alpha/alpha-stub alpha-updated 7091
-DynamicUser=yes
-StateDirectory=alpha-updated
-NoNewPrivileges=yes
-ProtectSystem=strict
-ProtectHome=yes
-PrivateTmp=yes
+ExecStart=/usr/libexec/alpha/alpha-updated
+# bootc needs root and the real mount namespace (/sysroot, /boot, ostree), so
+# no ProtectSystem/PrivateTmp here; the agent itself only writes its state dir.
+StateDirectory=alpha/updated
+StateDirectoryMode=0700
+# Media server veto (SRV-019): HTTPS on loopback, certificate pinned by the
+# SHA-256 of the server's own cert file (SRV-004, StateDirectory=alpha-media).
+Environment=ALPHA_MEDIA_ACTIVITY_URL=https://127.0.0.1:8487/api/v1/system/activity
+Environment=ALPHA_MEDIA_TLS_CERT=/var/lib/alpha-media/tls/server.crt
+# Operations are not cut short by a stop: bootc finishes or rolls back its
+# own transaction, but give a running download time to notice the signal.
+TimeoutStopSec=90
 Restart=on-failure
-RestartSec=5
+RestartSec=10
+# Keep the scheduler from fighting the OS on a starved box.
+Nice=10
+IOSchedulingClass=idle
 
 [Install]
 WantedBy=multi-user.target

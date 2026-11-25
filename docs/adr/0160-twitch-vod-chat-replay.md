@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Чат-replay VOD Twitch онлайн
+# ADR-0160: Чат-replay VOD Twitch онлайн
 
 - **Статус:** Принят
 - **Дата:** 2026-11-25

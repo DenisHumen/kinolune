@@ -35,6 +35,7 @@ import '../services/image_cache_control.dart';
 import '../theme/kinolune_theme.dart';
 import '../trailers/trailer_settings_section.dart';
 import '../trakt/trakt_settings.dart';
+import '../widgets/availability_status.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import '../widgets/secret_storage_text.dart';
@@ -42,8 +43,10 @@ import '../widgets/settings_tiles.dart';
 import '../widgets/scan_status.dart';
 import 'about_screen.dart';
 import 'add_source_dialog.dart';
+import 'connection_status_screen.dart';
 import 'anime_db_settings.dart';
 import 'devices_screen.dart';
+import 'audio_output_settings.dart';
 import 'display_match_settings.dart';
 import 'downloads_screen.dart';
 import 'onboarding_screen.dart';
@@ -262,6 +265,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'SFTP',
           ],
         ),
+      // UI-053: servers that are not sources and «Состояние подключений».
+      _Entry(
+        const ConnectionSettingsSection(),
+        advanced: true,
+        terms: [
+          l.availabilitySettingsTitle,
+          l.availabilitySettingsTile,
+          l.availabilitySettingsTileSubtitle,
+        ],
+      ),
       // SYNC-011: Trakt sign-in, sync, the user's own Trakt app.
       if (services.trakt != null)
         _Entry(
@@ -649,6 +662,8 @@ class _SourceTile extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // UI-053: the monitor's status of the source.
+          SourceAvailabilityDot(sourceId: source.id),
           IconButton(
             tooltip: l.settingsScanSource,
             onPressed: services.scanning
@@ -867,6 +882,8 @@ class _PlaybackSection extends StatelessWidget {
         // PLAY-AND-005: frame rate and resolution of the TV.
         if (FormFactorScope.of(context) == FormFactor.tv)
           ...displayMatchTiles(context),
+        // PLAY-AND-004: passthrough over HDMI or always PCM (Android).
+        ...audioOutputTiles(context),
         ValueListenableBuilder<int>(
           valueListenable: services.skipSeconds,
           builder: (context, seconds, _) => SettingsChoiceTile<int>(
@@ -1057,6 +1074,8 @@ class _DevicesSection extends StatelessWidget {
       title: l.settingsDevicesTitle,
       subtitle: l.settingsDevicesSubtitle,
       children: [
+        // UI-053: sync through a channel that is down waits.
+        const SyncPausedPlate(),
         SettingsTile(
           icon: Icons.devices,
           title: l.devicesTitle,

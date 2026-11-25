@@ -108,6 +108,11 @@ Future<void> playVideo(
     settings: services.displayMatch.value,
     enabled: tv ? null : false, // null: on Android
   );
+  // PLAY-AND-004: Dolby and DTS untouched to a receiver that takes them
+  // (read before the player opens, so the first audio starts right).
+  final passthrough = AudioPassthrough(mode: services.audioOutputMode.value);
+  await passthrough.prepare();
+  if (!context.mounted) return;
   handoff.begin(item.id, start, durationMs: item.durationMs ?? 0);
   // PLAY-012: the OSD's cast button reads the engine's position.
   final engineRef = _EngineRef()..item = item;
@@ -119,7 +124,11 @@ Future<void> playVideo(
         child: PlayerScreen(
           request: request,
           engineFactory: engineRef.wrap(
-            display.wrap(handoff.engineFactory(services.playerEngineFactory)),
+            display.wrap(
+              passthrough.wrap(
+                handoff.engineFactory(services.playerEngineFactory),
+              ),
+            ),
           ),
           onProgress: _saver(services, item, reporter, engineRef, trakt),
           // PLAY-012: «На телевизор» from the player continues there.

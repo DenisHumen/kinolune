@@ -143,6 +143,11 @@ abstract class CoreSync implements RustOpaqueInterface {
     config: config,
   );
 
+  /// Own changes no other device has acknowledged yet (the LAN outbox):
+  /// «N изменений ждут на этом устройстве» while a sync channel is down
+  /// (UI-053). Folder sync has its own count in [`CoreFolderSync::pending`].
+  Future<PlatformInt64> outboxPending();
+
   /// A device at a known `host:port` (when mDNS cannot see it; tests).
   void peerUp({
     required String deviceId,

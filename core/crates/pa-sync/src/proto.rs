@@ -21,6 +21,11 @@
 //! - `hello.nonce` and [`Message::Auth`] authenticate paired devices
 //!   (SYNC-005, `pa-pairing`); [`Message::Family`] carries roster updates
 //!   and the rotated family key between members.
+//! - Protocol 2 (SYNC-017, [`crate::nodelog`]): `hello.vv` carries the
+//!   version vector, `op.log` the place of the op in its origin's log;
+//!   [`Message::Vv`], [`Message::Want`] and [`Message::Digest`] run
+//!   anti-entropy. A peer of protocol 1 ignores them and keeps the journal
+//!   cursors.
 
 use std::collections::HashMap;
 
@@ -31,11 +36,12 @@ use crate::Error;
 use crate::hlc::{Hlc, is_valid_device_id};
 use crate::input::InputFrame;
 use crate::music::MusicFrame;
+use crate::nodelog::{Digest, LogMeta, Range, VersionVector};
 use crate::op::{Op, OpId, check_ref};
 use crate::outbox;
 
 /// Protocol version spoken by this build.
-pub const PROTOCOL_VERSION: u16 = 1;
+pub const PROTOCOL_VERSION: u16 = 2;
 /// Oldest version this build still speaks: one below [`PROTOCOL_VERSION`].
 pub const MIN_PROTOCOL_VERSION: u16 = if PROTOCOL_VERSION > 1 {
     PROTOCOL_VERSION - 1
@@ -153,6 +159,10 @@ pub struct Hello {
     /// devices and hubs (SYNC-005).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub nonce: Option<String>,
+    /// The sender's version vector (protocol 2, SYNC-017): the receiver
+    /// sends the log entries it lacks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vv: Option<VersionVector>,
 }
 
 /// `auth`: proof that the sender holds the key of its paired device: an
@@ -258,12 +268,14 @@ impl Payload {
 }
 
 /// `op`: one durable op. `seq` is set by a hub when the op comes from its
-/// journal.
+/// journal; `log` (protocol 2) is its place in its origin's log.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OpFrame {
     pub op_id: OpId,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub seq: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub log: Option<LogMeta>,
     pub payload: Payload,
 }
 
@@ -273,6 +285,7 @@ impl OpFrame {
         Ok(Self {
             op_id: op.op_id,
             seq: None,
+            log: None,
             payload: Payload::plain(op)?,
         })
     }
@@ -318,6 +331,24 @@ pub struct PullEnd {
     pub more: bool,
 }
 
+/// `vv`: the sender's version vector (protocol 2); the receiver sends the
+/// entries it lacks. Sent after the handshake again when a node wants to
+/// catch up (a long break, a hole).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VvFrame {
+    pub vv: VersionVector,
+}
+
+/// `digest`: the digest of the sender's materialised state (protocol 2).
+/// The receiver repairs the partitions that differ and, unless this is a
+/// `reply`, answers with its own digest.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DigestFrame {
+    pub digest: Digest,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub reply: bool,
+}
+
 /// `error`: see [`code`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ErrorFrame {
@@ -360,6 +391,16 @@ pub enum Message {
     /// Music continues on another device (MUS-015). Ephemeral, like `pb.*`.
     #[serde(rename = "music")]
     Music(MusicFrame),
+    /// The sender's version vector (protocol 2, SYNC-017).
+    #[serde(rename = "vv")]
+    Vv(VvFrame),
+    /// Asks for a range of an origin's log (protocol 2): a hole or a
+    /// damaged entry.
+    #[serde(rename = "want")]
+    Want(Range),
+    /// Digest of the materialised state (protocol 2).
+    #[serde(rename = "digest")]
+    Digest(DigestFrame),
     /// A message of a newer version; receivers ignore it. Never encoded.
     #[serde(other)]
     Unknown,
@@ -398,6 +439,9 @@ impl Message {
                 if let Some(nonce) = &h.nonce {
                     check_auth_text(nonce, "nonce")?;
                 }
+                if let Some(vv) = &h.vv {
+                    vv.validate()?;
+                }
                 h.cursor
                     .iter()
                     .chain(&h.head)
@@ -422,8 +466,11 @@ impl Message {
                 if p.enc.is_empty() || p.enc.len() > 32 || p.body.len() > MAX_PAYLOAD_LEN {
                     return Err(Error::Invalid("payload"));
                 }
-                Ok(())
+                f.log.as_ref().map_or(Ok(()), LogMeta::validate)
             }
+            Self::Vv(v) => v.vv.validate(),
+            Self::Want(r) => r.validate(),
+            Self::Digest(d) => d.digest.validate(),
             Self::Ack(_) | Self::Unknown => Ok(()),
             Self::Change(c) => c.head.validate(),
             Self::Pull(p) => {
@@ -520,6 +567,11 @@ impl Journal {
             log: self.log.clone(),
             seq: self.frames.len() as u64,
         }
+    }
+
+    /// Whether the journal holds `op_id`.
+    pub fn contains(&self, op_id: &OpId) -> bool {
+        self.seqs.contains_key(op_id)
     }
 
     /// Journal id.

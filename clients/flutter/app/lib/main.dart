@@ -28,6 +28,7 @@ import 'integration/library.dart';
 import 'integration/player.dart';
 import 'l10n/l10n.dart';
 import 'licenses.dart';
+import 'network/network_setup.dart';
 import 'offline/background_downloads.dart';
 import 'offline/network_watch.dart';
 import 'offline/offline_downloads.dart';
@@ -69,6 +70,7 @@ import 'twitch/twitch_downloads.dart';
 import 'twitch/twitch_native.dart';
 import 'twitch/twitch_service.dart';
 import 'widgets/artwork_image.dart';
+import 'widgets/error_boundary.dart';
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,6 +78,9 @@ Future<void> main(List<String> args) async {
   LaunchLinks.initial = args;
   ensurePaPlayerInitialized();
   registerAppLicenses();
+  // BUG-026: a screen that fails to build inside an ErrorBoundary shows an
+  // error with «Повторить» / «Назад», not a gray window.
+  installErrorBoundaries();
 
   final formFactor = await detectFormFactor();
   final dir = await getApplicationSupportDirectory();
@@ -377,6 +382,8 @@ Future<void> main(List<String> args) async {
     scrobbleBackend: AppConfig.demo || buildInfo.coreVersion == null
         ? null
         : CoreScrobbleBackend.open('${dir.path}/scrobble'),
+    // DIST-032: Wi-Fi and network from Home, Linux with NetworkManager only.
+    network: openNetwork(demo: AppConfig.demo),
     liveNotifier: PluginLiveNotifier(
       l10n: () => lookupAppLocalizations(
         services.locale.value ?? services.systemLocale(),

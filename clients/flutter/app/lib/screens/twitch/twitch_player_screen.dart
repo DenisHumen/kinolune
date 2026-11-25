@@ -67,6 +67,7 @@ import '../../twitch/twitch_models.dart';
 import '../../twitch/twitch_native.dart';
 import '../../twitch/twitch_service.dart';
 import '../../twitch/twitch_skip_chatting.dart';
+import '../../widgets/error_boundary.dart';
 import 'twitch_widgets.dart';
 
 /// Creates the player engine: [live] is the latency mode of a live stream,
@@ -125,13 +126,18 @@ Future<void> openTwitchNative(
   return Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
       fullscreenDialog: true,
-      builder: (_) => TwitchPlayerScreen(
-        target: target,
-        source: source,
-        engineFactory: engineFactory,
-        chat: chat,
-        findStreamVod: findStreamVod,
-        replay: replay,
+      // BUG-026: a failure while building is an error screen, not a gray
+      // window.
+      builder: (_) => ErrorBoundary(
+        name: 'twitch-player',
+        child: TwitchPlayerScreen(
+          target: target,
+          source: source,
+          engineFactory: engineFactory,
+          chat: chat,
+          findStreamVod: findStreamVod,
+          replay: replay,
+        ),
       ),
     ),
   );

@@ -26,6 +26,7 @@ import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../network/network_controller.dart';
 import '../notices/in_app_notices.dart';
 import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
@@ -93,6 +94,7 @@ class AppServices extends ChangeNotifier {
     SourceFiles? files,
     this.deviceFolder,
     this.scrobbleBackend,
+    this.network,
   }) : personal =
            personal ??
            (library is RustLibrary ? RustPersonalMedia(library) : null),
@@ -141,6 +143,10 @@ class AppServices extends ChangeNotifier {
   /// Trakt (SYNC-011): sign-in, scrobbles, sync, watchlist; null without
   /// the Rust core.
   final TraktLink? trakt;
+
+  /// Wi-Fi and network from Home (DIST-032): NetworkManager on Linux;
+  /// null elsewhere (the system settings handle it).
+  final NetworkController? network;
 
   /// The periodic Trakt sync; null without [trakt].
   TraktAutoSync? traktSync;
@@ -639,6 +645,12 @@ class AppServices extends ChangeNotifier {
     const DisplayMatchSettings(),
   );
 
+  /// «Звук» (PLAY-AND-004): passthrough to a receiver that takes the
+  /// format, or always PCM. Auto by default.
+  final ValueNotifier<AudioOutputMode> audioOutputMode = ValueNotifier(
+    AudioOutputMode.auto,
+  );
+
   /// Daily update of the anime databases from GitHub (META-030): the
   /// anime-offline-database release and the Anime-Lists list. On by default.
   final ValueNotifier<bool> animeDataUpdates = ValueNotifier(true);
@@ -816,6 +828,9 @@ class AppServices extends ChangeNotifier {
     );
     displayMatch.value = _displayMatchOf(
       await preferences.read(Preferences.displayMatch),
+    );
+    audioOutputMode.value = AudioOutputMode.fromName(
+      await preferences.read(Preferences.audioOutputMode),
     );
     await _initAnimeDb(
       await preferences.read(Preferences.animeDataUpdates) != 'false',
@@ -1370,6 +1385,14 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  Future<void> setAudioOutputMode(AudioOutputMode value) async {
+    audioOutputMode.value = value;
+    await preferences.write(
+      Preferences.audioOutputMode,
+      value == AudioOutputMode.auto ? null : value.name,
+    );
+  }
+
   Future<void> setTrickplayGenerate(bool value) async {
     _applyTrickplay(value);
     await preferences.write(
@@ -1659,6 +1682,7 @@ class AppServices extends ChangeNotifier {
     recognitionStatus.dispose();
     handoff.dispose();
     musicHandoff.dispose();
+    network?.dispose();
     unawaited(library.stopWatching());
     locale.dispose();
     showTwitch.dispose();
@@ -1680,6 +1704,7 @@ class AppServices extends ChangeNotifier {
     audioProcessing.dispose();
     trickplayGenerate.dispose();
     displayMatch.dispose();
+    audioOutputMode.dispose();
     animeDataUpdates.dispose();
     animeFrameSearch.dispose();
     animeDbStatus.dispose();

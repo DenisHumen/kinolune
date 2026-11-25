@@ -61,11 +61,16 @@ UpNextItem _item(_Harness h, String id, {int start = 0, bool chain = true}) =>
 Future<_Harness> _open(
   WidgetTester t, {
   bool withNext = true,
+  bool lastEpisode = false,
   bool continuous = true,
 }) async {
   late _Harness h;
   h = _Harness(
-    loadNext: withNext ? () async => _item(h, 'e2', start: 30000) : null,
+    loadNext: lastEpisode
+        ? () async => null
+        : withNext
+        ? () async => _item(h, 'e2', start: 30000)
+        : null,
     continuous: continuous,
   );
   await t.pumpWidget(h.app());
@@ -255,13 +260,19 @@ void main() {
     await t.pump(const Duration(seconds: 20));
     expect(h.engine.uris, ['/tv/e1.mkv'], reason: 'cancelled');
 
-    // Play again from the start, end again: the card returns.
-    h.state(t).togglePlay();
+    // Seek back and play again, end again: the card returns.
+    h.engine.emit(
+      (s) =>
+          s.copyWith(position: Duration.zero, completed: false, playing: true),
+    );
     await t.pump();
     h.engine.finish();
     await t.pump();
     expect(find.byKey(const ValueKey('up-next')), findsOneWidget);
-    h.state(t).togglePlay(); // restarts: completed → seek 0 + play
+    // Seeking back hides it.
+    h.engine.emit(
+      (s) => s.copyWith(position: const Duration(minutes: 5), completed: false),
+    );
     await t.pump();
     expect(find.byKey(const ValueKey('up-next')), findsNothing);
 
@@ -270,6 +281,77 @@ void main() {
     await t.sendKeyEvent(LogicalKeyboardKey.enter);
     await t.pump();
     expect(h.engine.uris, ['/tv/e2.mkv']);
+  });
+
+  // BUG-020: at the end with the card, Space and Play went back to the
+  // start of the same episode and saved a position near 0 over it.
+  for (final (name, press) in <(String, Future<void> Function(WidgetTester))>[
+    ('Space', (t) => t.sendKeyEvent(LogicalKeyboardKey.space)),
+    ('the Play button', (t) => t.tap(find.byKey(const ValueKey('osd-play')))),
+    ('the media Play key', (t) => t.sendKeyEvent(LogicalKeyboardKey.mediaPlay)),
+    ('TV OK', (t) => t.sendKeyEvent(LogicalKeyboardKey.select)),
+  ]) {
+    testWidgets('$name at the end with Up Next plays the next episode', (
+      t,
+    ) async {
+      final h = await _open(t);
+      await _play(t, h, 5);
+      h.engine.finish();
+      await t.pump();
+      expect(find.byKey(const ValueKey('up-next')), findsOneWidget);
+      final saved = h.saves.length;
+      await press(t);
+      await t.pump();
+      expect(h.engine.uris, ['/tv/e2.mkv']);
+      expect(h.engine.calls, isNot(contains('seek:0')));
+      expect(find.byKey(const ValueKey('up-next')), findsNothing);
+      // E1 keeps its finished position: nothing near the start was saved.
+      final e1 = [
+        for (final s in h.saves.skip(saved))
+          if (s.$1 == 'e1') s.$2,
+      ];
+      expect(e1.every((p) => p == 1200000), isTrue, reason: '$e1');
+      expect(h.saves.where((s) => s.$1 == 'e1').last.$2, 1200000);
+      await _play(t, h, 2);
+      expect(h.saves.last, ('e2', 32000, 1200000));
+    });
+  }
+
+  testWidgets('Space at the end after Cancel plays the next episode', (
+    t,
+  ) async {
+    final h = await _open(t);
+    h.engine.finish();
+    await t.pump();
+    await t.sendKeyEvent(LogicalKeyboardKey.escape);
+    await t.pump();
+    expect(find.byKey(const ValueKey('up-next')), findsNothing);
+    await t.sendKeyEvent(LogicalKeyboardKey.space);
+    await t.pump();
+    expect(h.engine.uris, ['/tv/e2.mkv']);
+    expect(h.engine.calls, isNot(contains('seek:0')));
+  });
+
+  testWidgets('Space after the last episode does not restart it', (t) async {
+    final h = await _open(t, lastEpisode: true);
+    h.engine.finish();
+    await t.pump();
+    await t.sendKeyEvent(LogicalKeyboardKey.space);
+    await t.pump(const Duration(seconds: 3));
+    expect(h.engine.uris, ['/tv/e1.mkv']);
+    expect(h.engine.calls, isNot(contains('seek:0')));
+    expect(h.engine.state.value.completed, isTrue);
+    expect(h.saves.last, ('e1', 1200000, 1200000));
+  });
+
+  testWidgets('Space after a video without Up Next plays it again', (t) async {
+    final h = await _open(t, withNext: false);
+    h.engine.finish();
+    await t.pump();
+    await t.sendKeyEvent(LogicalKeyboardKey.space);
+    await t.pump();
+    expect(h.engine.calls, containsAllInOrder(['seek:0', 'play']));
+    expect(h.engine.state.value.playing, isTrue);
   });
 
   testWidgets('Up Next buttons and background stop', (t) async {

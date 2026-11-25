@@ -18,6 +18,7 @@ import androidx.media3.ui.PlayerView
 import dev.projectalpha.core.MediaSource
 import dev.projectalpha.core.OpenRequest
 import dev.projectalpha.core.engineStateToJson
+import dev.projectalpha.audio.AudioOutputMode
 import dev.projectalpha.display.DisplayMatchOptions
 import dev.projectalpha.display.DisplayModeMatcher
 import dev.projectalpha.player.Media3Engine
@@ -44,6 +45,8 @@ import org.json.JSONObject
  * PLAY-AND-005: the request's `display` options switch the display to the video's frame rate (and resolution) once
  * the video format is known — usually while the first 5 s buffer — and put the previous mode back on exit; Dolby
  * Vision goes native or as its base layer by the display's capabilities.
+ *
+ * PLAY-AND-004: the request's `audio_output` (`auto`/`decode`) — passthrough to a receiver or always PCM.
  */
 @OptIn(UnstableApi::class)
 class PlayerActivity : FragmentActivity() {
@@ -69,6 +72,8 @@ class PlayerActivity : FragmentActivity() {
         val options = parseDisplayOptions(intent.getStringExtra(EXTRA_REQUEST))
         val matcher = DisplayModeMatcher(this).also { display = it }
         engine.setDisplayOptions(options, matcher.capabilities())
+        // PLAY-AND-004: «Звук: авто / всегда декодировать», before the first AudioTrack.
+        engine.setAudioOutputMode(parseAudioOutput(intent.getStringExtra(EXTRA_REQUEST)))
         engine.onVideoFormat = { format ->
             if (!isFinishing) matcher.match(format.frameRate, format.width, format.height, options)
         }
@@ -155,6 +160,11 @@ class PlayerActivity : FragmentActivity() {
             val o = JSONObject(json!!).optJSONObject("display") ?: return DisplayMatchOptions()
             DisplayMatchOptions.fromMap(o.keys().asSequence().associateWith { o.get(it) })
         }.getOrDefault(DisplayMatchOptions())
+
+        /** The optional `audio_output` of the request (PLAY-AND-004): `auto` (default) or `decode`. */
+        internal fun parseAudioOutput(json: String?): AudioOutputMode = runCatching {
+            AudioOutputMode.fromId(JSONObject(json!!).optString("audio_output"))
+        }.getOrDefault(AudioOutputMode.AUTO)
 
         /** `OpenRequest` from the JSON the Dart side sends (field names as in pa-playback). */
         internal fun parseRequest(json: String?): OpenRequest? = runCatching {

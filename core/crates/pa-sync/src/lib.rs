@@ -34,6 +34,10 @@
 //!   append-only journal per device in `/.kinolune/state/`, read by the
 //!   others from their cursors, compacted into snapshots.
 //!
+//! - [`nodelog`]: a log per node with gapless `seq` and a hash chain,
+//!   version vectors, anti-entropy and digests of the materialised state
+//!   (SYNC-017, ADR-0157 §1–2).
+//!
 //! Other transports (the user's own server, iroh) move the same [`proto`]
 //! frames and call [`Replica::receive`].
 //!
@@ -69,6 +73,7 @@ pub mod lan;
 pub mod library;
 pub mod matching;
 pub mod music;
+pub mod nodelog;
 pub mod op;
 pub mod outbox;
 pub mod profiles;

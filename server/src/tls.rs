@@ -191,11 +191,13 @@ pub struct TlsListener {
 }
 
 impl TlsListener {
-    /// Starts accepting on `listener`. The returned task owns the socket:
+    /// Starts accepting on `listener`; peers that `clients` refuses are
+    /// closed before the handshake. The returned task owns the socket:
     /// abort it to close the port.
     pub fn start(
         listener: TcpListener,
         config: Arc<rustls::ServerConfig>,
+        clients: crate::net::Clients,
     ) -> io::Result<(Self, JoinHandle<()>)> {
         let local_addr = listener.local_addr()?;
         let (tx, ready) = mpsc::channel(64);
@@ -215,6 +217,10 @@ impl TlsListener {
                         continue;
                     }
                 };
+                if !clients.allows(peer.ip()) {
+                    crate::net::refused(peer);
+                    continue;
+                }
                 let acceptor = acceptor.clone();
                 let tx = tx.clone();
                 tokio::spawn(async move {

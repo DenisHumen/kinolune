@@ -26,6 +26,7 @@ import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
@@ -44,6 +45,8 @@ import dev.projectalpha.core.RepeatMode
 import dev.projectalpha.core.TrackKind
 import dev.projectalpha.core.engineStateApply
 import dev.projectalpha.core.engineStateDefault
+import dev.projectalpha.audio.AudioOutputMode
+import dev.projectalpha.audio.AudioPassthrough
 import dev.projectalpha.display.DisplayCapabilities
 import dev.projectalpha.display.DisplayMatchOptions
 import dev.projectalpha.display.FrameRateMatch
@@ -63,6 +66,9 @@ import dev.projectalpha.display.FrameRateMatch
  * - HDR, Dolby Vision and frame rate (PLAY-AND-005, ADR-0147): [setDisplayOptions] sets Media3's seamless
  *   `Surface.setFrameRate` and native DV vs the base layer ([DynamicRangePolicy]); [onVideoFormat] tells the window
  *   owner the video's rate and size for the display mode switch (`DisplayModeMatcher`).
+ * - Sound (PLAY-AND-004, ADR-0163): passthrough of AC-3/E-AC-3/TrueHD/DTS by the HDMI `AudioCapabilities`, the FFmpeg
+ *   extension for what the device cannot decode, «всегда декодировать» ([setAudioOutputMode]); the stats report
+ *   what the `AudioTrack` got ([audioBitstream]).
  *
  * [playerFactory] replaces the default player (tests); such a player renders ASS only if it was built with
  * [player] and this engine's subtitles, so without it ASS goes through Media3's own parser.
@@ -109,6 +115,16 @@ class Media3Engine(
 
     /** Native Dolby Vision or the base layer (PLAY-AND-005); read by the video renderer on the playback thread. */
     val dynamicRange = DynamicRangePolicy()
+
+    /** «Звук: авто / всегда декодировать» (PLAY-AND-004); read by the audio sink on the playback thread. */
+    val audioOutput = AudioOutputPolicy()
+
+    /**
+     * What the current `AudioTrack` gets (PLAY-AND-004): true for a bitstream (passthrough), false for PCM, null
+     * before the first audio. From the track Media3 actually opened, not from the setting.
+     */
+    @Volatile var audioBitstream: Boolean? = null
+        private set
 
     /** The video format of the current item, when it is known or changes (main thread): for the display mode. */
     @Volatile var onVideoFormat: ((Format) -> Unit)? = null
@@ -317,6 +333,15 @@ class Media3Engine(
         }
     }
 
+    /**
+     * «Звук» (PLAY-AND-004): [AudioOutputMode.AUTO] lets Media3 pass Dolby and DTS to a receiver that takes them,
+     * [AudioOutputMode.DECODE] always decodes (platform decoders or the FFmpeg extension). Set it before `open`; a
+     * change applies when the next `AudioTrack` is made.
+     */
+    fun setAudioOutputMode(mode: AudioOutputMode) {
+        audioOutput.mode = mode
+    }
+
     // ---- For tests ----------------------------------------------------------------------------
 
     /** All commands sent so far are done and their events sent. Main thread. */
@@ -368,7 +393,9 @@ class Media3Engine(
         main.post { if (!closed) block(player()) }
     }
 
-    private fun player(): ExoPlayer = exo ?: (playerFactory?.invoke(appContext) ?: player(appContext, dataSources, subtitles, dynamicRange)).also {
+    private fun player(): ExoPlayer = exo ?: (
+        playerFactory?.invoke(appContext) ?: player(appContext, dataSources, subtitles, dynamicRange, audioOutput)
+        ).also {
         it.addListener(playerListener)
         it.addAnalyticsListener(analytics)
         exo = it
@@ -507,8 +534,8 @@ class Media3Engine(
             videoCodec = Media3Mapping.codecName(video),
             audioCodec = Media3Mapping.codecName(audio),
             hwDecoding = videoDecoder?.let(Media3Mapping::isHardwareDecoder),
-            // Passthrough arrives with PLAY-AND-004; until then audio is always decoded.
-            audioPassthrough = audio?.let { false },
+            // PLAY-AND-004: what the AudioTrack was opened with, not what the setting asks for.
+            audioPassthrough = audio?.let { audioBitstream ?: false },
             droppedFrames = droppedFrames.toULong(),
             bitrateBps = (video?.bitrate ?: audio?.bitrate)?.takeIf { it > 0 }?.toULong(),
             bufferedMs = (p.bufferedPosition - p.currentPosition).coerceAtLeast(0).toULong(),
@@ -569,6 +596,13 @@ class Media3Engine(
             this@Media3Engine.droppedFrames += droppedFrames
         }
 
+        override fun onAudioTrackInitialized(
+            eventTime: AnalyticsListener.EventTime,
+            audioTrackConfig: AudioSink.AudioTrackConfig,
+        ) {
+            audioBitstream = AudioPassthrough.isBitstream(audioTrackConfig.encoding)
+        }
+
         override fun onVideoDecoderInitialized(
             eventTime: AnalyticsListener.EventTime,
             decoderName: String,
@@ -626,7 +660,7 @@ class Media3Engine(
 
         /** [defaultPlayer] reading through [dataSources]. */
         fun player(context: Context, dataSources: DataSource.Factory): ExoPlayer =
-            player(context, dataSources, null, DynamicRangePolicy())
+            player(context, dataSources, null, DynamicRangePolicy(), AudioOutputPolicy())
 
         /** With [subtitles], SSA/ASS tracks stay raw and go to libass through [AssRenderer] (PLAY-AND-006). */
         internal fun player(
@@ -634,6 +668,7 @@ class Media3Engine(
             dataSources: DataSource.Factory,
             subtitles: AssSubtitles?,
             dynamicRange: DynamicRangePolicy,
+            audioOutput: AudioOutputPolicy,
         ): ExoPlayer {
             val renderers = object : DefaultRenderersFactory(context) {
                 override fun buildVideoRenderers(
@@ -671,7 +706,18 @@ class Media3Engine(
                     subtitles?.let { out.add(AssRenderer(it)) }
                     super.buildTextRenderers(context, output, outputLooper, extensionRendererMode, out)
                 }
+
+                // PLAY-AND-004: «Всегда декодировать» refuses bitstreams in the sink.
+                override fun buildAudioSink(
+                    context: Context,
+                    enableFloatOutput: Boolean,
+                    enableAudioOutputPlaybackParams: Boolean,
+                ): AudioSink? = super.buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParams)
+                    ?.let { PolicyAudioSink(it, audioOutput) }
             }.setEnableDecoderFallback(true)
+                // PLAY-AND-004: the FFmpeg extension (TrueHD, DTS, E-AC-3… from our LGPL FFmpeg, when the app ships
+                // it) after the platform decoders: passthrough and hardware decoders first, FFmpeg for the rest.
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
                 // PLAY-AND-005: HEVC after the DV decoders, so Dolby Vision profile 7 has its HDR10 base layer.
                 .setMediaCodecSelector(DolbyVisionFallbackSelector())
             val sources = DefaultMediaSourceFactory(dataSources)
