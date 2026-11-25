@@ -2336,5 +2336,8 @@
   "commonScreenErrorTitle": "На цьому екрані щось пішло не так",
   "commonScreenErrorMessage": "Помилку записано в журнал застосунку. Повторіть або поверніться назад.",
   "commonScreenErrorRetry": "Повторити",
-  "commonScreenErrorBack": "Назад"
+  "commonScreenErrorBack": "Назад",
+  "reviewWhyYearOff": "рік відрізняється на {years} ({delta} %)",
+  "reviewWhyRemake": "можливо, ремейк ({delta} %)",
+  "reviewWhyKindOff": "тип не збігся ({delta} %)"
 }

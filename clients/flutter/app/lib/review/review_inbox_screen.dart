@@ -40,6 +40,55 @@ String _sourceName(String source) => reviewSourceNames[source] ?? source;
 /// the candidate (true), against it (false) or neither (null).
 typedef ReviewSignal = ({String text, bool? good});
 
+/// A score adjustment as signed whole percent: `−8`, `+2` (META-036).
+String _delta(double v) {
+  final n = (v * 100).round();
+  return n < 0 ? '\u2212${-n}' : '+$n';
+}
+
+/// The title and its adjustments (META-036): the similarity of the titles
+/// alone, then what the years, the remake rule and the type changed. A
+/// match stored before the split has only the score, shown as before.
+List<ReviewSignal> _titleSignals(AppLocalizations l, MatchSignals s) {
+  final out = <ReviewSignal>[];
+  final sim = s.titleSimilarity;
+  final title = sim ?? s.title;
+  if (title > 0) {
+    out.add((
+      text: l.reviewWhyTitle((title * 100).round()),
+      good: title >= 0.85,
+    ));
+  }
+  final marker = s.lostMarker;
+  if (marker != null) {
+    out.add((text: l.reviewWhyLostMarker(marker.toUpperCase()), good: false));
+  }
+  final (fy, y) = (s.fileYear, s.year);
+  if (fy != null && y != null) {
+    final gap = (fy - y).abs();
+    final adj = s.yearAdjust;
+    out.add(switch (adj) {
+      _ when gap <= 1 => (text: l.reviewWhyYearSame(y), good: true),
+      final a? when sim != null && (a * 100).round() != 0 => (
+        text: l.reviewWhyYearOff(gap, _delta(a)),
+        good: false,
+      ),
+      _ => (text: l.reviewWhyYearDiffers(fy, y), good: false),
+    });
+  }
+  if (sim != null) {
+    final remake = s.remakeAdjust;
+    if (remake != null && (remake * 100).round() != 0) {
+      out.add((text: l.reviewWhyRemake(_delta(remake)), good: false));
+    }
+    final kind = s.kindAdjust;
+    if (kind != null && (kind * 100).round() < 0) {
+      out.add((text: l.reviewWhyKindOff(_delta(kind)), good: false));
+    }
+  }
+  return out;
+}
+
 /// The signals behind a candidate's score, strongest first: what
 /// «Почему?» lists.
 List<ReviewSignal> reviewSignals(AppLocalizations l, MatchSignals s) {
@@ -53,25 +102,7 @@ List<ReviewSignal> reviewSignals(AppLocalizations l, MatchSignals s) {
   if (s.provider == 'opensubtitles') {
     return [(text: l.reviewWhyFileHash, good: true)];
   }
-  final out = <ReviewSignal>[];
-  if (s.title > 0) {
-    out.add((
-      text: l.reviewWhyTitle((s.title * 100).round()),
-      good: s.title >= 0.85,
-    ));
-  }
-  final marker = s.lostMarker;
-  if (marker != null) {
-    out.add((text: l.reviewWhyLostMarker(marker.toUpperCase()), good: false));
-  }
-  final (fy, y) = (s.fileYear, s.year);
-  if (fy != null && y != null) {
-    out.add(
-      (fy - y).abs() <= 1
-          ? (text: l.reviewWhyYearSame(y), good: true)
-          : (text: l.reviewWhyYearDiffers(fy, y), good: false),
-    );
-  }
+  final out = _titleSignals(l, s);
   if (s.episodesBad > 0) {
     out.add((text: l.reviewWhyEpisodesMissing(s.episodesBad), good: false));
   } else if (s.episodesOk > 0) {
@@ -134,17 +165,7 @@ String reviewWhy(AppLocalizations l, MatchSignals s) {
   if (s.provider == 'opensubtitles') return l.reviewWhy(l.reviewWhyFileHash);
   final parts = <String>[];
   if (s.provider == 'anime_offline_database') parts.add(l.reviewWhyAnimeDb);
-  if (s.title > 0) parts.add(l.reviewWhyTitle((s.title * 100).round()));
-  final marker = s.lostMarker;
-  if (marker != null) parts.add(l.reviewWhyLostMarker(marker.toUpperCase()));
-  final (fy, y) = (s.fileYear, s.year);
-  if (fy != null && y != null) {
-    parts.add(
-      (fy - y).abs() <= 1
-          ? l.reviewWhyYearSame(y)
-          : l.reviewWhyYearDiffers(fy, y),
-    );
-  }
+  parts.addAll(_titleSignals(l, s).map((x) => x.text));
   if (s.episodesBad > 0) {
     parts.add(l.reviewWhyEpisodesMissing(s.episodesBad));
   } else if (s.episodesOk > 0) {
