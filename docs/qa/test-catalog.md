@@ -843,8 +843,15 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 | TWI-15 | «Загрузки» в шапке (`twitch-downloads`, только full) → список загрузок VOD | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
 | TWI-16 | «Записи и загрузки» в шапке (`twitch-archive`, только full, не у детского профиля) → библиотека записей | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
 | TWI-17 | Внизу раздела и страниц канала строка «Каналы, записи и эфиры — с Twitch. Kinolune не связан с Twitch.» (без логотипа) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-146 | Вошли: в шапке аватар и имя аккаунта с Twitch (`twitch-account-avatar`, `twitch-account-name`); без картинки или пока она грузится — первая буква имени на цвете | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-147 | Меню аккаунта в шапке → «Обновить имя и аватар» (`menu:twitchAccountRefresh`) → новое имя и аватар с Twitch; без нажатия приложение спрашивает Twitch не чаще раза в 24 ч (после входа — сразу) | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-148 | Настройки → Twitch: карточка аккаунта (`settings-twitch-account`) с аватаром, именем и «Вход выполнен: <логин>», «Обновить» (`settings-twitch-account-refresh`) и «Выйти» (`settings-twitch-sign-out`) → «Вход в Twitch не выполнен» и «Войти через Twitch» (`settings-twitch-sign-in`) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-149 | Вход в Twitch → у активного профиля со стандартным аватаром (цвет или картинка) аватар из Twitch (`profile-avatar-twitch`); детский профиль и своя картинка не меняются; «Выйти из Twitch» → прежний аватар; на другом устройстве после синхронизации профилей тот же аватар | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-150 | Редактор профиля: «Аватар из Twitch» (`profile-avatar-twitch-toggle`, есть при входе в Twitch, не у детского) вкл. → аватар из Twitch; выкл. или выбор цвета/картинки → свой | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| TWI-151 | Чат с правом отправки: свой аватар Twitch слева от поля ввода, подсказка — имя | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| TWI-152 | Twitch больше не принимает вход (401 после неудачного обновления токена) → приложение выходит само, в шапке кнопка входа, аватар профиля прежний | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 
-Автотесты: TWI-01, TWI-07 — `test/twitch_golden_test.dart` (phone, tablet, desktop, tv); TWI-02, TWI-03, TWI-04, TWI-09, TWI-10, TWI-12, TWI-13, TWI-17 — `test/twitch_test.dart` (desktop); TWI-06 — `test/twitch_test.dart`, `test/twitch_player_test.dart` (desktop); TWI-14, TWI-16 — `test/twitch_archive_test.dart`, `test/twitch_autorecord_profiles_test.dart`; TWI-15 — `test/twitch_downloads_test.dart`.
+Автотесты: TWI-01, TWI-07 — `test/twitch_golden_test.dart` (phone, tablet, desktop, tv); TWI-02, TWI-03, TWI-04, TWI-09, TWI-10, TWI-12, TWI-13, TWI-17 — `test/twitch_test.dart` (desktop); TWI-06 — `test/twitch_test.dart`, `test/twitch_player_test.dart` (desktop); TWI-14, TWI-16 — `test/twitch_archive_test.dart`, `test/twitch_autorecord_profiles_test.dart`; TWI-15 — `test/twitch_downloads_test.dart`; TWI-146, TWI-147 — `test/twitch_account_avatar_test.dart` (phone, desktop, tv); TWI-148, TWI-149, TWI-152 — `test/twitch_account_avatar_test.dart` (desktop).
 
 ### Каналы и поиск
 

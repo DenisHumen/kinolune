@@ -2350,5 +2350,11 @@
   "settingsDiagnosticsOpenFolder": "Открыть папку",
   "settingsDiagnosticsShare": "Поделиться",
   "settingsDiagnosticsOpenFolderFailed": "Не удалось открыть папку",
-  "settingsDiagnosticsShareFailed": "Не удалось открыть меню «Поделиться»"
+  "settingsDiagnosticsShareFailed": "Не удалось открыть меню «Поделиться»",
+  "twitchAccountRefresh": "Обновить имя и аватар",
+  "settingsTwitchAccountSignedOut": "Вход в Twitch не выполнен",
+  "settingsTwitchAccountSignedOutHint": "Войдите, чтобы видеть эфиры, подписки и свой аватар",
+  "settingsTwitchAccountSignOut": "Выйти",
+  "profilesAvatarFromTwitch": "Аватар из Twitch",
+  "profilesAvatarFromTwitchSubtitle": "Когда выключено или вы вышли из Twitch, вернутся ваш цвет или картинка"
 }

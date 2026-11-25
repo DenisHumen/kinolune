@@ -8234,5 +8234,29 @@
     "description": "BUG-024: Android button, opens the share sheet with the report."
   },
   "settingsDiagnosticsOpenFolderFailed": "Couldn't open the folder",
-  "settingsDiagnosticsShareFailed": "Couldn't open sharing"
+  "settingsDiagnosticsShareFailed": "Couldn't open sharing",
+  "twitchAccountRefresh": "Update name and avatar",
+  "@twitchAccountRefresh": {
+    "description": "TWI-032: fetches the Twitch account's display name and avatar again."
+  },
+  "settingsTwitchAccountSignedOut": "Not signed in to Twitch",
+  "@settingsTwitchAccountSignedOut": {
+    "description": "TWI-032: Settings → Twitch, the account card while signed out."
+  },
+  "settingsTwitchAccountSignedOutHint": "Sign in to see live status, follows and your avatar",
+  "@settingsTwitchAccountSignedOutHint": {
+    "description": "TWI-032: under the signed-out account card."
+  },
+  "settingsTwitchAccountSignOut": "Sign out",
+  "@settingsTwitchAccountSignOut": {
+    "description": "TWI-032: signs out of Twitch from the account card."
+  },
+  "profilesAvatarFromTwitch": "Avatar from Twitch",
+  "@profilesAvatarFromTwitch": {
+    "description": "TWI-032: profile editor switch: use the signed-in Twitch account's avatar."
+  },
+  "profilesAvatarFromTwitchSubtitle": "Your colour or picture comes back when this is off or you sign out of Twitch",
+  "@profilesAvatarFromTwitchSubtitle": {
+    "description": "TWI-032: under the switch."
+  }
 }

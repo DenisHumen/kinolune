@@ -29,6 +29,7 @@ import '../library/library_queries.dart';
 import '../network/network_controller.dart';
 import '../notices/in_app_notices.dart';
 import '../offline/offline_downloads.dart';
+import '../profiles/profile_avatar.dart' show AvatarRef, isStandardAvatar;
 import '../profiles/profile_controller.dart';
 import '../sources/availability.dart';
 import '../sources/cloud_link.dart';
@@ -45,6 +46,7 @@ import '../twitch/live_notifications.dart';
 import '../twitch/twitch_archive.dart';
 import '../twitch/twitch_backend.dart';
 import '../twitch/twitch_downloads.dart';
+import '../twitch/twitch_models.dart' show TwitchAccountProfile;
 import '../twitch/twitch_service.dart';
 import 'anime_db_asset.dart';
 import 'image_cache_control.dart';
@@ -119,6 +121,11 @@ class AppServices extends ChangeNotifier {
       nativeAllowedByConfig: twitchNativeAllowed,
       nativeKilledByConfig: twitchNativeKilled,
     );
+    // TWI-032: the Twitch avatar on the profile.
+    twitch
+      ..onSignedIn = _twitchAvatarOnSignIn
+      ..onProfileFetched = _twitchAvatarFetched
+      ..onSignedOut = _twitchAvatarRestore;
     liveNotifications = LiveNotificationController(
       twitch: twitch,
       preferences: this.preferences,
@@ -699,6 +706,48 @@ class AppServices extends ChangeNotifier {
     preferences: preferences,
     hasMusic: () async => (await library.tracks().first).isNotEmpty,
   );
+
+  // ----- Twitch avatar of profiles (TWI-032) -----------------------------
+
+  /// After signing in: the Twitch avatar goes by itself on the profile that
+  /// was active, only over a standard avatar (a colour or a picture) and
+  /// never on a restricted (kid) profile.
+  Future<void> _twitchAvatarOnSignIn(TwitchAccountProfile me) async {
+    final p = profileControl.active;
+    if (p == null ||
+        ProfileController.isRestricted(p) ||
+        !isStandardAvatar(p.avatar)) {
+      return;
+    }
+    await profileControl.setAvatar(
+      p.id,
+      AvatarRef.parse(p.avatar).withTwitch(me.userId, me.avatarUrl).ref,
+    );
+  }
+
+  /// A new picture on Twitch reaches the profiles that show it (and other
+  /// devices with the profile sync, ADR-0102).
+  Future<void> _twitchAvatarFetched(TwitchAccountProfile me) async {
+    for (final p in profileControl.all) {
+      final a = AvatarRef.parse(p.avatar);
+      if (a.twitchUserId == me.userId && a.twitchUrl != me.avatarUrl) {
+        await profileControl.setAvatar(
+          p.id,
+          a.withTwitch(me.userId, me.avatarUrl).ref,
+        );
+      }
+    }
+  }
+
+  /// After signing out: the previous colour or picture comes back.
+  Future<void> _twitchAvatarRestore(String userId) async {
+    for (final p in profileControl.all) {
+      final a = AvatarRef.parse(p.avatar);
+      if (a.twitchUserId == userId) {
+        await profileControl.setAvatar(p.id, a.base.ref);
+      }
+    }
+  }
 
   /// The Streams section is in the navigation: on in Settings and not
   /// hidden for the active profile (UI-015).
