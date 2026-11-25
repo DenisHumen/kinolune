@@ -12,6 +12,8 @@
 | `just roadmap next CORE PLAY-AND` | То же, только для указанных workstream |
 | `just roadmap next --offline` | Без запроса к GitHub (`gh` не нужен) |
 | `just roadmap next --json` | Машиночитаемый список для запуска волн агентов |
+| `just roadmap issues sync` | Read-only план good-first-issue синхронизации с roadmap |
+| `just roadmap issues sync --apply` | Создать issues для готовых S-задач и закрыть устаревшие |
 | `just roadmap test` | Unit-тесты инструмента |
 
 ## Что проверяет `lint`
