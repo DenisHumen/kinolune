@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 //! SRV-019 "done when": `GET /api/v1/system/activity` — idle → not busy; a
-//! `playing` heartbeat → busy until its TTL runs out; running work
+//! `playing` or `paused` heartbeat → busy until its TTL runs out, `stopped`
+//! → idle at once; running work
 //! (recording, scan) → busy until it ends; a request that is not from the
 //! machine itself → refused.
 
@@ -142,12 +143,21 @@ async fn playing_heartbeat_is_busy_until_its_ttl() {
             "idle too early: {gone:?}"
         );
 
-        // A fresh heartbeat makes it busy again; pause ends it at once.
-        ws.send(send(&pb(PlayState::Playing, 2_000, None)))
+        // Paused: still busy (a paused movie must not be rebooted away)
+        // until its TTL runs out.
+        ws.send(send(&pb(PlayState::Paused, 2_000, Some(1_500))))
             .await
             .unwrap();
         wait_for(addr, &busy).await;
-        ws.send(send(&pb(PlayState::Paused, 3_000, Some(600_000))))
+        let gone = wait_for(addr, &idle()).await;
+        assert!(gone >= Duration::from_millis(500), "idle too early: {gone:?}");
+
+        // Stopped ends the session at once, long before its TTL.
+        ws.send(send(&pb(PlayState::Playing, 3_000, None)))
+            .await
+            .unwrap();
+        wait_for(addr, &busy).await;
+        ws.send(send(&pb(PlayState::Stopped, 4_000, Some(600_000))))
             .await
             .unwrap();
         wait_for(addr, &idle()).await;

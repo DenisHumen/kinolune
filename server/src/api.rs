@@ -74,8 +74,9 @@ pub fn openapi_json() -> String {
 pub struct ActivityReport {
     /// Something is running that a reboot would interrupt.
     pub busy: bool,
-    /// Playback sessions: devices playing (`pb.update` `playing` within its
-    /// TTL) or streams served by the server, whichever is more.
+    /// Playback sessions: devices watching (last `pb.update` `playing` or
+    /// `paused`, within its TTL) or streams served by the server, whichever
+    /// is more.
     #[schema(minimum = 0)]
     pub sessions: u32,
     /// The main reason when busy: `playback`, `recording` or `scan`

@@ -7,8 +7,10 @@
 //! before it reboots, and postpones while the server is busy. Sources:
 //!
 //! - **playback**: devices whose last `pb.update` through the sync hub is
-//!   `playing` and still within its TTL (`ttl_ms`, 15 s by default: three
-//!   missed heartbeats and the device counts as gone), and streams the
+//!   `playing` or `paused` and still within its TTL (`ttl_ms`: 15 s for
+//!   `playing` — three missed heartbeats and the device counts as gone —
+//!   and 600 s for `paused`, so an update never reboots under a paused
+//!   movie; `stopped` ends the session at once), and streams the
 //!   server serves itself (direct play, HLS, transcode) — each holds an
 //!   [`ActivityGuard`] of [`ActivityKind::Playback`] while it runs;
 //! - **recording**: Twitch live recordings and VOD downloads on the server;
@@ -138,11 +140,11 @@ pub(crate) struct Snapshot {
 }
 
 impl Snapshot {
-    /// Combines served streams, devices playing through the sync hub
-    /// (`playing`), recordings and scans.
+    /// Combines served streams, devices watching through the sync hub
+    /// (`playing` or `paused`), recordings and scans.
     ///
     /// `sessions` counts playback only: the larger of served streams and
-    /// playing devices, because a device playing a stream from this server
+    /// watching devices, because a device playing a stream from this server
     /// shows up in both.
     pub(crate) fn new(activity: &Activity, playing: usize) -> Self {
         let streams = activity.count(ActivityKind::Playback);
@@ -202,7 +204,7 @@ pub(crate) async fn system_activity(
         )
             .into_response();
     }
-    let now = Snapshot::new(&activity, hub.playing_now());
+    let now = Snapshot::new(&activity, hub.watching_now());
     let report = ActivityReport {
         busy: now.busy,
         sessions: now.sessions,

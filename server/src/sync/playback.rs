@@ -16,8 +16,8 @@ struct Entry {
     hlc: Hlc,
     seen: Instant,
     frame: Utf8Bytes,
-    /// `playing`, for "someone is watching" (SRV-019).
-    playing: bool,
+    /// `playing` or `paused`, for "someone is watching" (SRV-019).
+    watching: bool,
     /// How long the state stays current after `seen` (`ttl_ms`).
     live: Duration,
 }
@@ -65,7 +65,9 @@ impl PlaybackCache {
                 hlc: update.hlc.clone(),
                 seen: now,
                 frame,
-                playing: update.state == PlayState::Playing,
+                // `stopped` ends the session; an unknown newer state is
+                // treated as `paused` (spec §2).
+                watching: update.state != PlayState::Stopped,
                 live: Duration::from_millis(update.ttl_ms.unwrap_or(DEFAULT_TTL_MS)),
             },
         );
@@ -79,15 +81,16 @@ impl PlaybackCache {
         kept.into_iter().map(|e| e.frame.clone()).collect()
     }
 
-    /// Titles playing right now: the last update is `playing` and younger
+    /// Titles someone is watching right now: the last update is `playing`
+    /// or `paused` (a paused movie must not be rebooted away) and younger
     /// than its own TTL (`ttl_ms`, measured from when the hub got it, so a
     /// device with a wrong clock does not matter) and than the replay time.
-    pub(super) fn playing(&self, now: Instant) -> usize {
+    pub(super) fn watching(&self, now: Instant) -> usize {
         self.entries
             .values()
             .filter(|e| {
                 let age = now.saturating_duration_since(e.seen);
-                e.playing && age < e.live && age < self.ttl
+                e.watching && age < e.live && age < self.ttl
             })
             .count()
     }
@@ -160,35 +163,37 @@ mod tests {
     fn playing_until_its_ttl() {
         let t0 = Instant::now();
         let mut cache = PlaybackCache::new(Duration::from_secs(600), 100);
-        assert_eq!(cache.playing(t0), 0);
+        assert_eq!(cache.watching(t0), 0);
         let mut u = update("tmdb:movie:603", 1_000, "tv");
         u.ttl_ms = Some(15_000);
         put(&mut cache, &u, t0);
-        assert_eq!(cache.playing(t0 + Duration::from_secs(14)), 1);
-        assert_eq!(cache.playing(t0 + Duration::from_secs(15)), 0);
+        assert_eq!(cache.watching(t0 + Duration::from_secs(14)), 1);
+        assert_eq!(cache.watching(t0 + Duration::from_secs(15)), 0);
         // Without `ttl_ms`: the protocol default (15 s).
         let t1 = t0 + Duration::from_secs(20);
         let mut u = update("tmdb:movie:604", 1_000, "tv");
         u.ttl_ms = None;
         put(&mut cache, &u, t1);
-        assert_eq!(cache.playing(t1 + Duration::from_secs(14)), 1);
-        assert_eq!(cache.playing(t1 + Duration::from_secs(15)), 0);
+        assert_eq!(cache.watching(t1 + Duration::from_secs(14)), 1);
+        assert_eq!(cache.watching(t1 + Duration::from_secs(15)), 0);
     }
 
     #[test]
-    fn paused_and_stopped_are_not_playing() {
+    fn paused_counts_until_its_ttl_stopped_does_not() {
         let t0 = Instant::now();
         let mut cache = PlaybackCache::new(Duration::from_secs(600), 100);
         let mut u = update("tmdb:movie:603", 1_000, "tv");
         put(&mut cache, &u, t0);
-        assert_eq!(cache.playing(t0), 1);
+        assert_eq!(cache.watching(t0), 1);
         u.state = PlayState::Paused;
+        u.ttl_ms = Some(600_000);
         u.hlc.wall_ms = 2_000;
         put(&mut cache, &u, t0);
-        assert_eq!(cache.playing(t0), 0);
+        assert_eq!(cache.watching(t0 + Duration::from_secs(599)), 1);
+        assert_eq!(cache.watching(t0 + Duration::from_secs(600)), 0);
         u.state = PlayState::Stopped;
         u.hlc.wall_ms = 3_000;
         put(&mut cache, &u, t0);
-        assert_eq!(cache.playing(t0), 0);
+        assert_eq!(cache.watching(t0), 0);
     }
 }
