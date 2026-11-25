@@ -219,6 +219,9 @@ final _flows = <String, (Section, _Step?)>{
   'twitch-search': (
     Section.twitch,
     (t, _) async {
+      // The tab pills scroll sideways: longer labels push it off a phone.
+      await t.ensureVisible(find.byKey(const ValueKey('twitch-tab-search')));
+      await settle(t, 2);
       await t.tap(find.byKey(const ValueKey('twitch-tab-search')));
       await settle(t, 6);
       await t.enterText(

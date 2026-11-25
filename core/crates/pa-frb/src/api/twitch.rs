@@ -955,7 +955,7 @@ impl CoreTwitch {
         let mut items: Vec<CoreTwitchStream> = page.items.iter().map(stream_of).collect();
         // Helix sorts by viewers already; keep it so within the page even
         // when counts moved while it was built.
-        items.sort_by(|a, b| b.viewer_count.cmp(&a.viewer_count));
+        items.sort_by_key(|s| std::cmp::Reverse(s.viewer_count));
         Ok(CoreTwitchStreamPage {
             items,
             cursor: page.next.map(|c| c.0),
