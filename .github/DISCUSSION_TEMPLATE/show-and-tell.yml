@@ -1,17 +1,22 @@
 # SPDX-License-Identifier: MPL-2.0
-title: "[Show and tell] "
 body:
+  - type: markdown
+    attributes:
+      value: |
+        На скриншотах приберіть імена користувачів, адреси серверів і приватні шляхи.
+        Remove usernames, server addresses and private paths from screenshots.
+        На скриншотах уберите имена пользователей, адреса серверов и приватные пути.
   - type: textarea
     id: made
     attributes:
-      label: What did you make or try? / Что вы сделали или попробовали?
-      description: Share a setup, experiment, workflow, or contribution. / Расскажите о настройке, эксперименте, процессе или вкладе.
+      label: Що ви зробили або спробували / What you made or tried / Что вы сделали или попробовали
+      description: Налаштування, експеримент, сценарій або внесок. / A setup, experiment, workflow or contribution. / Настройка, эксперимент, сценарий или вклад.
     validations:
       required: true
   - type: textarea
     id: result
     attributes:
-      label: How did it go? / Как прошло?
-      description: What worked, and what would you change? / Что сработало и что вы бы изменили?
+      label: Результат / Result / Результат
+      description: Що спрацювало і що б ви змінили? / What worked, and what would you change? / Что сработало и что бы вы изменили?
     validations:
-      required: true
+      required: false

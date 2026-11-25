@@ -18,24 +18,25 @@
 
 Нет подходящей задачи, но есть идея или ошибка — откройте issue по шаблону (ошибка, проблема воспроизведения, неверное распознавание, предложение) или тему в [Discussions](https://github.com/DenisHumen/kinolune/discussions).
 
-### Discussions: от идеи до ROADMAP
+## Discussions: від ідеї до ROADMAP / from idea to ROADMAP / от идеи до ROADMAP
 
-- **Q&A** — вопросы об установке и использовании; перед публикацией проверьте руководство и похожие обсуждения.
-- **Ideas** — опишите проблему и предложение. Реакции показывают интерес сообщества; для выбора из нескольких вариантов используйте **Polls**.
-- **Ошибки распознавания** — укажите версию, платформу, обезличенное имя файла, ожидаемый и фактический результат. Не публикуйте полный путь, имя пользователя, закрытую ссылку или личное медиа.
-- **Show and tell** — поделитесь настройкой, экспериментом или результатом.
-- **Announcements** — новости и релизы публикуют сопровождающие.
+Форми категорій — у [DISCUSSION_TEMPLATE/](DISCUSSION_TEMPLATE/) (ім'я файлу = slug категорії / file name = category slug / имя файла = slug категории).
 
-Путь идеи: обсуждение → сбор отзывов и, если нужно, голосование → решение сопровождающего → задача с критериями и зависимостями в `docs/ROADMAP.md`. Сопровождающий оставляет решение и ссылку на задачу в обсуждении. Открытый draft PR показывает, что работа началась; после слияния PR сопровождающий отмечает задачу выполненной. Реакции и голоса помогают понять спрос, но не обещают включение функции.
+| [Discussions](https://github.com/DenisHumen/kinolune/discussions) | uk | en | ru |
+|---|---|---|---|
+| **Q&A** | питання про встановлення й використання | setup and usage questions | вопросы об установке и использовании |
+| **Ideas** | проблема й пропозиція, голоси ▲ | a problem and a proposal, upvotes ▲ | проблема и предложение, голоса ▲ |
+| **Polls** | вибір між готовими варіантами | a vote between ready alternatives | выбор между готовыми вариантами |
+| **Recognition errors** | помилки розпізнавання | wrong matches | ошибки распознавания |
+| **Show and tell** | ваші налаштування й результати | your setups and results | ваши настройки и результаты |
+| **Announcements** | новини від супровідників | maintainer news | новости от сопровождающих |
+| **General** | усе інше, без форми | anything else, no form | всё остальное, без формы |
 
-## Process: from discussion to ROADMAP
+- **uk.** Шлях ідеї: обговорення в Ideas → відгуки й голоси (▲), за потреби Poll → рішення супровідника в обговоренні → задача з критеріями й залежностями в [docs/ROADMAP.md](../docs/ROADMAP.md) і посилання на неї в обговоренні → draft PR з `[ID]` означає «в роботі» → після злиття задачу позначено `[x]`. Голоси впливають на пріоритет, але не гарантують реалізацію. У Recognition errors вказуйте лише знеособлений шлях (`<lib>/…`): без повних шляхів, імен користувачів і серверів, токенів і приватних посилань.
+- **en.** Idea flow: discussion in Ideas → feedback and upvotes (▲), a Poll if needed → maintainer decision in the thread → a task with acceptance criteria and deps in [docs/ROADMAP.md](../docs/ROADMAP.md), linked from the thread → a draft PR with `[ID]` means "in progress" → the task is ticked `[x]` when it merges. Votes inform priority; they do not promise implementation. In Recognition errors post only the anonymized path (`<lib>/…`): no full paths, user or host names, tokens or private links.
+- **ru.** Путь идеи: обсуждение в Ideas → отзывы и голоса (▲), при необходимости Poll → решение сопровождающего в обсуждении → задача с критериями и зависимостями в [docs/ROADMAP.md](../docs/ROADMAP.md) и ссылка на неё в обсуждении → draft PR с `[ID]` означает «в работе» → после слияния задача отмечается `[x]`. Голоса влияют на приоритет, но не гарантируют реализацию. В Recognition errors указывайте только обезличенный путь (`<lib>/…`): без полных путей, имён пользователей и серверов, токенов и приватных ссылок.
 
-- **Q&A** is for setup and usage questions; search the user guide and existing discussions first.
-- **Ideas** is for a problem and a proposal. Reactions show interest; use **Polls** to choose between clear alternatives.
-- **Recognition errors** should include the version, platform, anonymized filename, expected match, and actual result. Never post full paths, usernames, private links, or personal media.
-- **Show and tell** is for setups, experiments, and results. **Announcements** are maintainer-only.
-
-Flow: discussion → feedback and an optional poll → maintainer decision → a task with acceptance criteria and dependencies in `docs/ROADMAP.md`. The maintainer records the decision and links the task in the discussion. An open draft PR shows that work has started; after it merges, the maintainer marks the task complete. Votes inform prioritization; they do not promise implementation.
+Підтверджену помилку розпізнавання з прикладом оформіть issue за шаблоном «Неверное распознавание / Wrong match» — він поповнює тестовий корпус. / File a confirmed wrong match with a sample as an issue using that template — it feeds the test corpus. / Подтверждённую ошибку с примером оформите issue по этому шаблону — он пополняет тестовый корпус.
 
 ## Процесс: одна задача — одна ветка — один worktree
 

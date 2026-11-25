@@ -1,22 +1,28 @@
 # SPDX-License-Identifier: MPL-2.0
-title: "[Q&A] "
 body:
   - type: markdown
     attributes:
       value: |
-        Search existing discussions and the user guide first. / Сначала проверьте руководство и похожие обсуждения.
-        Do not post passwords, tokens, private URLs, or personal file paths. / Не публикуйте пароли, токены, личные ссылки и пути к файлам.
+        Спершу перегляньте [посібник](https://github.com/DenisHumen/kinolune/tree/main/docs/user) і схожі обговорення. Не публікуйте паролі, токени, приватні посилання та повні шляхи до файлів.
+        Check the [user guide](https://github.com/DenisHumen/kinolune/tree/main/docs/user) and similar discussions first. Never post passwords, tokens, private links or full file paths.
+        Сначала посмотрите [руководство](https://github.com/DenisHumen/kinolune/tree/main/docs/user) и похожие обсуждения. Не публикуйте пароли, токены, приватные ссылки и полные пути к файлам.
   - type: textarea
     id: question
     attributes:
-      label: Question / Вопрос
-      description: What are you trying to do, and where are you stuck? / Что вы хотите сделать и на чём остановились?
+      label: Питання / Question / Вопрос
+      description: Що ви хочете зробити і де зупинилися? / What are you trying to do, and where are you stuck? / Что вы хотите сделать и где остановились?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Версія та платформа / Version and platform / Версия и платформа
+      placeholder: "0.1.0-alpha · Linux (Wayland)"
     validations:
       required: true
   - type: textarea
-    id: context
+    id: tried
     attributes:
-      label: Context / Контекст
-      description: Kinolune version, platform, and steps already tried. / Версия Kinolune, платформа и уже выполненные шаги.
+      label: Що вже спробували / What you tried / Что уже пробовали
     validations:
-      required: true
+      required: false

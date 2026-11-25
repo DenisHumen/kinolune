@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: MPL-2.0
-title: "[Announcement] "
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Новини та релізи публікують лише супровідники. / Maintainers only: news and releases. / Новости и релизы публикуют только сопровождающие.
   - type: textarea
     id: announcement
     attributes:
-      label: Announcement / Объявление
-      description: Maintainer-only updates, releases, and project news. / Новости и релизы от сопровождающих.
+      label: Оголошення / Announcement / Объявление
+      description: Коротко українською, англійською та російською; посилання на реліз або PR. / Briefly in Ukrainian, English and Russian; link the release or PR. / Кратко на украинском, английском и русском; ссылка на релиз или PR.
     validations:
       required: true
