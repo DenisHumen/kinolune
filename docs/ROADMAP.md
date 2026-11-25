@@ -2267,10 +2267,10 @@ project_alpha/
   - Что: что это, статус, скриншоты (без чужого арта), ссылки на ROADMAP, скачивание, донаты, документацию; бейджи CI.
   - deps: REPO-001 · size: S · parallel: yes · веха: M0 · ref: S §1
   - done when: README отражает M0; ссылки проверяются в CI.
-- [x] **COMM-004** Good first issues из ROADMAP
-  - Что: скрипт создаёт GitHub issues для S-задач с закрытыми deps и меткой `good first issue`, со ссылкой на строку ROADMAP; синхронизация статуса.
+- [ ] **COMM-004** Good first issues из ROADMAP
+  - Что: скрипт создаёт GitHub issues только для вручную проверенных задач с закрытыми deps и меткой `good first issue`, со ссылкой на строку ROADMAP; синхронизация статуса.
   - deps: REPO-012 · size: S · parallel: yes · веха: M1 · ref: —
-  - done when: в репо есть ≥ 10 актуальных good first issues.
+  - done when: в репо есть ≥ 10 актуальных, вручную проверенных good first issues; задачи размера S без отдельной проверки не публикуются.
 - [ ] **COMM-005** (owner) Каналы общения и анонсы
   - Что: выбор площадок (Matrix, Telegram, Discord), правила; шаблон анонса релиза; публикация changelog в Discussions.
   - deps: DEC-001 · size: S · parallel: yes · веха: M1 · ref: S §7

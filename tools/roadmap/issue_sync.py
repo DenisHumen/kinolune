@@ -18,6 +18,7 @@ from roadmap import Task
 DEFAULT_REPO = "DenisHumen/kinolune"
 LABEL = "good first issue"
 ISSUE_ID_RE = re.compile(r"\[([A-Z]+(?:-[A-Z]+)*-\d{3})\]")
+CURATED_FILE = Path(__file__).with_name("good_first_issues.txt")
 
 
 @dataclass(frozen=True)
@@ -33,9 +34,24 @@ def issue_id(issue: dict) -> str | None:
     return match.group(1) if match else None
 
 
-def eligible(tasks: list[Task], open_pr_ids: set[str]) -> list[Task]:
+def curated_ids(path: Path = CURATED_FILE) -> set[str]:
+    """Read the maintainer-reviewed beginner task allowlist."""
+    ids: set[str] = set()
+    for number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        value = raw.split("#", 1)[0].strip()
+        if not value:
+            continue
+        if not re.fullmatch(r"[A-Z]+(?:-[A-Z]+)*-\d{3}", value):
+            raise ValueError(f"{path}:{number}: invalid task ID {value!r}")
+        ids.add(value)
+    return ids
+
+
+def eligible(
+    tasks: list[Task], open_pr_ids: set[str], curated: set[str]
+) -> list[Task]:
     ready = roadmap.ready_tasks(tasks, taken=open_pr_ids)
-    return [task for task in ready if task.size == "S"]
+    return [task for task in ready if task.size == "S" and task.id in curated]
 
 
 def make_issue(task: Task, repo: str) -> tuple[str, str]:
@@ -56,9 +72,15 @@ def make_issue(task: Task, repo: str) -> tuple[str, str]:
     return title, body
 
 
-def plan(tasks: list[Task], open_pr_ids: set[str], issues: list[dict]) -> list[Action]:
+def plan(
+    tasks: list[Task], open_pr_ids: set[str], issues: list[dict], curated: set[str]
+) -> list[Action]:
+    # An empty allowlist means no human has reviewed the candidates yet. In
+    # that state, do not create or close issues based on task size alone.
+    if not curated:
+        return []
     by_id = {issue_id(issue): issue for issue in issues if issue_id(issue)}
-    ready = {task.id: task for task in eligible(tasks, open_pr_ids)}
+    ready = {task.id: task for task in eligible(tasks, open_pr_ids, curated)}
     actions: list[Action] = []
     for task_id, task in ready.items():
         issue = by_id.get(task_id)
@@ -93,6 +115,14 @@ def cmd_sync(args) -> int:
         return 1
     repo = args.repo or os.environ.get("GITHUB_REPOSITORY") or DEFAULT_REPO
     try:
+        reviewed_ids = curated_ids()
+    except (OSError, ValueError) as exc:
+        print(f"error: cannot read curated good-first-issue IDs: {exc}", file=sys.stderr)
+        return 1
+    if not reviewed_ids:
+        print("no roadmap tasks have been reviewed as beginner-friendly; no changes planned")
+        return 0
+    try:
         prs = gh_json(["pr", "list", "--state", "open", "--limit", "500", "--json", "title"], repo)
         issues = gh_json(["issue", "list", "--state", "all", "--label", LABEL,
                           "--limit", "500", "--json", "number,title,state,url"], repo)
@@ -100,7 +130,7 @@ def cmd_sync(args) -> int:
         print(f"error: GitHub query failed: {exc}", file=sys.stderr)
         return 1
     open_pr_ids = {task_id for pr in prs for task_id in roadmap.PR_ID_RE.findall(pr.get("title", ""))}
-    actions = plan(tasks, open_pr_ids, issues)
+    actions = plan(tasks, open_pr_ids, issues, reviewed_ids)
     for action in actions:
         if action.kind == "create":
             title, _ = make_issue(action.task, repo)

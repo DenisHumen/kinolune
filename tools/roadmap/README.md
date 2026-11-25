@@ -12,9 +12,15 @@
 | `just roadmap next CORE PLAY-AND` | То же, только для указанных workstream |
 | `just roadmap next --offline` | Без запроса к GitHub (`gh` не нужен) |
 | `just roadmap next --json` | Машиночитаемый список для запуска волн агентов |
-| `just roadmap issues sync` | Read-only план good-first-issue синхронизации с roadmap |
-| `just roadmap issues sync --apply` | Создать issues для готовых S-задач и закрыть устаревшие |
+| `just roadmap issues sync` | Read-only план синхронизации только для задач из `good_first_issues.txt` |
+| `just roadmap issues sync --apply` | Создать issues для готовых, вручную проверенных задач и закрыть устаревшие |
 | `just roadmap test` | Unit-тесты инструмента |
+
+`size: S` не означает, что задачу можно отдать новичку. Добавляйте ID в
+`good_first_issues.txt` только после проверки: задача ограничена по объёму,
+самостоятельна, не требует решения владельца, специальных ключей или
+оборудования, настройки внешнего сервиса и не затрагивает рискованный код.
+Пустой список означает, что синхронизация ничего не создаёт и не закрывает.
 
 ## Что проверяет `lint`
 
