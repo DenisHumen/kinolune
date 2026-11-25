@@ -78,9 +78,10 @@ if [[ "$("${ENGINE}" inspect -f '{{.State.Running}}' "${ISO_HELPER_NAME}" 2>/dev
             > /etc/containers/containers.conf.d/50-helper.conf
         # Ubuntu hosts (24.04+, also GitHub runners) confine /usr/bin/bwrap by path with the
         # AppArmor profile bwrap-userns-restrict, which drops every capability of its
-        # children: osbuild stages then cannot mount. A copy under another path is not
-        # matched; osbuild finds it first in PATH. The helper itself stays privileged.
-        install -m 0755 /usr/bin/bwrap /usr/local/bin/bwrap
+        # children: osbuild stages then cannot mount. AppArmor matches the resolved path,
+        # so the binary moves to /usr/local/bin and /usr/bin/bwrap becomes a symlink.
+        mv /usr/bin/bwrap /usr/local/bin/bwrap
+        ln -s ../local/bin/bwrap /usr/bin/bwrap
         image-builder version | head -n 3'
 fi
 
