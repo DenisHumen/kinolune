@@ -126,10 +126,8 @@ Finder get _row => find.byKey(episodeRowKey);
 ScrollPosition _pos(WidgetTester t, Finder scrollable) =>
     t.state<ScrollableState>(scrollable).position;
 
-ScrollPosition _rowPos(WidgetTester t) => _pos(
-  t,
-  find.descendant(of: _row, matching: find.byType(Scrollable)).first,
-);
+ScrollPosition _rowPos(WidgetTester t) =>
+    _pos(t, find.descendant(of: _row, matching: find.byType(Scrollable)).first);
 
 Finder _card(int e, {int season = 1}) =>
     find.byKey(showEpisodeKey('e-$season-$e'));
@@ -310,10 +308,7 @@ void main() {
     final up = page > 0;
     t.binding.handlePointerEvent(mouse.scroll(Offset(0, up ? -120 : 120)));
     await settle(t, 3);
-    expect(
-      _pos(t, _page).pixels,
-      up ? lessThan(page) : greaterThan(page),
-    );
+    expect(_pos(t, _page).pixels, up ? lessThan(page) : greaterThan(page));
     expect(_rowPos(t).pixels, 0);
     await _showRow(t);
     t.binding.handlePointerEvent(mouse.hover(t.getCenter(_row)));
@@ -426,7 +421,10 @@ void main() {
       _expectInView(t, _card(now), _tv);
       // At most the second card from an edge: a neighbour on each side.
       if (now < _long) {
-        expect(t.getRect(_card(now + 1)).right, lessThanOrEqualTo(screen.right));
+        expect(
+          t.getRect(_card(now + 1)).right,
+          lessThanOrEqualTo(screen.right),
+        );
       }
       expect(t.getRect(_card(now - 1)).left, greaterThanOrEqualTo(0));
     }
