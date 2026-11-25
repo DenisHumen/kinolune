@@ -8,7 +8,7 @@
 
 use std::path::Path;
 
-use pa_catalog::{Catalog, Item};
+use pa_catalog::{Catalog, Item, ItemKind, LibraryQuery, LibrarySort, SortField};
 use pa_library::rusqlite::{Connection, params};
 use pa_scanner::CancelToken;
 
@@ -225,4 +225,94 @@ fn a_missing_or_unprobed_part_is_left_out_of_the_sum() {
     .unwrap();
     drop(conn);
     assert_eq!(durations(&cat, "Charge"), [None; 4]);
+}
+
+#[test]
+fn sorting_by_duration_follows_the_runtime_on_the_cards() {
+    let (_dir, cat) = setup();
+    let q = LibraryQuery {
+        sort: LibrarySort {
+            field: SortField::Duration,
+            descending: true,
+        },
+        ..LibraryQuery::new(ItemKind::Movie)
+    };
+    let sorted: Vec<_> = cat
+        .query(&q, 0, 100)
+        .unwrap()
+        .items
+        .into_iter()
+        .map(|i| (i.title, i.duration_ms.map(|d| d / MIN)))
+        .collect();
+    assert_eq!(
+        sorted,
+        [
+            ("Heat".to_owned(), Some(170)),
+            ("Inception".to_owned(), Some(148)),
+            ("Alien".to_owned(), Some(117)),
+            ("Arrival".to_owned(), Some(116)),
+            ("Charge".to_owned(), Some(4)),
+        ]
+    );
+}
+
+#[test]
+fn the_player_timeline_does_not_fill_one_part() {
+    let (_dir, cat) = setup();
+    // Part 1 is not probed yet; part 2 is (2 minutes).
+    let conn = Connection::open(cat.path()).unwrap();
+    conn.execute(
+        "UPDATE files SET duration_ms = NULL WHERE path = ?1",
+        [format!("/{PART1}")],
+    )
+    .unwrap();
+    drop(conn);
+    let charge = movie(&cat, "Charge");
+    assert_eq!(durations(&cat, "Charge"), [Some(2 * MIN); 4]);
+
+    // The player reports the EDL timeline of both parts: 1:00 of 4:00.
+    assert!(
+        cat.save_progress(charge.id, MIN, 4 * MIN, 1_000, false)
+            .unwrap()
+    );
+    // Part 1 keeps waiting for its probe: the total is not written into
+    // it and then added to part 2 again.
+    let conn = Connection::open(cat.path()).unwrap();
+    let part1: Option<i64> = conn
+        .query_row(
+            "SELECT duration_ms FROM files WHERE path = ?1",
+            [format!("/{PART1}")],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(part1, None);
+    drop(conn);
+    assert_eq!(durations(&cat, "Charge"), [Some(2 * MIN); 4]);
+
+    // Once probed, the runtime and the progress are the whole timeline.
+    let conn = Connection::open(cat.path()).unwrap();
+    conn.execute(
+        "UPDATE files SET duration_ms = ?2 WHERE path = ?1",
+        params![format!("/{PART1}"), 2 * MIN],
+    )
+    .unwrap();
+    drop(conn);
+    assert_eq!(durations(&cat, "Charge"), [Some(4 * MIN); 4]);
+    let p = cat.progress(charge.id).unwrap().expect("progress");
+    assert_eq!((p.position_ms, p.duration_ms), (MIN, 4 * MIN));
+
+    // A single file still takes the player's duration until probing.
+    let conn = Connection::open(cat.path()).unwrap();
+    conn.execute(
+        "UPDATE files SET duration_ms = NULL WHERE path = ?1",
+        [format!("/{ONE}")],
+    )
+    .unwrap();
+    drop(conn);
+    let arrival = movie(&cat, "Arrival");
+    assert!(
+        cat.save_progress(arrival.id, MIN, 116 * MIN, 1_000, false)
+            .unwrap()
+    );
+    assert_eq!(durations(&cat, "Arrival"), [Some(116 * MIN); 4]);
 }

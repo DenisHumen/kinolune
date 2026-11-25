@@ -223,6 +223,18 @@ macro_rules! play_duration {
 }
 pub(crate) use play_duration;
 
+/// Files a duration the player reports may fill until probing (LIB-006):
+/// not a part of a split movie (BUG-021). The player reports the whole
+/// timeline of all parts, so writing it into one part would be added up
+/// again by [`play_duration!`]; a part keeps waiting for its own probe.
+macro_rules! not_a_part {
+    () => {
+        "NOT EXISTS (SELECT 1 FROM file_group_members np
+                      WHERE np.file_id = files.id AND np.role = 'part')"
+    };
+}
+pub(crate) use not_a_part;
+
 /// Local poster of the movie file `f` (LIB-007 `group_assets`): art named
 /// after the file (`<movie>-poster.jpg`, `<movie>.jpg`) first, then generic
 /// names (`poster.jpg`, `folder.jpg`) of a single-movie folder or a disc.
