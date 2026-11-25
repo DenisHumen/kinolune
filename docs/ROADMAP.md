@@ -2213,6 +2213,7 @@ project_alpha/
   - Что: формулировки экрана «О программе» для store-флейвора, правила IAP-чаевых (Apple 3.1.1, платёжная политика Google) по решению DEC-003.
   - deps: DEC-003 · size: S · parallel: yes · веха: M10 · ref: S §4
   - done when: тексты согласованы и использованы в PKG-015 и UI-016.
+  - Сделано частично: черновик `docs/legal/store-donations.md` — правила App Store (3.1.1, 3.1.1(a), 3.2.1(vi), 3.2.2(iv)), Google Play (Payments policy, FAQ о чаевых) и Microsoft Store (10.8.1–10.8.2), тексты «О программе» для store-флейвора (сейчас без донатов по ADR-0011) и черновик текста IAP-чаевых ru/uk/en. Осталось для галочки: согласование с юристом и владельцем, использование в PKG-015.
 - [ ] **LEGAL-009** Аудит лицензий зависимостей и ассетов
   - Что: cargo-about, flutter licenses и SwiftPM → `THIRD_PARTY_NOTICES`; запрет GPL в клиентах; совместимость с MPL; проверка ассетов (нет Infuse, Firecore, SF вне Apple), лицензии иконок и шрифтов, brand guidelines Plex, Jellyfin, Emby, Twitch и TMDB.
   - deps: CI-003 · size: M · parallel: yes · веха: M1 · ref: 02 §3, 01 §4.8, §5.2, CLAUDE.md
