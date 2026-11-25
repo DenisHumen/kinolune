@@ -68,7 +68,7 @@ exceptions = [
     { crate = "webpki-root-certs", allow = ["CDLA-Permissive-2.0"] },
     # Mozilla's CA root list as Rust data (pa-metadata HTTPS, ADR-0018).
     { crate = "webpki-roots", allow = ["CDLA-Permissive-2.0"] },
-    # Trickplay JPEG encoder (PLAY-009, ADR-NNNN): its DCT follows libjpeg,
+    # Trickplay JPEG encoder (PLAY-009, ADR-0168): its DCT follows libjpeg,
     # whose IJG licence is permissive (attribution only, no copyleft).
     { crate = "jpeg-encoder", allow = ["IJG"] },
 ]

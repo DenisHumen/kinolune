@@ -6,7 +6,7 @@
 
 ## Структура репозитория
 
-С 2026-11-25 (REPO-014, [ADR-NNNN](docs/adr/NNNN-tidy-repository-root.md), [подробно](docs/dev/repo-layout.md)) в корне только то, что обязано там лежать:
+С 2026-11-25 (REPO-014, [ADR-0168](docs/adr/0168-tidy-repository-root.md), [подробно](docs/dev/repo-layout.md)) в корне только то, что обязано там лежать:
 
 | Где | Что |
 |---|---|
