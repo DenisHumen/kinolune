@@ -11,6 +11,13 @@ nss-mdns
 # Firewall
 firewalld
 
+# Network: Wi-Fi from the Kinolune app over NetworkManager (DIST-032);
+# polkit applies usr/share/polkit-1/rules.d/50-kinolune-network.rules
+NetworkManager
+NetworkManager-wifi
+wpa_supplicant
+polkit
+
 # Disks and storage
 smartmontools
 mdadm
