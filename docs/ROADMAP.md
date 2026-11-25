@@ -2154,6 +2154,7 @@ project_alpha/
   - Что: рендер OpenAPI (Redoc, статически), `sync-protocol.md`, схема удалённого конфига Twitch, формат `releases.json` и манифестов каналов.
   - deps: SRV-002, SYNC-002 · size: S · parallel: yes · веха: M4 · ref: 04 §1.5, §1.8
   - done when: страницы публикуются на сайте (SITE-003).
+  - Сделано частично: `docs/api/` — `README.md` (оглавление API сервера с auth и `/api/v1/system/activity`, удалённый конфиг, обновления), `index.html` (Redoc CE, точная версия + SRI), JSON-схемы `remote-config`, ответа GitHub Releases для встроенного обновления и черновика каналов Kinolune OS; схемы проверены на `config/remote-config.json`, `remote-config.next.json`, фикстуре `release-json.py` и живом ответе API. Осталось для галочки: публикация на сайте (SITE-003); `releases.json` — после PKG-001.
 - [x] **DOC-005** Пользовательская документация: приложение
   - Что: ru и en: установка по платформам, источники (SMB, NFS, WebDAV, Plex, Jellyfin, Emby), именование файлов и исправление матчей (`{tmdb-…}`, NFO), профили и родительский контроль, синхронизация (LAN, папка, сервер), FAQ.
   - deps: UI-005 · size: M · parallel: yes · веха: M1 · ref: 01, 03 §4.6, S §2

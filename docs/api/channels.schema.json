@@ -1,18 +1,40 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://kinolune.app/schemas/channels.schema.json",
+  "$id": "https://raw.githubusercontent.com/DenisHumen/kinolune/main/docs/api/channels.schema.json",
   "title": "Kinolune OS update channel manifest (draft)",
-  "description": "Draft structural schema from docs/research/05 §4.1. SITE-004 has not implemented or published this contract yet.",
+  "description": "DRAFT, not implemented: Kinolune OS update channel manifest (channels/<channel>.json) from docs/research/05 section 4.1 and docs/dev/architecture.md. It will be a signed static file on GitHub Pages (SITE-004), not a project server (ADR-0004). Field names may change before SITE-004 fixes the contract.",
   "type": "object",
-  "required": ["version", "digest", "rollout"],
+  "required": [
+    "version",
+    "digest",
+    "rollout"
+  ],
   "properties": {
-    "version": { "type": "string" },
-    "digest": { "type": "string", "pattern": "^sha256:[a-fA-F0-9]{64}$" },
-    "rollout": { "type": "integer", "minimum": 0, "maximum": 100 },
-    "min_from": { "type": "string" },
-    "notes_url": { "type": "string", "format": "uri" },
-    "requires_reboot": { "type": "boolean" },
-    "halt": { "type": "boolean" }
+    "version": {
+      "type": "string"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-fA-F0-9]{64}$"
+    },
+    "rollout": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "min_from": {
+      "type": "string"
+    },
+    "notes_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "requires_reboot": {
+      "type": "boolean"
+    },
+    "halt": {
+      "type": "boolean"
+    }
   },
   "additionalProperties": true
 }

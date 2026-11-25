@@ -1,38 +1,87 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://kinolune.app/schemas/remote-config.schema.json",
+  "$id": "https://raw.githubusercontent.com/DenisHumen/kinolune/main/docs/api/remote-config.schema.json",
   "title": "Kinolune signed remote configuration",
-  "description": "Structural schema for config/remote-config.json. JSON Schema cannot verify the minisign signature, anti-rollback serial, or all runtime validation rules.",
+  "description": "Structure of config/remote-config.json (CORE-014, ADR-0039; parser: core/crates/pa-remote-config/src/model.rs, RemoteConfig::validate). JSON Schema does not check the minisign signature (.minisig) or the anti-rollback rule on serial. Clients ignore unknown fields.",
   "type": "object",
-  "required": ["schema", "serial"],
+  "required": [
+    "schema",
+    "serial"
+  ],
   "properties": {
-    "schema": { "type": "integer", "minimum": 1, "description": "Document schema supported by the client." },
-    "serial": { "type": "integer", "minimum": 1, "description": "Monotonically increasing document number; clients reject rollback." },
-    "issued_at": { "type": "string", "format": "date-time" },
+    "schema": {
+      "type": "integer",
+      "const": 1,
+      "description": "Format version. Clients reject 0 and any schema above the one they support (SUPPORTED_SCHEMA = 1)."
+    },
+    "serial": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic document number (u64); a client never accepts a smaller serial than it already has."
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Informational, RFC 3339."
+    },
     "refresh": {
       "type": "object",
       "properties": {
-        "interval_secs": { "type": "integer", "minimum": 0 },
-        "retry_secs": { "type": "integer", "minimum": 0 }
+        "interval_secs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 21600,
+          "description": "Clamped by the client to 900..604800."
+        },
+        "retry_secs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 1800,
+          "description": "Clamped by the client to 300..interval."
+        }
       },
       "additionalProperties": true
     },
     "flags": {
       "type": "object",
-      "description": "A missing flag is disabled.",
-      "additionalProperties": { "type": "boolean" }
+      "description": "Feature flags; a missing flag is off. Known: twitch.gql_playback, twitch.chapters_gql, twitch.chat_replay, twitch.archive.",
+      "additionalProperties": {
+        "type": "boolean"
+      }
     },
     "kill_switches": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["feature"],
+        "required": [
+          "feature"
+        ],
         "properties": {
-          "feature": { "type": "string", "minLength": 1 },
-          "min_app_version": { "type": "string" },
-          "max_app_version": { "type": "string" },
-          "platforms": { "type": "array", "items": { "type": "string" } },
-          "reason": { "type": "string" }
+          "feature": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Flag name, prefix pattern (twitch.*) or *; also twitch.native_player and updates.install, which have no flag."
+          },
+          "min_app_version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$",
+            "description": "Semver, inclusive bound."
+          },
+          "max_app_version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$",
+            "description": "Semver, inclusive bound."
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "android, ios, tvos, macos, linux, windows; empty or missing: all."
+          },
+          "reason": {
+            "type": "string"
+          }
         },
         "additionalProperties": true
       }
@@ -40,15 +89,37 @@
     "twitch": {
       "type": "object",
       "properties": {
-        "gql_client_id": { "type": "string" },
-        "persisted_queries": { "type": "object", "additionalProperties": { "type": "string" } },
-        "player": { "type": "string", "enum": ["embed", "native"] }
+        "gql_client_id": {
+          "type": "string"
+        },
+        "persisted_queries": {
+          "type": "object",
+          "description": "GQL operation name -> persisted-query sha256 hash.",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "player": {
+          "type": "string",
+          "examples": [
+            "native",
+            "embed"
+          ],
+          "description": "native or embed; any other value means embed."
+        }
       },
       "additionalProperties": true
     },
     "updates": {
       "type": "object",
-      "properties": { "release_public_key": { "type": "string" } },
+      "properties": {
+        "release_public_key": {
+          "type": "string",
+          "pattern": "^RW[A-Za-z0-9+/]{54}$",
+          "description": "minisign public key (base64 line of minisign.pub) that signs SHA256SUMS of app releases (PKG-018, ADR-0088). Not the config key."
+        }
+      },
       "additionalProperties": true
     }
   },
