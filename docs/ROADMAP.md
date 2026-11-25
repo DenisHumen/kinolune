@@ -232,7 +232,7 @@ project_alpha/
   - Что: gitleaks (pre-commit и CI), GitHub secret scanning и push protection, `.env.example` со всеми переменными, документ «какие секреты где живут» (CI, окружения, OIDC).
   - deps: REPO-001 · size: S · parallel: yes · веха: M0 · ref: 04 §4.5, CLAUDE.md
   - done when: коммит с тестовым ключом блокируется локально и в CI.
-- [ ] **REPO-010** release-please (manifest mode)
+- [x] **REPO-010** release-please (manifest mode)
   - Что: компоненты `core`, `server`, `app`, `tvos`, `distro`; теги `app-vX.Y.Z`, `server-vX.Y.Z` и т. д.; build number для сторов — `github.run_number`; changelog по Conventional Commits.
   - deps: CI-001 · size: S · parallel: yes · веха: M0 · ref: S §7, 04 §4.2
   - done when: тестовый merge `feat:` создаёт release PR с корректным changelog.

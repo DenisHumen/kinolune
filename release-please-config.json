@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "separate-pull-requests": true,
+  "packages": {
+    "core": {
+      "component": "core",
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "release-type": "simple",
+      "tag-separator": "-"
+    },
+    "server": {
+      "component": "server",
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "release-type": "simple",
+      "tag-separator": "-"
+    },
+    "clients/flutter/app": {
+      "component": "app",
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "release-type": "simple",
+      "tag-separator": "-"
+    },
+    "clients/apple/TVApp": {
+      "component": "tvos",
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "release-type": "simple",
+      "tag-separator": "-"
+    },
+    "distro": {
+      "component": "distro",
+      "include-component-in-tag": true,
+      "include-v-in-tag": true,
+      "release-type": "simple",
+      "tag-separator": "-"
+    }
+  }
+}
