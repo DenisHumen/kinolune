@@ -71,13 +71,16 @@ void main() {
   ) async {
     final s = await _services();
     setSurface(t, const Size(1280, 800));
+    // Home: the top shelf of the movie, «2022 · 4 мин».
+    await t.pumpWidget(testApp(s));
+    await settle(t, 10);
+    expect(find.textContaining('2022  ·  4 min'), findsWidgets);
+    expect(find.textContaining('2 min'), findsNothing);
+    await t.pumpWidget(const SizedBox());
+    await settle(t, 2);
+
     await t.pumpWidget(testApp(s, section: Section.movies));
     await settle(t, 10);
-
-    // The movie card.
-    expect(find.textContaining('4 min'), findsWidgets);
-    expect(find.textContaining('2 min'), findsNothing);
-
     await t.tap(find.text('Charge').first);
     await settle(t, 10);
     expect(find.byType(MovieDetailScreen), findsOneWidget);
