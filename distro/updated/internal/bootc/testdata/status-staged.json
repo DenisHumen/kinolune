@@ -1,0 +1,91 @@
+{
+  "apiVersion": "org.containers.bootc/v1",
+  "kind": "BootcHost",
+  "metadata": {
+    "name": "host"
+  },
+  "spec": {
+    "image": {
+      "image": "ghcr.io/denishumen/alpha-os:stable",
+      "transport": "registry"
+    },
+    "bootOrder": "default"
+  },
+  "status": {
+    "staged": {
+      "image": {
+        "image": {
+          "image": "ghcr.io/denishumen/alpha-os:stable",
+          "transport": "registry"
+        },
+        "version": "45.20261120.3",
+        "timestamp": "2026-11-20T03:12:44Z",
+        "imageDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "architecture": "amd64"
+      },
+      "cachedUpdate": null,
+      "incompatible": false,
+      "pinned": false,
+      "downloadOnly": true,
+      "store": "ostreeContainer",
+      "ostree": {
+        "checksum": "b0c1",
+        "deploySerial": 0,
+        "stateroot": "default"
+      }
+    },
+    "booted": {
+      "image": {
+        "image": {
+          "image": "ghcr.io/denishumen/alpha-os:stable",
+          "transport": "registry"
+        },
+        "version": "45.20261113.1",
+        "timestamp": "2026-11-13T03:01:02Z",
+        "imageDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "architecture": "amd64"
+      },
+      "cachedUpdate": {
+        "image": {
+          "image": "ghcr.io/denishumen/alpha-os:stable",
+          "transport": "registry"
+        },
+        "version": "45.20261120.3",
+        "timestamp": "2026-11-20T03:12:44Z",
+        "imageDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "architecture": "amd64"
+      },
+      "incompatible": false,
+      "pinned": false,
+      "store": "ostreeContainer",
+      "ostree": {
+        "checksum": "a1b2",
+        "deploySerial": 0,
+        "stateroot": "default"
+      }
+    },
+    "rollback": {
+      "image": {
+        "image": {
+          "image": "ghcr.io/denishumen/alpha-os:stable",
+          "transport": "registry"
+        },
+        "version": "45.20261101.2",
+        "timestamp": "2026-11-01T03:00:00Z",
+        "imageDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "architecture": "amd64"
+      },
+      "cachedUpdate": null,
+      "incompatible": false,
+      "pinned": false,
+      "store": "ostreeContainer",
+      "ostree": {
+        "checksum": "9f8e",
+        "deploySerial": 0,
+        "stateroot": "default"
+      }
+    },
+    "rollbackQueued": false,
+    "type": "bootcHost"
+  }
+}

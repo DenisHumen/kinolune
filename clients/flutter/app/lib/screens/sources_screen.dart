@@ -13,12 +13,14 @@ import '../errors/error_view.dart';
 import '../errors/friendly_errors.dart';
 import '../l10n/l10n.dart';
 import '../personal/source_content.dart' show SourceContentMark;
+import '../platform/local_path.dart';
 import '../services/app_services.dart';
 import '../sources/availability.dart';
 import '../sources/source_address.dart';
 import '../sources/source_manager.dart';
 import '../sources/source_text.dart';
 import '../theme/kinolune_theme.dart';
+import '../widgets/availability_status.dart';
 import '../widgets/secret_storage_text.dart' show secretFallbackWhy;
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
@@ -159,6 +161,8 @@ class _SourcesScreenState extends State<SourcesScreen> {
                             onFix: () => unawaited(services.refreshSources()),
                           ),
                         ),
+                      // UI-053: sync through a source that is down waits.
+                      const SyncPausedPlate(),
                       if (sources.isEmpty)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16),
@@ -253,7 +257,7 @@ class _Notice extends StatelessWidget {
   }
 }
 
-enum _Online { online, offline, unknown, checking, scanning }
+enum _Online { online, offline, noAccess, unknown, checking, scanning }
 
 class _SourceCard extends StatelessWidget {
   const _SourceCard({
@@ -381,6 +385,26 @@ class _SourceCard extends StatelessWidget {
                 ),
               ],
             ),
+            // UI-053: «Нет доступа к NAS с 14:05», why, and one action
+            // while the monitor sees it down (a scan error has its own
+            // block below).
+            if (rawError == null)
+              ListenableBuilder(
+                listenable: services.availability,
+                builder: (context, _) {
+                  final t = services.availability.ofSource(source.id);
+                  if (t == null ||
+                      checking ||
+                      !(t.status == Availability.noAccess ||
+                          t.status == Availability.unavailable)) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: AvailabilityStatusRow(target: t),
+                  );
+                },
+              ),
             const SizedBox(height: 8),
             for (final line in lines)
               Text(
@@ -475,15 +499,8 @@ class _SourceCard extends StatelessWidget {
     );
   }
 
-  /// `file:///a/b` (how the core stores folders) as a path.
-  static String _displayPath(String address) {
-    if (!address.startsWith('file://')) return address;
-    try {
-      return Uri.parse(address).toFilePath();
-    } on UnsupportedError {
-      return address;
-    }
-  }
+  /// `file:///a/b` (how the core stores folders) as a native path.
+  static String _displayPath(String address) => displayLocalPath(address);
 
   /// Opens the server's folders (with the stored password), starting where
   /// the core finds the source's current address, and saves the pick.
@@ -557,13 +574,13 @@ class _SourceCard extends StatelessWidget {
 }
 
 /// The chip state with the availability monitor's status (NET-024): a
-/// running check or scan wins; "no access" shows as offline until UI-053
-/// gives it its own words.
+/// running check or scan wins; "no access" has its own words (UI-053).
 _Online _withMonitor(_Online state, TargetAvailability? monitor) {
   if (state == _Online.checking || state == _Online.scanning) return state;
   return switch (monitor?.status) {
     Availability.available || Availability.slow => _Online.online,
-    Availability.unavailable || Availability.noAccess => _Online.offline,
+    Availability.unavailable => _Online.offline,
+    Availability.noAccess => _Online.noAccess,
     Availability.noNetwork => _Online.unknown,
     Availability.unknown || null => state,
   };
@@ -581,6 +598,7 @@ class _StatusChip extends StatelessWidget {
     final (text, color) = switch (state) {
       _Online.online => (l.sourcesStatusOnline, const Color(0xFF4CAF7A)),
       _Online.offline => (l.sourcesStatusOffline, theme.colorScheme.error),
+      _Online.noAccess => (l.sourcesStatusNoAccess, theme.colorScheme.error),
       _Online.unknown => (l.sourcesStatusUnknown, KColors.textTertiary),
       _Online.checking => (l.sourcesStatusChecking, KColors.textSecondary),
       _Online.scanning => (l.settingsScanning, theme.colorScheme.primary),

@@ -100,6 +100,12 @@ class FakeDeviceSync implements DeviceSync {
   /// pick found; tests and the demo set it directly.
   FolderSyncState folder = FolderSyncState.none;
 
+  /// What [outboxPending] returns (UI-053); tests set it.
+  int outbox = 0;
+
+  @override
+  Future<int> outboxPending() async => outbox;
+
   /// The source the automatic pick (SYNC-015) takes; null: none found.
   String? autoSourceId;
 

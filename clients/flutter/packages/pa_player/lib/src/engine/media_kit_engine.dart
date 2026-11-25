@@ -19,6 +19,7 @@ import 'audio_processing.dart';
 import 'audio_profile.dart';
 import 'macos_gl.dart';
 import 'mpv_stats.dart';
+import 'native_heap.dart';
 import 'parts.dart';
 import 'playback_activity.dart';
 import 'playback_error.dart';
@@ -64,6 +65,7 @@ class MediaKitEngine
         SubtitleRenderingEngine,
         PlaylistEditingEngine,
         AudioProcessingEngine,
+        AudioPassthroughEngine,
         VideoTrackEngine {
   MediaKitEngine({bool video = true, this.mpvOptions = const {}})
     : _isVideo = video,
@@ -946,6 +948,23 @@ class MediaKitEngine
     }
   }
 
+  /// PLAY-AND-004: mpv's `audio-spdif`. On Android its `audiotrack` output
+  /// sends these codecs as IEC 61937 to the HDMI receiver; the stats show
+  /// it as `spdif-…` in `audio-out-params/format` (passthrough).
+  @override
+  Future<void> setAudioPassthrough(String codecs) async {
+    await _ready;
+    final p = _player.platform;
+    // Diagnostics overrides (mpvOptions) win.
+    if (_disposed || p is! mk.NativePlayer) return;
+    if (mpvOptions.containsKey('audio-spdif')) return;
+    try {
+      await p.setProperty('audio-spdif', codecs);
+    } catch (e) {
+      debugPrint('pa_player: audio-spdif failed: $e');
+    }
+  }
+
   @override
   Future<void> setVideoTrack(MediaTrack track) async {
     final t = _player.state.tracks.video.where((v) => v.id == track.id);
@@ -1102,6 +1121,8 @@ class MediaKitEngine
       await s.cancel();
     }
     await _player.dispose();
+    // BUG-001: hand the freed libmpv memory back to the system on Linux.
+    NativeHeap.afterPlayerDisposed();
     // _state is left to GC: widgets may still detach listeners after this.
   }
 }

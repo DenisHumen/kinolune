@@ -4,6 +4,7 @@ enable alpha-media.service
 enable alpha-admin.service
 enable alpha-admin-auth.socket
 enable alpha-updated.service
+enable alpha-updated.socket
 enable smb.service
 enable wsdd.service
 enable avahi-daemon.service

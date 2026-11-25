@@ -16,6 +16,8 @@ distro/tests/vm-switch-rollback.sh                     # ~10 мин: switch → 
 distro/admin/tests/pam-container.sh                    # alpha-admin с настоящим PAM в контейнере Fedora
 distro/admin/tests/vm-admin-e2e.sh                     # ~15 мин: alpha-admin в QEMU против настоящих systemd/NM/firewalld/UDisks2/logind
 shellcheck distro/scripts/*.sh distro/tests/*.sh       # если установлен
+just distro::installer-test                            # Go: установщик (DIST-004)
+just distro::updated-test                              # Go: агент обновлений alpha-updated на fake bootc (DIST-009)
 ```
 
 Локальные артефакты (диски, ключи SSH, логи) — в `distro/.work/`, он в `.gitignore`.

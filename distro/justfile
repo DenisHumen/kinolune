@@ -10,6 +10,10 @@ installer-disks *args:
 installer-test:
     cd installer && test -z "$(gofmt -l .)" && go vet ./... && go test ./...
 
+# Update agent (alpha-updated) Go checks: gofmt, vet, tests on a fake bootc
+updated-test:
+    cd updated && test -z "$(gofmt -l .)" && go vet ./... && go test -race ./...
+
 # Admin backend (alpha-admin) Go checks: gofmt, vet, tests on fake D-Bus services
 admin-test:
     cd admin && test -z "$(gofmt -l .)" && go vet ./... && go test -race ./...

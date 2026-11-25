@@ -9,6 +9,7 @@ import android.system.ErrnoException
 import android.system.Os
 import android.view.WindowManager
 import android.view.accessibility.CaptioningManager
+import app.kinolune.player.audio.AudioOutputChannel
 import app.kinolune.player.display.DisplayChannel
 import app.kinolune.player.media.MediaBridge
 import app.kinolune.player.media.OutputPicker
@@ -41,6 +42,8 @@ import java.io.File
  *
  * Channel `app.kinolune/audio_output` (MUS-005): `showPicker` opens the system audio output picker ([OutputPicker]).
  * Channel `app.kinolune/display` (PLAY-AND-005): display mode switching for the video's frame rate ([DisplayChannel]).
+ * Channel `app.kinolune/audio_passthrough` (PLAY-AND-004): what the HDMI output takes untouched, mpv's `audio-spdif`
+ * ([AudioOutputChannel]).
  */
 class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandler {
     private var channel: MethodChannel? = null
@@ -54,6 +57,7 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
     private val pip = PipController { args -> pipChannel?.invokeMethod("changed", args) }
     private val leaveHint = PluginRegistry.UserLeaveHintListener { pip.onUserLeaveHint() }
     private val display = DisplayChannel()
+    private val audioOutput = AudioOutputChannel()
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
@@ -63,6 +67,7 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
         pipChannel = MethodChannel(binding.binaryMessenger, PIP_CHANNEL).also { it.setMethodCallHandler(this) }
         outputChannel = MethodChannel(binding.binaryMessenger, OUTPUT_CHANNEL).also { it.setMethodCallHandler(this) }
         display.attachToEngine(binding.binaryMessenger)
+        audioOutput.attachToEngine(binding.binaryMessenger, binding.applicationContext)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -77,6 +82,7 @@ class PaPlayerPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHan
         outputChannel?.setMethodCallHandler(null)
         outputChannel = null
         display.detachFromEngine()
+        audioOutput.detachFromEngine()
         // The Dart players are gone with the engine: nothing to show or control any more. Other engines (the
         // background one of workmanager) never own the session, so their detach leaves it alone.
         MediaBridge.release(this, binding.applicationContext)

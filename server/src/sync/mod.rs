@@ -24,6 +24,13 @@
 //!   update (roster and family key) after the handshake and after every
 //!   change. [`SyncConfig::require_pairing`] = false lets unpaired devices
 //!   in (tests, a trusted loopback setup).
+//! - **Node logs** (SYNC-017, protocol 2): the hub keeps every origin's log
+//!   ([`journal`], `node_log`) and its version vector. A device of
+//!   protocol 2 sends its vector in `hello.vv` and gets the entries it
+//!   lacks; `op` frames carry their log place, a damaged entry is not
+//!   acked and is asked for again (`want`); `vv`, `want` and `digest` run
+//!   anti-entropy. Devices of protocol 1 keep the cursor path unchanged;
+//!   their ops go into the hub's own log.
 
 pub mod journal;
 mod playback;
@@ -32,8 +39,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use axum::extract::ws::{Message as WsMessage, Utf8Bytes, WebSocket};
+use pa_sync::nodelog::{Inserted, Range};
 use pa_sync::proto::{
-    self, Ack, Auth, Change, ErrorFrame, Family, Hello, Message, OpFrame, ProtoRange, Role, code,
+    self, Ack, Auth, Change, DigestFrame, ErrorFrame, Family, Hello, Message, OpFrame, ProtoRange,
+    Role, code,
 };
 use tokio::sync::{OwnedSemaphorePermit, Semaphore, broadcast, watch};
 
@@ -125,6 +134,16 @@ impl Hub {
         })
     }
 
+    /// Titles that devices are watching right now: their last `pb.update`
+    /// is `playing` or `paused` and within its TTL (SRV-019).
+    pub fn watching_now(&self) -> usize {
+        self.inner
+            .playback
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .watching(Instant::now())
+    }
+
     /// `device_id` of the hub.
     pub fn hub_id(&self) -> &str {
         &self.inner.hub_id
@@ -183,13 +202,19 @@ impl Hub {
     }
 
     fn hello(&self, nonce: &str) -> Message {
+        let (head, vv) = {
+            let j = self.journal();
+            (j.head(), j.vector())
+        };
         Message::Hello(Hello {
             proto: ProtoRange::LOCAL,
             device_id: self.inner.hub_id.clone(),
             role: Role::Hub,
             cursor: None,
-            head: Some(self.head()),
+            head: Some(head),
             nonce: Some(nonce.to_owned()),
+            // Protocol 1 devices ignore it.
+            vv: Some(vv),
         })
     }
 
@@ -211,6 +236,7 @@ impl Hub {
             device: None,
             authenticated: false,
             last_seen: Instant::now(),
+            version: 1,
         };
         match conn.run().await {
             Ok(()) => tracing::debug!(conn = id, device = conn.device(), "sync: closed"),
@@ -260,6 +286,8 @@ struct Connection {
     /// The device proved its paired key.
     authenticated: bool,
     last_seen: Instant,
+    /// Protocol version agreed with the device.
+    version: u16,
 }
 
 impl Connection {
@@ -324,6 +352,7 @@ impl Connection {
             Err(e) => return self.fail(code::PROTO_UNSUPPORTED, &e.to_string()).await,
         };
         self.device = Some(remote.device_id.clone());
+        self.version = version;
         if let Some(device_nonce) = &remote.nonce {
             // Prove the hub to the device, then check the device.
             let sig = self
@@ -376,6 +405,22 @@ impl Connection {
         };
         for frame in recent {
             self.send_raw(frame).await?;
+        }
+        // SYNC-017: what the device's vector lacks, and the holes the hub
+        // would like filled.
+        if version >= 2
+            && let Some(vv) = remote.vv.clone()
+        {
+            let (missing, gaps) = {
+                let j = self.hub.journal();
+                (j.missing_for(&vv), j.gaps())
+            };
+            for e in missing {
+                self.send(&Message::Op(e.frame())).await?;
+            }
+            for gap in gaps {
+                self.send(&Message::Want(gap)).await?;
+            }
         }
         // Tell a device that is behind to pull (it may pull anyway).
         let head = self.hub.head();
@@ -523,6 +568,39 @@ impl Connection {
                     Err(e) => tracing::error!(conn = self.id, error = %e, "sync: pull failed"),
                 }
             }
+            Message::Vv(v) => {
+                let missing = self.hub.journal().missing_for(&v.vv);
+                for e in missing {
+                    self.send(&Message::Op(e.frame())).await?;
+                }
+            }
+            Message::Want(range) => {
+                let found = self.hub.journal().range(&range);
+                for e in found {
+                    self.send(&Message::Op(e.frame())).await?;
+                }
+            }
+            Message::Digest(d) => {
+                let (mine, repair) = self.hub.journal().digest_diff(&d.digest);
+                let differs = !mine.diff(&d.digest).is_empty();
+                if differs {
+                    tracing::info!(
+                        conn = self.id,
+                        entries = repair.len(),
+                        "sync: digests differ"
+                    );
+                }
+                for e in repair {
+                    self.send(&Message::Op(e.frame())).await?;
+                }
+                if differs && !d.reply {
+                    self.send(&Message::Digest(DigestFrame {
+                        digest: mine,
+                        reply: true,
+                    }))
+                    .await?;
+                }
+            }
             Message::Family(update) if self.authenticated => {
                 let pairing = self.hub.inner.pairing.clone();
                 let device = self.device().to_owned();
@@ -547,24 +625,57 @@ impl Connection {
         Ok(())
     }
 
-    /// Journals an op, acks it and fans it out if it is new.
+    /// Journals an op, acks it and fans it out if it is new. A log entry
+    /// that does not match its hash is not acked and is asked for again.
     async fn store(&mut self, frame: OpFrame) -> Result<(), ConnError> {
         let now = now_ms();
         let stored = {
-            let frame = frame.clone();
             let library = self.hub.inner.library.clone();
             self.hub
                 .blocking(move |j| {
+                    let mut frame = OpFrame { seq: None, ..frame };
+                    let mut entry_new = false;
+                    let mut gap = None;
+                    match j.insert_entry(&frame)? {
+                        None | Some(Inserted::Duplicate) => {}
+                        Some(Inserted::New { .. }) => entry_new = true,
+                        Some(Inserted::Gap { missing }) => {
+                            entry_new = true;
+                            gap = Some(missing);
+                        }
+                        Some(Inserted::Corrupt { want }) => return Ok(Stored::Refused(want)),
+                        // The op is fine; only its claimed place is not.
+                        Some(Inserted::Conflict { .. } | Inserted::Dropped) => frame.log = None,
+                    }
+                    if frame.log.is_none() && !j.contains(frame.op_id)? {
+                        // A device of protocol 1: the hub vouches for its op.
+                        frame.log = j.vouch(&frame)?.frame().log;
+                        entry_new = true;
+                    }
                     let (seq, new) = j.append(&frame, now)?;
                     if new {
                         apply_to_library(&library, &frame);
                     }
-                    Ok((seq, new))
+                    Ok(Stored::Kept {
+                        frame,
+                        seq,
+                        fan_out: new || entry_new,
+                        gap,
+                    })
                 })
                 .await
         };
-        let (seq, new) = match stored {
-            Ok(stored) => stored,
+        let (frame, seq, fan_out, gap) = match stored {
+            Ok(Stored::Kept {
+                frame,
+                seq,
+                fan_out,
+                gap,
+            }) => (frame, seq, fan_out, gap),
+            Ok(Stored::Refused(want)) => {
+                tracing::info!(conn = self.id, origin = %want.origin, seq = want.from, "sync: damaged log entry");
+                return self.send(&Message::Want(want)).await;
+            }
             Err(e) => {
                 // No ack: the device keeps the op in its outbox and retries.
                 tracing::error!(conn = self.id, error = %e, "sync: journal write failed");
@@ -576,7 +687,12 @@ impl Connection {
             seq: Some(seq),
         }))
         .await?;
-        if new {
+        if let Some(gap) = gap
+            && self.version >= 2
+        {
+            self.send(&Message::Want(gap)).await?;
+        }
+        if fan_out {
             let frame = OpFrame {
                 seq: Some(seq),
                 ..frame
@@ -585,6 +701,17 @@ impl Connection {
         }
         Ok(())
     }
+}
+
+/// What [`Connection::store`] did.
+enum Stored {
+    Kept {
+        frame: OpFrame,
+        seq: u64,
+        fan_out: bool,
+        gap: Option<Range>,
+    },
+    Refused(Range),
 }
 
 /// The server is authoritative for its own library: progress ops of known

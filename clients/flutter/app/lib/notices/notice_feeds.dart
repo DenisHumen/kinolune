@@ -6,7 +6,9 @@
 // the watcher shows up), the takeovers of pa-sync (another device of the
 // profile started a title), the offline download queue, the Twitch VOD and
 // recording queues of the core (read every 30 s, local calls), the "X is
-// live" alerts of TWI-009. New app releases have their own strip (PKG-022).
+// live" alerts of TWI-009, a source or server down for a while (UI-053,
+// availability_notices.dart). New app releases have their own strip
+// (PKG-022).
 //
 // Nothing is announced for what was already there when the app started.
 // A profile switch drops the queue and starts over. Library notices are
@@ -29,6 +31,7 @@ import '../sync/device_sync.dart';
 import '../twitch/twitch_downloads.dart';
 import '../twitch/twitch_service.dart';
 import '../widgets/format.dart';
+import 'availability_notices.dart';
 import 'in_app_notices.dart';
 
 /// How often the Twitch download and recording queues are read.
@@ -51,6 +54,7 @@ class NoticeFeeds {
   final List<VoidCallback> _unlisten = [];
   Timer? _poll;
   int? _profileId;
+  AvailabilityNotices? _availability;
 
   /// Follows the events once [services] has loaded.
   void start() {
@@ -66,6 +70,10 @@ class NoticeFeeds {
     _subs.add(services.sync.events.listen(_onSync, onError: (_) {}));
     if (services.offline case final off?) _listen(off, _onOffline, seed: true);
     _listen(services.liveNotifications, _onLive, seed: true);
+    _availability = AvailabilityNotices(
+      availability: services.availability,
+      post: _post,
+    )..start();
     if (services.twitchDownloads != null || services.twitchArchive != null) {
       unawaited(_pollTwitch());
       _poll = Timer.periodic(twitchQueuePoll, (_) => unawaited(_pollTwitch()));
@@ -82,6 +90,7 @@ class NoticeFeeds {
     _disposed = true;
     services.removeListener(_waitLoaded);
     _poll?.cancel();
+    _availability?.dispose();
     for (final s in _subs) {
       unawaited(s.cancel());
     }

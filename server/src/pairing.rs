@@ -6,17 +6,17 @@
 //! data directory (`pa_secrets::EncryptedFileStore`; a headless server has no
 //! OS keychain), the roster into [`ROSTER_FILE`].
 //!
-//! - **Pairing:** an administrator asks for a code on the loopback API
-//!   (`POST /api/v1/pair/invite`); a new device connects to the WebSocket
+//! - **Pairing:** an administrator asks for a code
+//!   (`POST /api/v1/pair/invite`, SRV-003 [`crate::auth`]); a new device connects to the WebSocket
 //!   [`PAIR_PATH`] and runs SPAKE2 with the code. The invitation allows
 //!   [`pa_pairing::pair::MAX_ATTEMPTS`] attempts within five minutes and is
 //!   consumed by a successful pairing.
 //! - **Authentication:** the sync hub checks `hello.nonce` + `auth` of every
 //!   device against the roster ([`Pairing::verify`]).
-//! - **Revocation:** `DELETE /api/v1/devices/{id}` (loopback) or a `family`
-//!   update from another member revokes a device: its connections are closed
-//!   with `unauthorized`, the family key rotates, and connected members get
-//!   the new roster and key.
+//! - **Revocation:** `DELETE /api/v1/devices/{id}` (an administrator) or a
+//!   `family` update from another member revokes a device: its connections
+//!   are closed with `unauthorized`, its sessions end (SRV-003), the family
+//!   key rotates, and connected members get the new roster and key.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -134,6 +134,22 @@ impl Pairing {
     /// Fingerprint of the server's key, to compare on the new device.
     pub fn fingerprint(&self) -> String {
         self.family().identity().public().fingerprint()
+    }
+
+    /// Device id of the server in the family (= the hub id).
+    pub fn device_id(&self) -> String {
+        self.family().identity().device_id().to_owned()
+    }
+
+    /// Whether `device_id` is a member that is not revoked.
+    pub fn is_active(&self, device_id: &str) -> bool {
+        self.family().authorize(device_id).is_ok()
+    }
+
+    /// The encrypted secrets file of the server (the token signing key of
+    /// SRV-003 lives next to the device keys).
+    pub(crate) fn secrets(&self) -> Arc<dyn SecretStore> {
+        Arc::clone(&self.inner.store)
     }
 
     fn family(&self) -> MutexGuard<'_, Family> {

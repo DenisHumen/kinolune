@@ -33,6 +33,10 @@ class PaPlayerAndroid {
   /// `frame_rate` (`auto`/`off`), `resolution` and `dynamic_range` (bools),
   /// as `DisplayMatchSettings.toJson()` of pa_player gives them. Without it:
   /// frame rate on, resolution kept, native Dolby Vision where possible.
+  ///
+  /// [audioOutput] (PLAY-AND-004): `auto` passes Dolby and DTS untouched to
+  /// a receiver that takes them, `decode` always decodes to PCM (as
+  /// `AudioOutputMode.name` of pa_player). Without it: `auto`.
   static Future<Map<String, Object?>?> open(
     List<PlayerItem> items, {
     int index = 0,
@@ -41,6 +45,7 @@ class PaPlayerAndroid {
     bool nativeOsd = false,
     String osdEntrypoint = 'osdMain',
     Map<String, Object?>? display,
+    String? audioOutput,
   }) async {
     if (items.isEmpty) throw ArgumentError.value(items, 'items', 'empty');
     final request = {
@@ -49,6 +54,7 @@ class PaPlayerAndroid {
       'start_position_ms': startPositionMs,
       'play': play,
       'display': ?display,
+      'audio_output': ?audioOutput,
     };
     final state = await channel.invokeMethod<String>('open', {
       'request': jsonEncode(request),

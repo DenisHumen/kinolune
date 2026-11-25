@@ -17,6 +17,9 @@ dependencies:
 dependency_overrides:
   media_kit_libs_android_video:
     path: ../../media_kit_libs_android_video
+  # BUG-001: the Linux video texture freed on close, as in the app.
+  media_kit_video:
+    path: ../../media_kit_video
 
 dev_dependencies:
   flutter_lints: ^6.0.0

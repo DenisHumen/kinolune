@@ -14,11 +14,13 @@ use std::time::{Duration, Instant};
 use futures_util::{SinkExt, StreamExt};
 use pa_model::{MediaKey, MediaKind};
 use pa_server::{Config, Server};
+use pa_sync::nodelog::{Inserted, NodeLog, Range, VersionVector};
 use pa_sync::proto::{
     self, Cursor, Hello, Message, OpFrame, Payload, PlayState, PlaybackUpdate, ProtoRange, Pull,
     Role, Takeover, code,
 };
-use pa_sync::{Hlc, Op, OpBody, OpId};
+use pa_sync::proto::{DigestFrame, VvFrame};
+use pa_sync::{Hlc, Op, OpBody, OpId, SyncState};
 use tokio::net::TcpStream;
 use tokio::sync::oneshot;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
@@ -107,6 +109,7 @@ fn hello(device: &str, cursor: Option<Cursor>) -> Message {
         cursor,
         head: None,
         nonce: None,
+        vv: None,
     })
 }
 
@@ -194,6 +197,7 @@ async fn handshake_rules() {
             cursor: None,
             head: None,
             nonce: None,
+            vv: None,
         }),
     )
     .await;
@@ -254,6 +258,7 @@ async fn ops_are_journaled_acked_fanned_out_and_pulled() {
     let sealed = OpFrame {
         op_id: OpId::new_v7(),
         seq: None,
+        log: None,
         payload: Payload {
             enc: "secretbox.v1".to_owned(),
             body: "c2VhbGVk".to_owned(),
@@ -507,5 +512,227 @@ async fn load_50_devices_10_messages_per_second() {
     assert_eq!(acks.len() as u64, sent_op_count, "every op is acked");
     assert!(p95 < Duration::from_millis(200), "fan-out p95 {p95:?}");
     assert!(ack_p95 < Duration::from_millis(200), "ack p95 {ack_p95:?}");
+    hub.stop().await;
+}
+
+/// Every frame that arrives until the hub is quiet.
+async fn drain(ws: &mut Ws) -> Vec<Message> {
+    let mut out = Vec::new();
+    while let Ok(Some(Ok(msg))) = tokio::time::timeout(Duration::from_millis(300), ws.next()).await
+    {
+        if let WsMessage::Text(text) = msg {
+            out.push(proto::decode(text.as_str()).unwrap());
+        }
+    }
+    out
+}
+
+async fn connect_as(
+    addr: SocketAddr,
+    device: &str,
+    proto: ProtoRange,
+    vv: Option<VersionVector>,
+) -> (Ws, Hello) {
+    let mut ws = open(addr).await;
+    send(
+        &mut ws,
+        &Message::Hello(Hello {
+            proto,
+            device_id: device.to_owned(),
+            role: Role::Device,
+            cursor: None,
+            head: None,
+            nonce: None,
+            vv,
+        }),
+    )
+    .await;
+    match recv(&mut ws).await {
+        Some(Message::Hello(h)) => (ws, h),
+        other => panic!("expected hello, got {other:?}"),
+    }
+}
+
+/// SYNC-017 done-when: a device of protocol 1 (N-1) works with the new
+/// hub exactly as before — ops acked with their `seq`, fanned out, pulled
+/// by cursor — and a device of protocol 2 gets the same ops as log
+/// entries of the hub, which vouches for ops without a log place.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_protocol_1_device_works_with_the_new_hub() {
+    let tmp = tempfile::tempdir().unwrap();
+    let hub = Running::start(tmp.path()).await;
+    let v1 = ProtoRange::for_version(1);
+    let (mut old, h) = connect_as(hub.addr, "old-phone", v1, None).await;
+    assert!(h.vv.is_some(), "an extra field protocol 1 ignores");
+    let (mut old_tv, _) = connect_as(hub.addr, "old-tv", v1, None).await;
+
+    let op = progress_op("old-phone", 603, 1_000, 1_763_000_000_000);
+    send(&mut old, &Message::Op(OpFrame::plain(&op).unwrap())).await;
+    let Some(Message::Ack(ack)) = recv(&mut old).await else {
+        panic!("no ack")
+    };
+    assert_eq!((ack.op_id, ack.seq), (op.op_id, Some(1)));
+    let Some(Message::Op(fanned)) = recv(&mut old_tv).await else {
+        panic!("no fan-out")
+    };
+    assert_eq!((fanned.seq, fanned.open().unwrap()), (Some(1), op.clone()));
+    send(
+        &mut old_tv,
+        &Message::Pull(Pull {
+            cursor: None,
+            limit: 10,
+        }),
+    )
+    .await;
+    let Some(Message::Op(pulled)) = recv(&mut old_tv).await else {
+        panic!("no pull answer")
+    };
+    assert_eq!(pulled.op_id, op.op_id);
+    assert!(matches!(recv(&mut old_tv).await, Some(Message::PullEnd(e)) if !e.more));
+
+    // A device of protocol 2 gets it as an entry of the hub's own log.
+    let (mut new, h) = connect_as(
+        hub.addr,
+        "new-tv",
+        ProtoRange::LOCAL,
+        Some(VersionVector::default()),
+    )
+    .await;
+    assert_eq!(h.vv.as_ref().unwrap().get(&hub.hub_id), 1);
+    let got = drain(&mut new).await;
+    let entries: Vec<_> = got
+        .iter()
+        .filter_map(|m| match m {
+            Message::Op(f) => f.log.clone().map(|l| (l.origin, l.oseq, f.op_id)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(entries, [(hub.hub_id.clone(), 1, op.op_id)]);
+    hub.stop().await;
+}
+
+/// SYNC-017: log entries of a device of protocol 2 — out of order, one
+/// damaged — are acked or asked for again; another device catches up by
+/// its vector; digests repair a device that lacks ops.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn protocol_2_devices_exchange_logs_and_damaged_entries_are_asked_again() {
+    let tmp = tempfile::tempdir().unwrap();
+    let hub = Running::start(tmp.path()).await;
+    let (mut phone, _) = connect_as(
+        hub.addr,
+        "phone",
+        ProtoRange::LOCAL,
+        Some(VersionVector::default()),
+    )
+    .await;
+    drain(&mut phone).await;
+
+    let mut log = NodeLog::new("phone").unwrap();
+    let ops: Vec<Op> = (0..3)
+        .map(|i| progress_op("phone", 600 + i, 1_000, 1_763_000_000_000 + u64::from(i)))
+        .collect();
+    let entries: Vec<_> = ops
+        .iter()
+        .map(|op| log.append_frame(&OpFrame::plain(op).unwrap()))
+        .collect();
+
+    // Entry 3 first: kept and acked; the hole before it is asked for.
+    send(&mut phone, &Message::Op(entries[0].frame())).await;
+    send(&mut phone, &Message::Op(entries[2].frame())).await;
+    let got = drain(&mut phone).await;
+    let acks = got.iter().filter(|m| matches!(m, Message::Ack(_))).count();
+    assert_eq!(acks, 2, "{got:?}");
+    assert!(
+        got.iter().any(|m| matches!(m, Message::Want(r) if *r == Range { origin: "phone".into(), from: 2, to: 2 })),
+        "{got:?}"
+    );
+
+    // Entry 2 damaged on the way: no ack, asked for again.
+    let mut bad = entries[1].frame();
+    bad.payload.body = bad.payload.body.replace("601", "609");
+    send(&mut phone, &Message::Op(bad)).await;
+    let got = drain(&mut phone).await;
+    assert!(!got.iter().any(|m| matches!(m, Message::Ack(_))), "{got:?}");
+    assert!(
+        got.iter()
+            .any(|m| matches!(m, Message::Want(r) if r.origin == "phone" && r.from == 2)),
+        "{got:?}"
+    );
+    send(&mut phone, &Message::Op(entries[1].frame())).await;
+    let got = drain(&mut phone).await;
+    assert!(
+        got.iter()
+            .any(|m| matches!(m, Message::Ack(a) if a.op_id == ops[1].op_id)),
+        "{got:?}"
+    );
+
+    // A new device catches up by its vector, entries in log order.
+    let (mut tv, h) = connect_as(
+        hub.addr,
+        "tv",
+        ProtoRange::LOCAL,
+        Some(VersionVector::default()),
+    )
+    .await;
+    assert_eq!(h.vv.unwrap().get("phone"), 3);
+    let mut tv_log = NodeLog::new("tv").unwrap();
+    let mut tv_state = SyncState::default();
+    for m in drain(&mut tv).await {
+        if let Message::Op(f) = m
+            && f.log.is_some()
+        {
+            assert!(matches!(
+                tv_log.insert_frame(&f),
+                Some(Inserted::New { .. })
+            ));
+            tv_state.apply(&f.open().unwrap());
+        }
+    }
+    assert_eq!(tv_log.vector(), log.vector());
+
+    // A device that lost its state: the digest shows it and the hub sends
+    // the ops of the differing partitions.
+    let (mut fresh, _) = connect_as(hub.addr, "fresh", ProtoRange::LOCAL, None).await;
+    drain(&mut fresh).await;
+    send(
+        &mut fresh,
+        &Message::Digest(DigestFrame {
+            digest: SyncState::default().digest(),
+            reply: false,
+        }),
+    )
+    .await;
+    let mut repaired = SyncState::default();
+    let mut replied = false;
+    for m in drain(&mut fresh).await {
+        match m {
+            Message::Op(f) => {
+                repaired.apply(&f.open().unwrap());
+            }
+            Message::Digest(d) => {
+                assert!(d.reply);
+                assert_eq!(d.digest, tv_state.digest());
+                replied = true;
+            }
+            _ => {}
+        }
+    }
+    assert!(replied);
+    assert_eq!(repaired, tv_state);
+
+    // And `vv` asks for what is missing at any time.
+    send(
+        &mut fresh,
+        &Message::Vv(VvFrame {
+            vv: VersionVector::default(),
+        }),
+    )
+    .await;
+    let n = drain(&mut fresh)
+        .await
+        .iter()
+        .filter(|m| matches!(m, Message::Op(_)))
+        .count();
+    assert_eq!(n, 3);
     hub.stop().await;
 }

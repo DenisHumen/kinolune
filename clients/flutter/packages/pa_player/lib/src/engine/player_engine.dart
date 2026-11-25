@@ -342,6 +342,15 @@ abstract interface class AudioProcessingEngine {
   Future<void> setAudioDelay(Duration delay);
 }
 
+/// An engine that can send compressed sound untouched to a receiver
+/// (PLAY-AND-004: passthrough over HDMI). Optional like [StatsEngine].
+abstract interface class AudioPassthroughEngine {
+  /// The codecs that go out untouched, in mpv's `audio-spdif` form
+  /// (`ac3,eac3,dts,dts-hd,truehd` or a part of it); empty decodes
+  /// everything to PCM. Applies from the next audio (re)start.
+  Future<void> setAudioPassthrough(String codecs);
+}
+
 /// An engine that lists the video streams of a file and switches between
 /// them (UI-014 video tab). Optional like [StatsEngine].
 abstract interface class VideoTrackEngine {
