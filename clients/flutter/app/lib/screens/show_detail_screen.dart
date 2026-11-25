@@ -15,8 +15,13 @@
 // UI-049: an episode, the episodes before it, a season or the whole show
 // are marked watched or not from the menus of episode_marks.dart (long
 // press, right click, a held OK, the «⋯» of a card, a season tab, «Ещё»).
+//
+// UI-055: the episodes of the season tab are one horizontal row
+// (episode_row.dart); «Все серии» opens them as the grid (list on phones)
+// of BUG-019 on a screen of their own ([SeasonEpisodesScreen]).
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:material_ui/material_ui.dart';
@@ -38,6 +43,7 @@ import '../widgets/watched_art.dart';
 import 'detail_layout.dart' show MatchBadge;
 import 'detail_sections.dart';
 import 'episode_marks.dart';
+import 'episode_row.dart';
 import 'fix_match_dialog.dart';
 import 'playback.dart';
 
@@ -49,6 +55,9 @@ const showOrderKey = ValueKey('show-order');
 
 /// Key of an episode card.
 ValueKey<String> showEpisodeKey(String id) => ValueKey('show-episode-$id');
+
+/// Key of the «Все серии» button (UI-055).
+const showAllEpisodesKey = ValueKey('show-all-episodes');
 
 /// Show → seasons → episodes.
 class ShowDetailScreen extends StatefulWidget {
@@ -92,6 +101,9 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     ..addListener(_onTrailer);
   bool _trailerKnown = false;
 
+  /// The selected season tab: ↑ from the episode row comes back to it.
+  final _seasonNode = FocusNode(debugLabel: 'season-tab');
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -113,6 +125,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
   @override
   void dispose() {
     _trailer.dispose();
+    _seasonNode.dispose();
     super.dispose();
   }
 
@@ -294,6 +307,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     }
     if (!seasons.contains(season) && seasons.isNotEmpty) season = seasons.first;
     final inSeason = eps.inSeason(season);
+    final tab = season;
 
     final regularSeasons = seasons.where((s) => s >= 1).length;
     final runtime = eps.runtime;
@@ -487,8 +501,9 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
                     runSpacing: 10,
                     children: [
                       for (final s in seasons)
-                        _SeasonChip(
+                        ShowChip(
                           key: ValueKey('show-season-$s'),
+                          focusNode: s == season ? _seasonNode : null,
                           label: _seasonLabel(l, eps.order, s),
                           selected: s == season,
                           onTap: () => setState(() {
@@ -508,7 +523,9 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
                 ),
               ),
             ),
-          if (seasons.isNotEmpty && seasonLine.isNotEmpty)
+          // UI-056: «10 серий · 7 ч 10 мин · осталось 2 ч 30 мин»; UI-055:
+          // «Все серии» opens the season as a grid.
+          if (inSeason.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.only(
@@ -516,36 +533,46 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
                   right: d.pageInsets.right,
                   top: d.isTv ? 10 : 12,
                 ),
-                child: Text(
-                  seasonLine,
-                  key: const ValueKey('show-runtime-season'),
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontSize: d.type.caption + 1,
-                    color: KColors.textSecondary,
-                  ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        seasonLine,
+                        key: const ValueKey('show-runtime-season'),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontSize: d.type.caption + 1,
+                          color: KColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    KButton(
+                      key: showAllEpisodesKey,
+                      icon: Icons.grid_view_rounded,
+                      label: l.showEpisodesAll,
+                      onPressed: () => _openAll(eps, tab),
+                    ),
+                  ],
                 ),
               ),
             ),
-          // BUG-019: the episodes are slivers of the page itself, built
-          // lazily: the page scrolls down to the last one of a long season
-          // with a wheel, a trackpad, the scrollbar, keys or the remote.
+          // UI-055: one lazy row of the season's episodes (BUG-019: a
+          // thousand of them as fast as ten).
           if (inSeason.isNotEmpty)
-            SliverPadding(
-              padding: EdgeInsets.only(
-                top: d.isTv ? 14 : 18,
-                left: d.pageInsets.left,
-                right: d.pageInsets.right,
-              ),
-              sliver: _EpisodeList(
-                // A new list per order and season: focus starts at the
-                // first card.
-                key: ValueKey('episodes-${eps.order.name}-$season'),
-                episodes: inSeason,
-                order: eps.order,
-                hideSpoilers: hideSpoilers,
-                nextId: _nextId(eps, target),
-                all: eps.episodes,
-                canMark: canMark,
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.only(top: d.isTv ? 4 : 6),
+                child: _SeasonRow(
+                  // A new row per order and season: it opens on «Далее».
+                  key: ValueKey('episodes-${eps.order.name}-$season'),
+                  episodes: inSeason,
+                  order: eps.order,
+                  hideSpoilers: hideSpoilers,
+                  nextId: _nextId(eps),
+                  all: eps.episodes,
+                  canMark: canMark,
+                  onUp: () => _seasonNode.requestFocus(),
+                ),
               ),
             ),
           if (cast.isNotEmpty)
@@ -572,16 +599,36 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     );
   }
 
-  /// The episode to watch next (UI-037: outline and «Далее»): what the
-  /// button plays (a started one too), once the show was started.
-  static String? _nextId(ShowEpisodes eps, _Target? t) {
-    if (t == null || t.episode.watched) return null;
-    if (!eps.episodes.any((e) => e.progress != null)) return null;
-    return t.episode.item.id;
+  /// «Все серии» (UI-055): the season of the tab as the grid of BUG-019.
+  void _openAll(ShowEpisodes eps, int season) {
+    final services = Services.read(context);
+    final order = eps.order;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SeasonEpisodesScreen(
+          title: context.l10n.showEpisodesAllTitle(
+            _show.title,
+            _seasonLabel(context.l10n, order, season),
+          ),
+          season: season,
+          initial: eps,
+          watch: () => _watchIn(services, order),
+        ),
+      ),
+    );
   }
 
   /// The library knows details (not v0).
   bool get _probes => Services.read(context).library is LibraryDetails;
+}
+
+/// The episode to watch next (UI-037: outline and «Далее»): what the
+/// button plays (a started one too), once the show was started.
+String? _nextId(ShowEpisodes eps) {
+  final t = showContinueTarget(eps.episodes);
+  if (t == null || t.episode.watched) return null;
+  if (!eps.episodes.any((e) => e.progress != null)) return null;
+  return t.episode.item.id;
 }
 
 /// Name of an episode order.
@@ -603,66 +650,150 @@ String _code(AppLocalizations l, EpisodeOrder order, LibraryItem e) =>
     ? l.showEpisodeNumber(e.episode ?? 0)
     : episodeCode(l, e);
 
-class _SeasonChip extends StatelessWidget {
-  const _SeasonChip({
+/// The episodes of the season tab as one row (UI-055): it opens on «Далее»
+/// (UI-037); a long season gets range chips by episode number.
+class _SeasonRow extends StatelessWidget {
+  const _SeasonRow({
     super.key,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.onMenu,
+    required this.episodes,
+    required this.order,
+    required this.hideSpoilers,
+    this.nextId,
+    this.all = const [],
+    this.canMark = false,
+    this.onUp,
   });
 
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  /// UI-049: the watched marks of the season.
-  final ValueChanged<Offset>? onMenu;
+  final List<ShowEpisode> episodes;
+  final EpisodeOrder order;
+  final bool hideSpoilers;
+  final String? nextId;
+  final List<ShowEpisode> all;
+  final bool canMark;
+  final VoidCallback? onUp;
 
   @override
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
-    return KFocusable(
-      onActivate: onTap,
-      onContextMenu: onMenu,
-      radius: 999,
-      light: false,
-      focusScale: d.focusScaleButton,
-      semanticLabel: label,
-      selected: selected,
-      builder: (context, focused) {
-        final on = focused || selected;
-        return AnimatedContainer(
-          duration: KMotion.focus,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: focused
-                ? Colors.white
-                : (selected
-                      ? Colors.white.withValues(alpha: .22)
-                      : Colors.white.withValues(alpha: .07)),
-            borderRadius: BorderRadius.circular(999),
+    final l = context.l10n;
+    final width = d.isPhone
+        ? math.min(300.0, MediaQuery.sizeOf(context).width * .72)
+        : (d.isTv ? 260.0 : 300.0);
+    // Still + three text lines (code, title, two of overview).
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final next = nextId == null
+        ? -1
+        : episodes.indexWhere((e) => e.item.id == nextId);
+    int number(int i) => episodes[i].item.episode ?? i + 1;
+    return EpisodeRow(
+      count: episodes.length,
+      cardWidth: width,
+      cardHeight: width * 9 / 16 + 112 * textScale,
+      startIndex: next < 0 ? null : next,
+      onUp: onUp,
+      rangeLabel: (first, last) => (
+        l.showEpisodeRange(number(first), number(last)),
+        l.showEpisodeRangeLabel(number(first), number(last)),
+      ),
+      itemBuilder: (context, i, node) {
+        final e = episodes[i];
+        return _EpisodeCard(
+          key: showEpisodeKey(e.item.id),
+          focusNode: node,
+          episode: e,
+          order: order,
+          hideSpoilers: hideSpoilers,
+          next: e.item.id == nextId,
+          width: width,
+          onTap: () => playVideo(
+            context,
+            e.item,
+            startPositionMs: resumePositionMs(e.progress),
           ),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: focused
-                  ? Colors.black
-                  : (on ? Colors.white : KColors.textSecondary),
-            ),
-          ),
+          onMenu: canMark
+              ? (p) => showEpisodeMarkMenu(context, e, all, position: p)
+              : null,
         );
       },
     );
   }
 }
 
-/// Episodes of a season (BUG-019): a list of wide cards on phones, a grid
-/// of 16:9 cards elsewhere. Slivers built on demand, so a season of a
-/// thousand episodes scrolls with the page like a short one.
+/// «Все серии» (UI-055): every episode of a season as the grid (a list on
+/// phones) of BUG-019, on a screen of its own; it follows the library like
+/// the show page (progress, watched marks).
+class SeasonEpisodesScreen extends StatefulWidget {
+  const SeasonEpisodesScreen({
+    super.key,
+    required this.title,
+    required this.season,
+    required this.initial,
+    required this.watch,
+  });
+
+  final String title;
+  final int season;
+
+  /// The episodes as the show page had them, until [watch] yields.
+  final ShowEpisodes initial;
+  final Stream<ShowEpisodes> Function() watch;
+
+  @override
+  State<SeasonEpisodesScreen> createState() => _SeasonEpisodesScreenState();
+}
+
+class _SeasonEpisodesScreenState extends State<SeasonEpisodesScreen> {
+  late final Stream<ShowEpisodes> _episodes = widget.watch();
+
+  @override
+  Widget build(BuildContext context) {
+    final d = KDensity.of(context);
+    final canMark = canMarkEpisodes(context);
+    return Scaffold(
+      backgroundColor: KColors.bgBase,
+      appBar: AppBar(title: Text(widget.title)),
+      body: StreamBuilder<ShowEpisodes>(
+        stream: _episodes,
+        initialData: widget.initial,
+        builder: (context, snap) {
+          final eps = snap.data ?? widget.initial;
+          final inSeason = eps.inSeason(widget.season);
+          return ValueListenableBuilder<bool>(
+            valueListenable: Services.of(context).hideSpoilers,
+            builder: (context, hide, _) => CustomScrollView(
+              scrollCacheExtent: const ScrollCacheExtent.viewport(1),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    d.pageInsets.left,
+                    d.isTv ? 14 : 18,
+                    d.pageInsets.right,
+                    d.pageInsets.bottom + 24,
+                  ),
+                  sliver: _EpisodeList(
+                    episodes: inSeason,
+                    order: eps.order,
+                    hideSpoilers: hide,
+                    nextId: _nextId(eps),
+                    all: eps.episodes,
+                    canMark: canMark,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Episodes of a season (BUG-019), on the «Все серии» screen since UI-055:
+/// a list of wide cards on phones, a grid of 16:9 cards elsewhere. Slivers
+/// built on demand, so a season of a thousand episodes scrolls like a short
+/// one.
 class _EpisodeList extends StatelessWidget {
   const _EpisodeList({
-    super.key,
     required this.episodes,
     required this.order,
     required this.hideSpoilers,
@@ -747,6 +878,7 @@ class _EpisodeList extends StatelessWidget {
 class _EpisodeCard extends StatelessWidget {
   const _EpisodeCard({
     super.key,
+    this.focusNode,
     required this.episode,
     required this.order,
     required this.hideSpoilers,
@@ -760,6 +892,9 @@ class _EpisodeCard extends StatelessWidget {
   final ShowEpisode episode;
   final EpisodeOrder order;
   final bool hideSpoilers;
+
+  /// The node of the card in the episode row (UI-055: the remote walks it).
+  final FocusNode? focusNode;
 
   /// The episode to watch next.
   final bool next;
@@ -884,6 +1019,7 @@ class _EpisodeCard extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: horizontal ? 12 : 0),
       child: KFocusable(
+        focusNode: focusNode,
         onActivate: onTap,
         focusScale: horizontal ? 1.01 : (d.isTv ? 1.05 : 1.03),
         light: false,

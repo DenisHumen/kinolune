@@ -621,6 +621,42 @@
   "@showEpisodeActions": {
     "description": "UI-049: screen-reader label and tooltip of the «⋯» button on an episode card."
   },
+  "showEpisodesAll": "All episodes",
+  "@showEpisodesAll": {
+    "description": "UI-055: button above the episode row that opens every episode of the season as a grid (list on phones) on its own screen."
+  },
+  "showEpisodesAllTitle": "{show} · {season}",
+  "@showEpisodesAllTitle": {
+    "description": "UI-055: title of the «All episodes» screen: the show and the season tab.",
+    "placeholders": {
+      "show": {"type": "String"},
+      "season": {"type": "String"}
+    }
+  },
+  "showEpisodesPrevious": "Previous episodes",
+  "@showEpisodesPrevious": {
+    "description": "UI-055: tooltip and screen-reader label of the ‹ button that pages the episode row back."
+  },
+  "showEpisodesNext": "Next episodes",
+  "@showEpisodesNext": {
+    "description": "UI-055: tooltip and screen-reader label of the › button that pages the episode row on."
+  },
+  "showEpisodeRange": "{from}–{to}",
+  "@showEpisodeRange": {
+    "description": "UI-055: chip above the row of a long season that jumps to a range of episodes, e.g. «151–200».",
+    "placeholders": {
+      "from": {"type": "int"},
+      "to": {"type": "int"}
+    }
+  },
+  "showEpisodeRangeLabel": "Episodes {from} to {to}",
+  "@showEpisodeRangeLabel": {
+    "description": "UI-055: screen-reader label of a range chip.",
+    "placeholders": {
+      "from": {"type": "int"},
+      "to": {"type": "int"}
+    }
+  },
   "showMarkedWatched": "{count, plural, =1{1 episode marked as watched} other{{count} episodes marked as watched}}",
   "@showMarkedWatched": {
     "description": "UI-049: snack bar after a bulk mark, with Undo.",
