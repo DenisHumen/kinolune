@@ -240,6 +240,8 @@ fn hdr_bits(probed: bool, hdr: Option<&str>) -> u8 {
 /// Profile filters of the indexed files and works (LIB-012).
 const FILE_VISIBLE: &str = pa_library::file_visible!("f");
 const WORK_ALLOWED: &str = pa_library::work_allowed!("w.id");
+/// Runtime of what a file plays: all parts of a split movie (BUG-021).
+const PLAY_DURATION: &str = crate::items::play_duration!();
 
 impl Index {
     /// Reads the index from the database for the active profile: works and
@@ -250,7 +252,7 @@ impl Index {
         // Present files of movies and shows, grouped by work.
         let mut stmt = conn.prepare_cached(&format!(
             "SELECT m.work_id, w.kind, w.title, w.year, w.runtime_ms,
-                    f.source_id, f.added_at_ms, f.duration_ms, f.video_json IS NOT NULL,
+                    f.source_id, f.added_at_ms, {PLAY_DURATION}, f.video_json IS NOT NULL,
                     {RESOLUTION_SQL}, json_extract(f.video_json, '$.hdr'),
                     f.audio_formats, f.audio_langs
              FROM matches m

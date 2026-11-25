@@ -143,9 +143,14 @@ fn file_ref(uri: &str, path: &str, source_id: i64) -> FileRef {
 fn tech(conn: &Connection, file_id: i64) -> Result<Option<TechInfo>, Error> {
     let row = conn
         .query_row(
-            "SELECT f.source_id, s.uri, f.path, f.container, f.size_bytes, f.duration_ms,
+            // The duration of a split movie is that of all its parts (BUG-021).
+            concat!(
+                "SELECT f.source_id, s.uri, f.path, f.container, f.size_bytes, ",
+                items::play_duration!(),
+                ",
                     f.video_json, f.audio_formats, f.audio_langs, f.sub_langs
-             FROM files f JOIN sources s ON s.id = f.source_id WHERE f.id = ?1",
+             FROM files f JOIN sources s ON s.id = f.source_id WHERE f.id = ?1"
+            ),
             [file_id],
             |r| {
                 Ok((

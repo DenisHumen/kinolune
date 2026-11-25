@@ -161,12 +161,90 @@ class AppShellState extends State<AppShell> {
     if (_section == Section.settings && s != Section.settings) {
       _services?.profileControl.relockSettings();
     }
-    if (s == _section) {
-      // Re-selecting a section pops it to its root.
-      _navKeys[s]!.currentState?.popUntil((r) => r.isFirst);
-    }
+    if (s == _section) _reselect(s);
     if (s == Section.movies || s == Section.shows) _lastLibrary = s;
     setState(() => _section = s);
+  }
+
+  /// BUG-025: tapping the section that is already selected (sidebar, rail,
+  /// phone tab, TV menu, by pointer or by Enter / Space / OK) goes back to
+  /// its root page, as in other media players; at the root it scrolls the
+  /// page to the top. Other sections keep their pages; the player and
+  /// dialogs live on the root navigator and are not touched.
+  void _reselect(Section s) {
+    final nav = _navKeys[s]!.currentState;
+    if (nav == null) return;
+    if (nav.canPop()) {
+      // A popped route hands the focus to the page below; a menu item
+      // activated by Enter / Space / OK keeps it (the next press scrolls
+      // to the top, D-pad stays in the TV menu).
+      final menu = FocusManager.instance.primaryFocus;
+      final keep =
+          menu != null &&
+          menu is! FocusScopeNode &&
+          !menu.ancestors.contains(nav.focusNode);
+      nav.popUntil((r) => r.isFirst);
+      if (keep) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && menu.context != null) menu.requestFocus();
+        });
+      }
+      return;
+    }
+    final scrollable = _pageScrollable(nav.context);
+    if (scrollable == null) return;
+    final position = scrollable.position;
+    if (!position.hasContentDimensions ||
+        position.pixels <= position.minScrollExtent) {
+      return;
+    }
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (reduceMotion) {
+      position.jumpTo(position.minScrollExtent);
+    } else {
+      position
+          .animateTo(
+            position.minScrollExtent,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+          )
+          .ignore();
+    }
+  }
+
+  /// The main vertical scroll view of the page under [root]: the largest
+  /// one on screen that can scroll (a page may hold smaller lists beside
+  /// it; horizontal rows are skipped).
+  static ScrollableState? _pageScrollable(BuildContext root) {
+    ScrollableState? best;
+    var bestArea = 0.0;
+    void visit(Element e) {
+      // Hidden tabs of a page (IndexedStack, Visibility, Offstage) keep
+      // their scroll views laid out; they are not the page on screen.
+      final w = e.widget;
+      if ((w is TickerMode && !w.enabled) || (w is Offstage && w.offstage)) {
+        return;
+      }
+      if (e is StatefulElement && e.state is ScrollableState) {
+        final state = e.state as ScrollableState;
+        final box = e.findRenderObject();
+        if (axisDirectionToAxis(state.axisDirection) == Axis.vertical &&
+            state.position.hasContentDimensions &&
+            state.position.maxScrollExtent > state.position.minScrollExtent &&
+            box is RenderBox &&
+            box.hasSize) {
+          final area = box.size.width * box.size.height;
+          if (area > bestArea) {
+            best = state;
+            bestArea = area;
+          }
+        }
+      }
+      e.visitChildElements(visit);
+    }
+
+    root.visitChildElements(visit);
+    return best;
   }
 
   /// Each value asks the Search screen to put the focus in its field
@@ -899,11 +977,20 @@ class _SidebarItem extends StatelessWidget {
                 color: selected ? KColors.accentSoft : KColors.textSecondary,
               ),
               const SizedBox(width: 14),
-              Text(
-                section.label(context.l10n),
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? Colors.white : KColors.textSecondary,
+              // A long label («Налаштування» in Ukrainian) shrinks a little
+              // instead of running past the sidebar.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    section.label(context.l10n),
+                    maxLines: 1,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected ? Colors.white : KColors.textSecondary,
+                    ),
+                  ),
                 ),
               ),
             ],

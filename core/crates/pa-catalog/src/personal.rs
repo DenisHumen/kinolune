@@ -688,9 +688,14 @@ impl Catalog {
             },
         )?;
         if let Some(d) = duration {
-            // The duration the player saw fills the file until probing.
+            // The duration the player saw fills the file until probing;
+            // not a part of a split movie, whose timeline is all its parts
+            // (BUG-021).
             conn.execute(
-                "UPDATE files SET duration_ms = ?2 WHERE id = ?1 AND duration_ms IS NULL",
+                concat!(
+                    "UPDATE files SET duration_ms = ?2 WHERE id = ?1 AND duration_ms IS NULL AND ",
+                    crate::items::not_a_part!()
+                ),
                 params![file_id, d],
             )?;
         }
