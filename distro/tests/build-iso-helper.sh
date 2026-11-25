@@ -20,11 +20,12 @@ S="${FAKE_STATE}"
 echo "$*" >> "${S}/calls"
 cmd="$1"; shift
 case "${cmd}" in
-    inspect)
-        [[ -f "${S}/label" ]] || exit 1
-        echo "true $(cat "${S}/label")" ;;
+    inspect) # -f FORMAT NAME: .State.Running, optionally followed by the label
+        [[ -f "${S}/out" ]] || exit 1
+        if [[ "$2" == *Labels* ]]; then echo "true $(cat "${S}/label" 2>/dev/null)"; else echo true; fi ;;
     rm) rm -f "${S}/label" "${S}/out" ;;
     run)
+        : > "${S}/out"
         while (($#)); do
             case "$1" in
                 --label) echo "${2#*=}" > "${S}/label"; shift ;;
@@ -33,7 +34,7 @@ case "${cmd}" in
             shift
         done ;;
     exec)
-        [[ -f "${S}/label" ]] || { echo "no container" >&2; exit 1; }
+        [[ -f "${S}/out" ]] || { echo "no container" >&2; exit 1; }
         shift 2 # -i NAME
         case "$1" in
             find) echo /out/build/image.iso ;;
@@ -70,6 +71,6 @@ grep -q 'other mounts or image: recreating' "${T}/log" || fail "other OUT_DIR: h
 [[ "$(runs)" == 2 ]] || fail "other OUT_DIR: helper not started again"
 [[ -f "${T}/b/${iso}" && -f "${T}/b/${iso}.sha256" ]] || fail "other OUT_DIR: no ISO in OUT_DIR b"
 [[ ! -e "${T}/a/${iso}" ]] || fail "other OUT_DIR: ISO written into the old OUT_DIR a"
-[[ ! -f "${T}/state/label" ]] || fail "without KEEP=1 the helper must be removed"
+[[ ! -f "${T}/state/out" ]] || fail "without KEEP=1 the helper must be removed"
 
 echo "OK: build-iso.sh helper reuse follows OUT_DIR"
