@@ -108,6 +108,10 @@ distro/tests/iso-boot.sh distro/.work/iso/kinolune-os-*.iso   # загрузка
 
 Это временный вход до полноэкранного установщика (TUI, DIST-006), который займёт тот же юнит `alpha-live-installer@.service`. На других консолях (Alt+F2…) — обычный вход root без пароля, `sshd` в live-системе выключен.
 
+**Особенности live-системы** (подробно — в ADR): payload читается прямо из squashfs (`/run/rootfsbase/var/lib/containers/storage` как хранилище образов только для чтения, `storage.rootful.conf.d/10-alpha-live.conf`), потому что слои podman не работают поверх overlayfs live-корня; SELinux в live-системе выключен (`selinux=0`), чтобы метки целевой системы ставились по её собственной политике; `kmsconvt@tty1` замаскирован — tty1 принадлежит установщику.
+
+Полная офлайн-установка с ISO в QEMU: `INSTALL=1 distro/tests/iso-boot.sh <iso>` — после проверок меню ставит ОС на виртуальный NVMe (неподписанный тестовый payload) и загружает установленный диск до приглашения входа.
+
 **CI:** `.github/workflows/distro-iso.yml` — вручную, на `main` и на готовых PR с изменениями `distro/**`: сборка, размер, загрузка в QEMU/OVMF (`iso-boot.sh`). ISO как артефакт — для `main` и ручных запусков.
 
 ## Команда дисков
