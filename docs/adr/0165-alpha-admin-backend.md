@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: `alpha-admin` — бэкенд админки NAS-ОС: демон без root, polkit, PAM-помощник, только LAN
+# ADR-0165: `alpha-admin` — бэкенд админки NAS-ОС: демон без root, polkit, PAM-помощник, только LAN
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-25

@@ -11,6 +11,7 @@
 
 ```bash
 distro/scripts/build-image.sh localhost/alpha-os:dev   # сборка образа + bootc container lint
+distro/tests/branding.sh localhost/alpha-os:dev        # брендинг Kinolune OS в образе, fastfetch (DIST-003)
 distro/tests/vm-switch-rollback.sh                     # ~10 мин: switch → rollback → upgrade → digest-пин
 (cd distro/admin && go vet ./... && go test -race ./...) # alpha-admin: нужен dbus-daemon (иначе D-Bus-тесты пропускаются)
 distro/admin/tests/pam-container.sh                    # alpha-admin с настоящим PAM в контейнере Fedora
@@ -26,5 +27,5 @@ just distro::updated-test                              # Go: агент обно
 
 - В каждом скрипте и конфиге SPDX-заголовок (`# SPDX-License-Identifier: MPL-2.0`).
 - Базовый образ — по digest; пакеты RPM Fusion и NVIDIA — только по задачам LEGAL-010 и DIST.
-- Без бренда и логотипов Fedora: формулировка «основано на Fedora Linux» (DIST-003).
+- Без бренда и логотипов Fedora: имя Kinolune OS, формулировка «based on Fedora Linux»; что сознательно остаётся «fedora» — в README, раздел «Брендинг» (DIST-003). После правки `design/brand` — `distro/branding/sync-assets.sh`.
 - Ключи подписи образа (cosign) — только в CI-окружении, см. [docs/dev/secrets.md](../docs/dev/secrets.md).

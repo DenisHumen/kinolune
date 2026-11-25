@@ -83,6 +83,8 @@ RUN set -eux; \
         off) echo "WARNING: signature policy is off, this image accepts unsigned updates" ;; \
         *) echo "unknown ALPHA_SIGNATURE_POLICY=${policy}"; exit 1 ;; \
     esac; \
+    # Kinolune OS name, os-release, issue, motd (DIST-003, see the script).
+    /usr/libexec/alpha/alpha-branding "${ALPHA_OS_VERSION}"; \
     printf 'ALPHA_OS_VERSION=%s\nALPHA_IMAGE_REPO=%s\nALPHA_SIGNATURE_POLICY=%s\n' \
         "${ALPHA_OS_VERSION}" "${ALPHA_IMAGE_REPO}" "${policy}" > /usr/share/alpha/version; \
     # Updates are driven by our own agent (alpha-updated, DIST-009), never by the
@@ -105,8 +107,8 @@ RUN set -eux; \
     rm -rf /run/dnf /run/cockpit /run/selinux-policy /var/log/* /var/cache/* /var/tmp/* /tmp/*; \
     bootc container lint
 
-LABEL org.opencontainers.image.title="alpha-os" \
-      org.opencontainers.image.description="NAS OS prototype for project_alpha (image-based, bootc)" \
+LABEL org.opencontainers.image.title="Kinolune OS" \
+      org.opencontainers.image.description="Kinolune OS: NAS OS of the Kinolune project, based on Fedora Linux (image-based, bootc)" \
       org.opencontainers.image.licenses="MPL-2.0" \
       org.opencontainers.image.source="https://github.com/DenisHumen/kinolune" \
       org.opencontainers.image.version="${ALPHA_OS_VERSION}" \

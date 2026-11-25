@@ -27,3 +27,6 @@ polkit
 # "Advanced mode" admin console, disabled by default (05 §5.1)
 cockpit-system
 cockpit-ws
+
+# System summary with the Kinolune OS logo (DIST-003, /etc/xdg/fastfetch/config.jsonc)
+fastfetch
