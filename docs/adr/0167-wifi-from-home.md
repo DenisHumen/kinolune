@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 
-# ADR-NNNN: Wi-Fi и сеть с главной: NetworkManager по D-Bus из Dart, polkit-правило образа
+# ADR-0167: Wi-Fi и сеть с главной: NetworkManager по D-Bus из Dart, polkit-правило образа
 
 - **Статус:** Предложен
 - **Дата:** 2026-11-25

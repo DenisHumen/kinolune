@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// Wi-Fi and network right from Home (DIST-032, ADR-NNNN). What the network
+// Wi-Fi and network right from Home (DIST-032, ADR-0167). What the network
 // icon and its panel see of the system's network: Wi-Fi networks around,
 // the wired link, the address and the internet check. On Linux this is
 // NetworkManager over D-Bus (nm_backend.dart); there is nothing elsewhere

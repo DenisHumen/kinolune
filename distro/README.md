@@ -36,7 +36,7 @@
 - **`alpha-admin`** (DIST-013) — настоящий бэкенд админки: HTTPS на :443 с самоподписанным сертификатом, :80 перенаправляет и отвечает `/health`; только LAN; работает от пользователя `alpha-admin`, права на D-Bus — через polkit-правило, пароли проверяет PAM-помощник `alpha-admin-auth`. Подробно — [admin/README.md](admin/README.md).
 - **Samba**: SMB3, `vfs_fruit` для macOS, шара `Media` → `/var/srv/media` (гостевое чтение). **wsdd** (Windows), **Avahi** + nss-mdns (`<hostname>.local`).
 - **firewalld**: зона по умолчанию `home`; открыты samba, mdns, ws-discovery, http, https, 8487/tcp. (ssh и dhcpv6-client остаются из стандартной зоны `home` — на прототипе SSH нужен для тестов; выключение по умолчанию — в DIST-013.)
-- **NetworkManager** с Wi-Fi (`NetworkManager-wifi`, `wpa_supplicant`): группа `kinolune` (`sysusers.d`) по polkit-правилу `50-kinolune-network.rules` подключает сети, сканирует, включает и выключает Wi-Fi, сохраняет и забывает профили без root — для панели «Сеть» на главной Kinolune (DIST-032, ADR-NNNN).
+- **NetworkManager** с Wi-Fi (`NetworkManager-wifi`, `wpa_supplicant`): группа `kinolune` (`sysusers.d`) по polkit-правилу `50-kinolune-network.rules` подключает сети, сканирует, включает и выключает Wi-Fi, сохраняет и забывает профили без root — для панели «Сеть» на главной Kinolune (DIST-032, ADR-0167).
 - **smartd**, **chronyd**, **greenboot** (проверки появятся в DIST-011), **Cockpit** установлен, `cockpit.socket` выключен.
 - `bootc-fetch-apply-updates.timer` и его `.service` **замаскированы**: обновлениями управляет `alpha-updated` (DIST-009) — скачивает в фоне, ставит в окне обслуживания и не перезагружает NAS во время просмотра.
 - Версия образа — `/usr/share/alpha/version` (`ALPHA_OS_VERSION`, build-arg).

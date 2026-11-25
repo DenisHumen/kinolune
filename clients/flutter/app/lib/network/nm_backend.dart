@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //
-// NetworkManager over D-Bus (DIST-032, ADR-NNNN): the system bus on Linux,
+// NetworkManager over D-Bus (DIST-032, ADR-0167): the system bus on Linux,
 // with no root. Kinolune OS lets its user manage connections through a
 // polkit rule (distro/rootfs/usr/share/polkit-1/rules.d); on other
 // desktops NetworkManager's own rules allow the active local session.
