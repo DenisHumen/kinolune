@@ -3,8 +3,12 @@
 # label: ISO 9660 volume label (<= 32 chars; ${root} becomes root=live:CDLABEL=<label>).
 # Kernel messages go to both consoles, tty0 is the main one (/dev/console) for a monitor;
 # the installer also runs on ttyS0 for headless boxes and the QEMU smoke test.
+# selinux=0: the live system only writes the target disk. With SELinux on, setfiles checks
+# the target's labels against the live system's own (smaller) policy and rejects labels of
+# modules only the OS has (cockpit…); disabled, the target is labelled from its own policy.
 label: "Kinolune-OS-Installer"
 kernel_args:
+  - selinux=0
   - console=ttyS0,115200
   - console=tty0
   - loglevel=3
