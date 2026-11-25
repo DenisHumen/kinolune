@@ -19,6 +19,9 @@ FROM ${BASE_IMAGE} AS go-build
 # hadolint ignore=DL3041
 RUN dnf -y install --setopt=install_weak_deps=False golang && dnf clean all
 COPY updated/ /src/updated/
+# In bootc images /root is a symlink into /var (empty at build time), so the
+# default ~/.cache/go-build cannot be created: keep Go's cache and GOPATH in /tmp.
+ENV GOCACHE=/tmp/go-cache GOPATH=/tmp/go
 RUN cd /src/updated && \
     CGO_ENABLED=0 GOTOOLCHAIN=local GOFLAGS=-trimpath \
     go build -ldflags=-s -o /out/alpha-updated ./cmd/alpha-updated
