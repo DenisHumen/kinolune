@@ -18,9 +18,9 @@ API описан в [`internal/server/openapi.yaml`](internal/server/openapi.yam
                      HTTP :80 ─► 301 на HTTPS, /health для проверок
 ```
 
-- **Демон без root.** `alpha-admin.service` работает от системного пользователя `alpha-admin` с жёсткой песочницей (`ProtectSystem=strict`, `NoNewPrivileges`, фильтр системных вызовов, только `CAP_NET_BIND_SERVICE`). Всё, что меняет систему, — вызовы D-Bus, которые polkit разрешает **только этому пользователю и только нужные действия** (перезапуск наших сервисов, переключение подключений и Wi-Fi, открытие наших портов, монтирование, перезагрузка и выключение). Какой человек может нажать кнопку, решает сам демон по роли.
+- **Демон без root.** `alpha-admin.service` работает от системного пользователя `alpha-admin` с жёсткой песочницей (`ProtectSystem=strict`, `NoNewPrivileges`, фильтр системных вызовов, только `CAP_NET_BIND_SERVICE`). Всё, что меняет систему, — вызовы D-Bus, которые polkit разрешает **только этому пользователю и только нужные действия** (перезапуск наших сервисов, переключение подключений и Wi-Fi, открытие наших портов, монтирование, перезагрузка и выключение). Кто может войти, решает сам демон: только администраторы.
 - **Пароли проверяет отдельный помощник.** `alpha-admin-auth` запускается systemd на каждое подключение к `/run/alpha-admin/auth.sock` (`Accept=yes`), проверяет один пароль через PAM (сервис `/etc/pam.d/alpha-admin`: `password-auth`, плюс проверки учётной записи — заблокированные и просроченные не войдут) и завершается. Сокет принадлежит `alpha-admin` с правами 0600, помощник дополнительно сверяет `SO_PEERCRED`. Помощник не говорит, почему вход не удался: неизвестный пользователь, неверный пароль, заблокированная и системная учётная запись выглядят одинаково.
-- **Роли.** `admin` — члены групп `wheel` или `alpha-admin` (05 §5.2: админ = wheel); `viewer` — остальные пользователи с UID ≥ 1000: видят всё, ничего не меняют. `root` и системные учётные записи (UID < 1000) не входят никогда.
+- **Только администраторы** (решение мейнтейнера): войти могут члены групп `wheel` или `alpha-admin` (05 §5.2: админ = wheel). Остальные пользователи с верным паролем получают `403 not_admin` «Нет прав администратора» — без сессии и без счёта в блокировке. `root` и системные учётные записи (UID < 1000) не входят никогда. Отдельной роли «член семьи» пока нет.
 
 ## Сессии и защита
 
@@ -37,20 +37,20 @@ API описан в [`internal/server/openapi.yaml`](internal/server/openapi.yam
 
 ## API кратко
 
-| Метод и путь | Роль | Что |
+| Метод и путь | Вход | Что |
 |---|---|---|
 | `GET /healthz`, `GET /api/v1/info`, `GET /api/v1/openapi.yaml` | — | живость, версия ОС и отпечаток TLS, описание API |
-| `POST/GET/DELETE /api/v1/session` | — / любая | вход, текущая сессия (и CSRF-токен), выход |
-| `GET /api/v1/system` | viewer | имя, версия ОС, ядро, uptime, нагрузка, память, данные установки (`/var/lib/alpha/install.json`, DIST-005) |
-| `GET /api/v1/services[/{unit}]` | viewer | состояние наших сервисов (systemd) |
-| `POST /api/v1/services/{unit}/restart` | admin | перезапуск (медиасервер, админка, обновления, SMB, wsdd, Avahi, smartd, chrony) |
-| `GET /api/v1/services/{unit}/journal?lines=N` | admin | последние строки журнала сервиса |
-| `GET /api/v1/network`, `GET /api/v1/network/connections` | viewer | состояние NetworkManager, интерфейсы и адреса; сохранённые подключения (без секретов) |
-| `POST /api/v1/network/connections/{uuid}/up\|down`, `PUT /api/v1/network/wireless` | admin | включить/выключить подключение, радио Wi-Fi |
-| `GET /api/v1/firewall`, `PUT /api/v1/firewall/openings/{name}` | viewer / admin | зоны firewalld; открыть или закрыть наше: `media` (8487/tcp), `smb`, `discovery` (mDNS, WS-Discovery), `cockpit` — сразу и после перезагрузки. http/https админки из админки не закрываются |
-| `GET /api/v1/disks`, `POST /api/v1/disks/{dev}/mount\|unmount` | viewer / admin | диски, разделы, сводка SMART (ATA и NVMe: статус, температура, часы, плохие сектора); монтирование файловых систем с данными. Файловые системы самой ОС (из `install.json` и смонтированные в `/`, `/sysroot`, `/boot`, `/var`…) не трогаются; отмонтировать можно только то, что под `/var/srv`, `/srv`, `/run/media`, `/media` |
-| `GET /api/v1/power`, `POST /api/v1/power/{reboot\|poweroff}` | viewer / admin | ингибиторы; перезагрузка и выключение с подтверждением |
-| `/api/v1/system/update…` | viewer (чтение) / admin | прокси к `alpha-updated` (DIST-009): `GET ""` → `/v1/update`, `GET /status`, `POST /check`, `POST /download`, `POST\|DELETE /apply`, `POST /rollback`, `GET\|PUT /settings`. Пробрасывается только эта таблица, тела и коды ответов — как у агента; если сокет не отвечает — `502 update_agent_unavailable` |
+| `POST/GET/DELETE /api/v1/session` | — / да | вход, текущая сессия (и CSRF-токен), выход |
+| `GET /api/v1/system` | да | имя, версия ОС, ядро, uptime, нагрузка, память, данные установки (`/var/lib/alpha/install.json`, DIST-005) |
+| `GET /api/v1/services[/{unit}]` | да | состояние наших сервисов (systemd) |
+| `POST /api/v1/services/{unit}/restart` | да | перезапуск (медиасервер, админка, обновления, SMB, wsdd, Avahi, smartd, chrony) |
+| `GET /api/v1/services/{unit}/journal?lines=N` | да | последние строки журнала сервиса |
+| `GET /api/v1/network`, `GET /api/v1/network/connections` | да | состояние NetworkManager, интерфейсы и адреса; сохранённые подключения (без секретов) |
+| `POST /api/v1/network/connections/{uuid}/up\|down`, `PUT /api/v1/network/wireless` | да | включить/выключить подключение, радио Wi-Fi |
+| `GET /api/v1/firewall`, `PUT /api/v1/firewall/openings/{name}` | да | зоны firewalld; открыть или закрыть наше: `media` (8487/tcp), `smb`, `discovery` (mDNS, WS-Discovery), `cockpit` — сразу и после перезагрузки. http/https админки из админки не закрываются |
+| `GET /api/v1/disks`, `POST /api/v1/disks/{dev}/mount\|unmount` | да | диски, разделы, сводка SMART (ATA и NVMe: статус, температура, часы, плохие сектора); монтирование файловых систем с данными. Файловые системы самой ОС (из `install.json` и смонтированные в `/`, `/sysroot`, `/boot`, `/var`…) не трогаются; отмонтировать можно только то, что под `/var/srv`, `/srv`, `/run/media`, `/media` |
+| `GET /api/v1/power`, `POST /api/v1/power/{reboot\|poweroff}` | да | ингибиторы; перезагрузка и выключение с подтверждением |
+| `/api/v1/system/update…` | да | прокси к `alpha-updated` (DIST-009): `GET ""` → `/v1/update`, `GET /status`, `POST /check`, `POST /download`, `POST\|DELETE /apply`, `POST /rollback`, `GET\|PUT /settings`. Пробрасывается только эта таблица, тела и коды ответов — как у агента; если сокет не отвечает — `502 update_agent_unavailable` |
 
 Ошибки: `{"error": "<код>", "message": "<текст>"}`, коды перечислены в OpenAPI.
 
@@ -99,9 +99,9 @@ go vet -tags pam ./...                              # нужен pam-devel и cg
 ```
 
 - `internal/system/fakebus` поднимает **приватную шину** (`dbus-daemon` с собственным конфигом во временном каталоге) и на ней — фейковые systemd, logind, NetworkManager, firewalld и UDisks2 с теми же именами, путями, интерфейсами и сигнатурами, что у настоящих. Клиенты `internal/system` и весь HTTP-слой тестируются через настоящий D-Bus, включая отказ polkit (`AccessDenied`). Без `dbus-daemon` эти тесты пропускаются; `ALPHA_ADMIN_REQUIRE_DBUS=1` (CI) делает пропуск ошибкой.
-- `internal/server` — вход, роли, cookie, CSRF и `Origin`, блокировка и `Retry-After`, все маршруты, подтверждение перезагрузки, прокси к фейковому `alpha-updated` на unix-сокете (включая недоступный сокет), покрытие OpenAPI.
+- `internal/server` — вход только администраторов («Нет прав администратора» для остальных), cookie, CSRF и `Origin`, блокировка и `Retry-After`, все маршруты, подтверждение перезагрузки, прокси к фейковому `alpha-updated` на unix-сокете (включая недоступный сокет), покрытие OpenAPI.
 - `internal/auth` — сессии (простой, максимум, лимит на пользователя), блокировки и лимит попыток на подменённых часах.
 - `internal/authhelper`, `cmd/alpha-admin-auth` — протокол помощника, отказ в чужом `SO_PEERCRED`, тайм-аут; `TestRealPAM` — **настоящий PAM** с тестовыми учётными записями.
 - `internal/netpolicy`, `internal/tlscert` — классификация адресов, отбрасывание публичных клиентов, сертификат переживает перезапуск.
 - [`tests/pam-container.sh`](tests/pam-container.sh) — всё сразу в одноразовом контейнере Fedora: учётные записи (wheel, обычная, заблокированная, системная), наш PAM-файл, `TestRealPAM`, сборка как в образе, `go test -race`.
-- [`tests/vm-admin-e2e.sh`](tests/vm-admin-e2e.sh) — сквозной тест в QEMU: образ из этой ветки, установка на диск, второй пустой диск; по SSH проверяются юниты и права, затем [`tests/vm_api_check.py`](tests/vm_api_check.py) ходит в настоящий API: вход PAM, роли, cookie, CSRF, блокировка, перезапуск smb, журнал, Wi-Fi, firewalld (runtime и permanent), монтирование и отмонтирование btrfs на втором диске, отказ трогать системную ФС, прокси к фейковому `alpha-updated` на его сокете, LAN-фильтр (адрес 192.168/16 обслуживается, 203.0.113.0/24 — нет), перезагрузка с подтверждением, тот же сертификат после перезагрузки. `QEMU_EXEC="docker exec <контейнер>"` запускает QEMU во вспомогательном контейнере.
+- [`tests/vm-admin-e2e.sh`](tests/vm-admin-e2e.sh) — сквозной тест в QEMU: образ из этой ветки, установка на диск, второй пустой диск; по SSH проверяются юниты и права, затем [`tests/vm_api_check.py`](tests/vm_api_check.py) ходит в настоящий API: вход PAM администратора, отказ «Нет прав администратора» обычному пользователю, cookie, CSRF, блокировка, перезапуск smb, журнал, Wi-Fi, firewalld (runtime и permanent), монтирование и отмонтирование btrfs на втором диске, отказ трогать системную ФС, прокси к фейковому `alpha-updated` на его сокете, LAN-фильтр (адрес 192.168/16 обслуживается, 203.0.113.0/24 — нет), перезагрузка с подтверждением, тот же сертификат после перезагрузки. `QEMU_EXEC="docker exec <контейнер>"` запускает QEMU во вспомогательном контейнере.

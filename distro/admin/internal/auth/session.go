@@ -17,27 +17,26 @@ import (
 	"time"
 )
 
-// Role of a logged-in user.
+// Role of a logged-in user. The admin UI is for administrators only
+// (maintainer decision on DIST-013): there is one role, kept in the API so a
+// later role (e.g. family members) does not change the session format.
 type Role string
 
-const (
-	// RoleAdmin may change things (restart, reboot, network, updates…).
-	RoleAdmin Role = "admin"
-	// RoleViewer may look only.
-	RoleViewer Role = "viewer"
-)
+// RoleAdmin is the only role: members of an admin group.
+const RoleAdmin Role = "admin"
 
 // DefaultAdminGroups make a user an administrator (05 §5.2: admin = wheel).
 var DefaultAdminGroups = []string{"wheel", "alpha-admin"}
 
-// RoleFor returns admin when groups contain one of adminGroups.
-func RoleFor(groups, adminGroups []string) Role {
+// IsAdmin reports whether groups contain one of adminGroups. Nobody else
+// may log in to the admin UI.
+func IsAdmin(groups, adminGroups []string) bool {
 	for _, g := range groups {
 		if slices.Contains(adminGroups, g) {
-			return RoleAdmin
+			return true
 		}
 	}
-	return RoleViewer
+	return false
 }
 
 // Session is one logged-in browser (or client app).

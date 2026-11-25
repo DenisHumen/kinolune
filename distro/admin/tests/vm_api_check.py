@@ -215,15 +215,13 @@ def main_checks():
         fail(f"update agent saw: {seen}")
     ok("update API proxied to the unix socket /run/alpha-updated/api.sock")
 
-    viewer = Client()
-    code, body, _ = viewer.login("boris")
-    expect(code, 200, "viewer login", body)
-    if body["role"] != "viewer":
-        fail(f"boris role {body}")
-    expect(viewer.call("GET", "/api/v1/disks")[0], 200, "viewer disks")
-    expect(viewer.call("POST", "/api/v1/services/smb.service/restart")[0], 403, "viewer restart")
-    expect(viewer.call("POST", "/api/v1/power/reboot")[0], 403, "viewer reboot")
-    ok("boris (no wheel) -> viewer: reads, cannot change (403)")
+    plain = Client()
+    code, body, _ = plain.login("boris")
+    expect(code, 403, "non-admin login", body)
+    if body.get("error") != "not_admin" or body.get("message") != "Нет прав администратора":
+        fail(f"boris: {body}")
+    expect(plain.call("GET", "/api/v1/disks")[0], 401, "non-admin without session")
+    ok("boris (no wheel) cannot log in: 403 «Нет прав администратора»")
 
     for user in ("svc", "root", "locked"):
         code, body, _ = Client().login(user)

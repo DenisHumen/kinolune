@@ -15,15 +15,15 @@ func newClock() *clock               { return &clock{t: time.Date(2026, 11, 25, 
 func storeWith(c *clock) *Store      { s := NewStore(); s.Now = c.now; return s }
 func limiterWith(c *clock) *Limiter  { return NewLimiter(DefaultLimiterConfig, c.now) }
 
-func TestRoleFor(t *testing.T) {
-	if RoleFor([]string{"anna", "wheel"}, DefaultAdminGroups) != RoleAdmin {
+func TestIsAdmin(t *testing.T) {
+	if !IsAdmin([]string{"anna", "wheel"}, DefaultAdminGroups) {
 		t.Fatal("wheel is admin")
 	}
-	if RoleFor([]string{"alpha-admin"}, DefaultAdminGroups) != RoleAdmin {
+	if !IsAdmin([]string{"alpha-admin"}, DefaultAdminGroups) {
 		t.Fatal("alpha-admin is admin")
 	}
-	if RoleFor([]string{"boris", "alpha-users"}, DefaultAdminGroups) != RoleViewer {
-		t.Fatal("others are viewers")
+	if IsAdmin([]string{"boris", "alpha-users"}, DefaultAdminGroups) || IsAdmin(nil, DefaultAdminGroups) {
+		t.Fatal("others are not admins")
 	}
 }
 
@@ -87,7 +87,7 @@ func TestSessionsPerUserBounded(t *testing.T) {
 		c.add(time.Second)
 		s.Create("anna", 1000, RoleAdmin, "")
 	}
-	s.Create("boris", 1001, RoleViewer, "")
+	s.Create("boris", 1001, RoleAdmin, "")
 	if _, ok := s.Get(first); ok {
 		t.Fatal("oldest session must be dropped")
 	}

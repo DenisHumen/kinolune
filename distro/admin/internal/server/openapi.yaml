@@ -14,8 +14,8 @@ info:
     `X-CSRF-Token` with the `csrf_token` of the session, and a same-origin
     `Origin` header when a browser sends one.
 
-    Roles: `admin` (members of `wheel` or `alpha-admin`) may change things;
-    `viewer` (other users with UID >= 1000) may only look.
+    Administrators only: members of `wheel` or `alpha-admin` (UID >= 1000)
+    can log in; other users get 403 `not_admin` ("Нет прав администратора").
 
     Errors have the body `{"error": "<code>", "message": "<text>"}`.
 license:
@@ -62,7 +62,7 @@ components:
         application/json:
           schema: {$ref: "#/components/schemas/Error"}
     Forbidden:
-      description: Wrong role (`forbidden`), missing CSRF token or cross-origin (`csrf`), or refused by polkit.
+      description: Missing CSRF token or cross-origin (`csrf`), or refused by polkit / not ours (`forbidden`).
       content:
         application/json:
           schema: {$ref: "#/components/schemas/Error"}
@@ -73,7 +73,7 @@ components:
       properties:
         error:
           type: string
-          enum: [bad_request, unauthorized, invalid_credentials, locked, csrf, forbidden, not_found,
+          enum: [bad_request, unauthorized, invalid_credentials, not_admin, locked, csrf, forbidden, not_found,
                  conflict, confirmation_invalid, method_not_allowed, unavailable, update_agent_unavailable,
                  system, timeout]
         message: {type: string}
@@ -81,7 +81,7 @@ components:
       type: object
       properties:
         user: {type: string}
-        role: {type: string, enum: [admin, viewer]}
+        role: {type: string, enum: [admin]}
         csrf_token: {type: string}
         created: {type: string, format: date-time}
     System:
@@ -291,6 +291,11 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/Session"}
         "401": {$ref: "#/components/responses/Error"}
+        "403":
+          description: Right password, but not an administrator (`not_admin`, message "Нет прав администратора")
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Error"}
         "429": {$ref: "#/components/responses/Error"}
         "503": {$ref: "#/components/responses/Error"}
     get:
@@ -344,7 +349,7 @@ paths:
     parameters: [{$ref: "#/components/parameters/unit"}]
     post:
       security: [{session: [], csrf: []}]
-      summary: Restart a service (admin; only `restartable` ones)
+      summary: Restart a service (only `restartable` ones)
       responses:
         "202": {description: Restart job queued}
         "403": {$ref: "#/components/responses/Forbidden"}
@@ -354,7 +359,7 @@ paths:
       - {$ref: "#/components/parameters/unit"}
       - {name: lines, in: query, schema: {type: integer, minimum: 1, maximum: 1000, default: 100}}
     get:
-      summary: Last journal lines of a service (admin)
+      summary: Last journal lines of a service
       responses:
         "200":
           description: OK
@@ -391,7 +396,7 @@ paths:
     parameters: [{$ref: "#/components/parameters/uuid"}]
     post:
       security: [{session: [], csrf: []}]
-      summary: Activate a saved connection (admin)
+      summary: Activate a saved connection
       responses:
         "202": {description: Activation started}
         "404": {$ref: "#/components/responses/Error"}
@@ -399,14 +404,14 @@ paths:
     parameters: [{$ref: "#/components/parameters/uuid"}]
     post:
       security: [{session: [], csrf: []}]
-      summary: Deactivate a connection (admin). Careful: this may be the connection the browser uses.
+      summary: Deactivate a connection. Careful: this may be the connection the browser uses.
       responses:
         "202": {description: Deactivated}
         "409": {$ref: "#/components/responses/Error"}
   /api/v1/network/wireless:
     put:
       security: [{session: [], csrf: []}]
-      summary: Turn Wi-Fi on or off (admin)
+      summary: Turn Wi-Fi on or off
       requestBody:
         required: true
         content:
@@ -432,7 +437,7 @@ paths:
       - {name: name, in: path, required: true, schema: {type: string, enum: [media, smb, discovery, cockpit]}}
     put:
       security: [{session: [], csrf: []}]
-      summary: Open or close one of our ports, now and after reboot (admin)
+      summary: Open or close one of our ports, now and after reboot
       requestBody:
         required: true
         content:
@@ -458,7 +463,7 @@ paths:
     parameters: [{$ref: "#/components/parameters/device"}]
     post:
       security: [{session: [], csrf: []}]
-      summary: Mount a data file system (admin; never the OS's own)
+      summary: Mount a data file system (never the OS's own)
       responses:
         "200":
           description: Mounted
@@ -475,7 +480,7 @@ paths:
     parameters: [{$ref: "#/components/parameters/device"}]
     post:
       security: [{session: [], csrf: []}]
-      summary: Unmount a data file system mounted under /var/srv, /srv, /run/media or /media (admin)
+      summary: Unmount a data file system mounted under /var/srv, /srv, /run/media or /media
       responses:
         "200": {description: Unmounted}
         "403": {$ref: "#/components/responses/Forbidden"}
@@ -497,7 +502,7 @@ paths:
       - {name: action, in: path, required: true, schema: {type: string, enum: [reboot, poweroff]}}
     post:
       security: [{session: [], csrf: []}]
-      summary: Reboot or power off, with confirmation (admin)
+      summary: Reboot or power off, with confirmation
       description: |
         Two steps. Without a body (or without `confirm`) the answer is 409
         `confirmation_required` with `confirm_token` (valid 60 s, one use,
@@ -540,20 +545,20 @@ paths:
   /api/v1/system/update/check:
     post:
       security: [{session: [], csrf: []}]
-      summary: Check for an update now (admin; POST /v1/update/check)
+      summary: Check for an update now (POST /v1/update/check)
       responses:
         "202": {description: Started}
         "409": {description: Another operation runs}
   /api/v1/system/update/download:
     post:
       security: [{session: [], csrf: []}]
-      summary: Download without applying (admin; POST /v1/update/download)
+      summary: Download without applying (POST /v1/update/download)
       responses:
         "202": {description: Started}
   /api/v1/system/update/apply:
     post:
       security: [{session: [], csrf: []}]
-      summary: 'Apply: {"when":"now"} reboots now, {"when":"maintenance"} in the window (admin)'
+      summary: 'Apply: {"when":"now"} reboots now, {"when":"maintenance"} in the window'
       requestBody:
         content:
           application/json:
@@ -565,13 +570,13 @@ paths:
         "202": {description: Started or scheduled}
     delete:
       security: [{session: [], csrf: []}]
-      summary: Cancel "apply in the window" (admin)
+      summary: Cancel "apply in the window"
       responses:
         "200": {description: Cancelled}
   /api/v1/system/update/rollback:
     post:
       security: [{session: [], csrf: []}]
-      summary: 'Roll back to the previous OS; {"reboot": true} reboots now (admin)'
+      summary: 'Roll back to the previous OS; {"reboot": true} reboots now'
       requestBody:
         content:
           application/json:
@@ -588,7 +593,7 @@ paths:
         "200": {description: OK}
     put:
       security: [{session: [], csrf: []}]
-      summary: Change update settings (admin)
+      summary: Change update settings
       requestBody:
         content:
           application/json:

@@ -167,30 +167,30 @@ func (s *Server) routes() {
 		_, _ = w.Write(openAPI)
 	})
 	m.HandleFunc("POST /api/v1/session", s.login)
-	m.HandleFunc("GET /api/v1/session", s.viewer(s.session))
-	m.HandleFunc("DELETE /api/v1/session", s.viewer(s.logout))
+	m.HandleFunc("GET /api/v1/session", s.admin(s.session))
+	m.HandleFunc("DELETE /api/v1/session", s.admin(s.logout))
 
-	m.HandleFunc("GET /api/v1/system", s.viewer(s.systemInfo))
+	m.HandleFunc("GET /api/v1/system", s.admin(s.systemInfo))
 
-	m.HandleFunc("GET /api/v1/services", s.viewer(s.listServices))
-	m.HandleFunc("GET /api/v1/services/{unit}", s.viewer(s.getService))
+	m.HandleFunc("GET /api/v1/services", s.admin(s.listServices))
+	m.HandleFunc("GET /api/v1/services/{unit}", s.admin(s.getService))
 	m.HandleFunc("POST /api/v1/services/{unit}/restart", s.admin(s.restartService))
 	m.HandleFunc("GET /api/v1/services/{unit}/journal", s.admin(s.journal))
 
-	m.HandleFunc("GET /api/v1/network", s.viewer(s.networkStatus))
-	m.HandleFunc("GET /api/v1/network/connections", s.viewer(s.connections))
+	m.HandleFunc("GET /api/v1/network", s.admin(s.networkStatus))
+	m.HandleFunc("GET /api/v1/network/connections", s.admin(s.connections))
 	m.HandleFunc("POST /api/v1/network/connections/{uuid}/up", s.admin(s.connectionUp))
 	m.HandleFunc("POST /api/v1/network/connections/{uuid}/down", s.admin(s.connectionDown))
 	m.HandleFunc("PUT /api/v1/network/wireless", s.admin(s.wireless))
 
-	m.HandleFunc("GET /api/v1/firewall", s.viewer(s.firewallStatus))
+	m.HandleFunc("GET /api/v1/firewall", s.admin(s.firewallStatus))
 	m.HandleFunc("PUT /api/v1/firewall/openings/{name}", s.admin(s.setOpening))
 
-	m.HandleFunc("GET /api/v1/disks", s.viewer(s.disks))
+	m.HandleFunc("GET /api/v1/disks", s.admin(s.disks))
 	m.HandleFunc("POST /api/v1/disks/{device}/mount", s.admin(s.mount))
 	m.HandleFunc("POST /api/v1/disks/{device}/unmount", s.admin(s.unmount))
 
-	m.HandleFunc("GET /api/v1/power", s.viewer(s.powerStatus))
+	m.HandleFunc("GET /api/v1/power", s.admin(s.powerStatus))
 	m.HandleFunc("POST /api/v1/power/{action}", s.admin(s.power))
 
 	m.HandleFunc("/api/v1/system/update", s.updates)
@@ -203,10 +203,10 @@ func (s *Server) routes() {
 	s.confirm = map[string]pendingPower{}
 }
 
-// viewer requires a session (any role); admin requires the admin role.
-// Both check CSRF on changing methods.
-func (s *Server) viewer(h handler) http.HandlerFunc { return s.authed(h, false) }
-func (s *Server) admin(h handler) http.HandlerFunc  { return s.authed(h, true) }
+// admin requires an administrator's session and checks CSRF on changing
+// methods. Only administrators get sessions; the role is checked again in
+// case the session store ever holds other roles.
+func (s *Server) admin(h handler) http.HandlerFunc { return s.authed(h, true) }
 
 func (s *Server) authed(h handler, needAdmin bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

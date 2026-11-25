@@ -42,6 +42,7 @@ var accounts = map[string]struct {
 }{
 	"anna":  {"correct horse", authhelper.Identity{User: "anna", UID: 1000, Groups: []string{"anna", "wheel"}}},
 	"boris": {"battery staple", authhelper.Identity{User: "boris", UID: 1001, Groups: []string{"boris", "alpha-users"}}},
+	"carla": {"tape measure", authhelper.Identity{User: "carla", UID: 1002, Groups: []string{"carla", "alpha-admin"}}},
 }
 
 func (v *fakeVerifier) count() int {
@@ -256,14 +257,6 @@ func (e *env) admin() *client {
 	return c
 }
 
-func (e *env) viewer() *client {
-	c := e.client()
-	if r := c.login("boris", "battery staple"); r.code != 200 {
-		e.t.Fatalf("viewer login: %d %s", r.code, r.raw)
-	}
-	return c
-}
-
 func want(t *testing.T, r resp, code int, errCode string) {
 	t.Helper()
 	if r.code != code {
@@ -298,7 +291,7 @@ func TestLoginAndSessionCookie(t *testing.T) {
 	if r.body["user"] != "anna" || r.body["csrf_token"] != c.csrf {
 		t.Fatalf("%s", r.raw)
 	}
-	if v := e.viewer(); v.csrf == c.csrf {
+	if v := e.admin(); v.csrf == c.csrf {
 		t.Fatal("CSRF tokens must differ per session")
 	}
 	if r.header.Get("Cache-Control") != "no-store" || r.header.Get("X-Frame-Options") != "DENY" {
@@ -344,7 +337,7 @@ func TestWrongPasswordAndLockout(t *testing.T) {
 		t.Fatalf("locked login: %v, helper calls %d→%d", r.header, calls, e.ver.count())
 	}
 	// Another account from the same address still works.
-	want(t, e.client().login("boris", "battery staple"), 200, "")
+	want(t, e.client().login("carla", "tape measure"), 200, "")
 	// Unknown users look exactly like wrong passwords.
 	r = e.client().login("ghost", "x")
 	want(t, r, 401, "invalid_credentials")
@@ -392,32 +385,43 @@ func TestCSRF(t *testing.T) {
 	}
 }
 
-func TestViewerRole(t *testing.T) {
+func TestNonAdminCannotLogIn(t *testing.T) {
 	e := newEnv(t)
-	v := e.viewer()
-	r := v.do("GET", "/api/v1/services", nil)
-	want(t, r, 200, "")
-	if n := len(r.body["services"].([]any)); n != len(system.OurUnits) {
-		t.Fatalf("%d services", n)
+	c := e.client()
+	r := c.login("boris", "battery staple")
+	want(t, r, 403, "not_admin")
+	if r.body["message"] != NotAdminMessage || NotAdminMessage != "Нет прав администратора" {
+		t.Fatalf("%s", r.raw)
 	}
-	for _, p := range []string{"/api/v1/network", "/api/v1/network/connections", "/api/v1/firewall", "/api/v1/disks", "/api/v1/power", "/api/v1/system", "/api/v1/system/update"} {
-		want(t, v.do("GET", p, nil), 200, "")
+	if strings.Contains(r.header.Get("Set-Cookie"), CookieName) || e.srv.Sessions.Len() != 0 {
+		t.Fatal("a non-admin got a session")
 	}
-	want(t, v.do("POST", "/api/v1/services/smb.service/restart", nil), 403, "forbidden")
-	want(t, v.do("GET", "/api/v1/services/smb.service/journal", nil), 403, "forbidden")
-	want(t, v.do("POST", "/api/v1/power/reboot", nil), 403, "forbidden")
-	want(t, v.do("PUT", "/api/v1/firewall/openings/cockpit", map[string]bool{"open": true}), 403, "forbidden")
-	want(t, v.do("POST", "/api/v1/disks/sda1/mount", nil), 403, "forbidden")
-	want(t, v.do("POST", "/api/v1/system/update/check", nil), 403, "forbidden")
-	want(t, v.do("PUT", "/api/v1/system/update/settings", map[string]string{"auto": "off"}), 403, "forbidden")
+	for _, p := range []string{"/api/v1/services", "/api/v1/disks", "/api/v1/system/update"} {
+		want(t, c.do("GET", p, nil), 401, "unauthorized")
+	}
+	// A right password is not a failure: no lockout after many tries.
+	for i := 0; i < 6; i++ {
+		want(t, e.client().login("boris", "battery staple"), 403, "not_admin")
+	}
 	if got := e.bus.Calls(); len(got) != 0 {
-		t.Fatalf("viewer reached D-Bus: %q", got)
+		t.Fatalf("non-admin reached D-Bus: %q", got)
 	}
-	for _, r := range e.updated.requests() {
-		if !strings.HasPrefix(r, "GET ") {
-			t.Fatalf("viewer changed updates: %q", r)
-		}
+	if got := e.updated.requests(); len(got) != 0 {
+		t.Fatalf("non-admin reached alpha-updated: %q", got)
 	}
+}
+
+// A session that is not an administrator's (none are created today) is
+// still refused everywhere.
+func TestNonAdminSessionRefused(t *testing.T) {
+	e := newEnv(t)
+	token, sess := e.srv.Sessions.Create("boris", 1001, auth.Role("guest"), "127.0.0.1")
+	c := e.client()
+	c.csrf = sess.CSRF
+	c.hc.Jar.SetCookies(mustURL(e.ts.URL), []*http.Cookie{{Name: CookieName, Value: token, Path: "/", Secure: true}})
+	want(t, c.do("GET", "/api/v1/services", nil), 403, "forbidden")
+	want(t, c.do("GET", "/api/v1/system/update", nil), 403, "forbidden")
+	want(t, c.do("POST", "/api/v1/services/smb.service/restart", nil), 403, "forbidden")
 }
 
 func TestLogout(t *testing.T) {
@@ -556,7 +560,7 @@ func TestUpdateProxy(t *testing.T) {
 
 func TestSystemInfo(t *testing.T) {
 	e := newEnv(t)
-	r := e.viewer().do("GET", "/api/v1/system", nil)
+	r := e.admin().do("GET", "/api/v1/system", nil)
 	want(t, r, 200, "")
 	b := r.body
 	if b["hostname"] != "kinolune" || b["os_version"] != "0.1.0" || b["uptime_seconds"] != float64(3600) ||

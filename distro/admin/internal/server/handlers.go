@@ -43,6 +43,10 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 
 // --- sessions ---
 
+// NotAdminMessage is shown to a user whose password is right but who is not
+// in an admin group (the UI shows it as is; DIST-014 may translate by code).
+const NotAdminMessage = "Нет прав администратора"
+
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -97,7 +101,14 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(CookieName); err == nil {
 		s.Sessions.Delete(c.Value)
 	}
-	role := auth.RoleFor(id.Groups, s.AdminGroups)
+	// The admin UI is for administrators only: a right password of an
+	// ordinary user gets a clear answer, not a session.
+	if !auth.IsAdmin(id.Groups, s.AdminGroups) {
+		s.log().Warn("login refused: not an administrator", "user", id.User, "addr", addr)
+		writeError(w, http.StatusForbidden, "not_admin", NotAdminMessage)
+		return
+	}
+	role := auth.RoleAdmin
 	token, sess := s.Sessions.Create(id.User, id.UID, role, addr)
 	http.SetCookie(w, &http.Cookie{
 		Name: CookieName, Value: token, Path: "/",
@@ -416,7 +427,7 @@ func (s *Server) updates(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	sess, ok := s.check(w, r, route.Admin)
+	sess, ok := s.check(w, r, true)
 	if !ok {
 		return
 	}
