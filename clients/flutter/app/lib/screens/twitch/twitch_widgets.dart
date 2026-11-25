@@ -125,7 +125,7 @@ class TwitchAccountAvatar extends StatelessWidget {
     required this.login,
     required this.name,
     required this.url,
-    this.size = 28,
+    this.size = 24,
   });
 
   final String login;
