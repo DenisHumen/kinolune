@@ -20,8 +20,16 @@ type Result<T> = std::result::Result<T, LibraryError>;
 pub struct CoreMatchSignals {
     /// `tmdb`, `anime_offline_database`, `anilist`.
     pub provider: String,
-    /// Title similarity, `0..=1`.
+    /// Title score with the year, remake and type adjustments, `0..=1`.
     pub title: f64,
+    /// Similarity of the titles alone, `0..=1` (META-036); `None` in
+    /// rows stored before it.
+    pub title_similarity: Option<f64>,
+    /// What the years, the remake rule and the type added to `title`
+    /// (META-036).
+    pub year_adjust: Option<f64>,
+    pub remake_adjust: Option<f64>,
+    pub kind_adjust: Option<f64>,
     /// `exact`, `loose`, `compact`, `base`, `fuzzy`.
     pub tier: String,
     /// The candidate's title that matched.
@@ -56,6 +64,10 @@ impl From<MatchSignals> for CoreMatchSignals {
         Self {
             provider: s.provider,
             title: s.title,
+            title_similarity: s.title_similarity,
+            year_adjust: s.year_adjust,
+            remake_adjust: s.remake_adjust,
+            kind_adjust: s.kind_adjust,
             tier: s.tier,
             matched_title: s.matched_title,
             file_year: year(s.file_year),

@@ -82,7 +82,7 @@ use pa_metadata::tmdb::{
 };
 use pa_recognition::parse::MediaHint;
 use pa_recognition::score::pair;
-use pa_recognition::title::{TitleIndex, TitleQuery, TitleRecord, WorkKind};
+use pa_recognition::title::{MatchTier, TitleIndex, TitleQuery, TitleRecord, WorkKind};
 use pa_scanner::CancelToken;
 use serde_json::json;
 
@@ -493,9 +493,24 @@ pub struct MatchSignals {
     /// `tmdb` (search), `anime_offline_database` (the local anime
     /// database), `anilist`.
     pub provider: String,
-    /// Title similarity of the title index (title tiers, year ±1, kind),
-    /// `0..=1`.
+    /// Score of the title index with the remake penalty and the marker
+    /// cap (title tiers, year, kind), `0..=1`: the sum of the parts below.
     pub title: f64,
+    /// Similarity of the titles alone, `0..=1` (META-036); absent in rows
+    /// stored before it, whose `title` then is all there is.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title_similarity: Option<f64>,
+    /// What the years added to `title` in the title index: +0.04 the same,
+    /// +0.02 one apart, −0.08 further apart (META-036).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub year_adjust: Option<f64>,
+    /// What the remake rule took from `title`: a movie of another year
+    /// (more than one apart) is another movie, ×0.8 (META-036).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remake_adjust: Option<f64>,
+    /// What the type (movie or series, anime) added to `title` (META-036).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind_adjust: Option<f64>,
     /// How the title matched (`exact`, `loose`, `compact`, `base`, `head`, `fuzzy`).
     pub tier: String,
     /// The candidate's title that matched.
@@ -975,6 +990,20 @@ struct Ranked {
     scores: Vec<f64>,
 }
 
+/// Largest gap between the file's year and the year of a movie with
+/// exactly its title that is still the same movie when no other work has
+/// that title (BUG-023): premiere against wide or local release.
+const YEAR_SLACK: u64 = 2;
+
+/// The title tier names the work's title itself: the same words up to
+/// punctuation, case, articles or spacing.
+fn same_title(tier: MatchTier) -> bool {
+    matches!(
+        tier,
+        MatchTier::Exact | MatchTier::Loose | MatchTier::Compact
+    )
+}
+
 /// Ranks `records` for `work`: title tiers, year ±1 and kind from the local
 /// title index, plus the META-014 pair features of the work's files against
 /// each record (duration against runtime, written episodes against the
@@ -993,17 +1022,30 @@ fn rank_all(work: &WorkQuery, records: &[TitleRecord]) -> Option<Ranked> {
         .map(|c| (c.record, index.record(c.record)))
         .collect();
     let relative = pair::relative(&evidence, &pairs);
-    // (candidate, title score, score with pair features)
+    // Records whose title is the work's title itself (not a head, a
+    // fuzzy or a partial match): more than one is a remake or a
+    // same-named work (BUG-023).
+    let same_titled = candidates.iter().filter(|c| same_title(c.tier)).count();
+    // (candidate, title score, score with pair features, remake penalty)
     let scored: Vec<_> = candidates
         .into_iter()
         .map(|c| {
             let mut score = f64::from(c.score);
-            // A movie of another year is another movie (remakes).
+            let mut remake = None;
+            // A movie of another year is another movie (remakes). The
+            // only work with exactly the file's title, a year or two off,
+            // is the same movie dated by another release (`Plan 9 from
+            // Outer Space (1959)`: premiere 1957, wide release 1959;
+            // BUG-023): the title index's year penalty is enough.
             let record = index.record(c.record);
             if work.kind == "movie"
                 && let (Some(a), Some(b)) = (work.year, record.year)
                 && a.abs_diff(i64::from(b)) > 1
+                && !(a.abs_diff(i64::from(b)) <= YEAR_SLACK
+                    && same_title(c.tier)
+                    && same_titled == 1)
             {
+                remake = Some(score * 0.8 - score);
                 score *= 0.8;
             }
             // `Fairy Tail OVA` is not the series `Fairy Tail` for sure
@@ -1013,17 +1055,17 @@ fn rank_all(work: &WorkQuery, records: &[TitleRecord]) -> Option<Ranked> {
                 score = score.min(MARKER_CAP);
             }
             let with_pair = score + f64::from(relative.get(&c.record).copied().unwrap_or(0.0));
-            (c, score, with_pair)
+            (c, score, with_pair, remake)
         })
         .collect();
     let mut best = 0;
-    for (i, (_, _, score)) in scored.iter().enumerate() {
+    for (i, (_, _, score, _)) in scored.iter().enumerate() {
         if *score > scored[best].2 {
             best = i;
         }
     }
-    let (candidate, title_score, mut score) = scored.get(best).cloned()?;
-    let tied = scored.iter().enumerate().any(|(i, (_, t, s))| {
+    let (candidate, title_score, mut score, _) = scored.get(best).cloned()?;
+    let tied = scored.iter().enumerate().any(|(i, (_, t, s, _))| {
         i != best && (*s >= score - TIE || (*t >= title_score - TIE && *s >= score - PAIR_TIE))
     });
     if tied {
@@ -1034,12 +1076,16 @@ fn rank_all(work: &WorkQuery, records: &[TitleRecord]) -> Option<Ranked> {
     let signals = order
         .iter()
         .map(|&i| {
-            let (c, title_score, _) = &scored[i];
+            let (c, title_score, _, remake) = &scored[i];
             let record = index.record(c.record);
             let f = pair::features(&evidence, record);
             MatchSignals {
                 provider: "tmdb".to_owned(),
                 title: round3(*title_score),
+                title_similarity: Some(round3(f64::from(c.similarity))),
+                year_adjust: Some(round3(f64::from(c.year_adjust))),
+                remake_adjust: remake.map(round3),
+                kind_adjust: Some(round3(f64::from(c.kind_adjust))),
                 tier: format!("{:?}", c.tier).to_lowercase(),
                 matched_title: record.titles.get(c.title).cloned(),
                 file_year: work.year,

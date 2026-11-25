@@ -17,6 +17,7 @@ import 'package:pa_player/pa_player.dart'
 
 import '../review/review_inbox_screen.dart';
 import '../branding.dart';
+import '../build_info.dart';
 import '../diagnostics/diagnostics.dart';
 import '../diagnostics/diagnostics_section.dart';
 import '../diagnostics/health_screen.dart' show openHealthScreen;
@@ -1722,7 +1723,7 @@ class _AboutSection extends StatelessWidget {
         SettingsTile(
           icon: Icons.info_outline,
           title: l.settingsAboutApp(kAppName),
-          subtitle: l.settingsAboutSubtitle(kAppVersion),
+          subtitle: l.settingsAboutSubtitle(kBuildVersion),
           onTap: () => _push(context, const AboutScreen()),
         ),
         // UI-004: the first-run setup, again.

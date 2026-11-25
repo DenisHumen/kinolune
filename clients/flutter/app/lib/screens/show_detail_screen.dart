@@ -296,13 +296,18 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     final inSeason = eps.inSeason(season);
 
     final regularSeasons = seasons.where((s) => s >= 1).length;
+    final runtime = eps.runtime;
     final meta = [
       if (show.year != null) '${show.year}',
       if (regularSeasons > 0 && eps.order != EpisodeOrder.absolute)
         l.showSeasonCount(regularSeasons),
       if (eps.episodes.isNotEmpty) l.showEpisodeCount(eps.episodes.length),
+      // UI-056: «всего 21 ч 40 мин · осталось 12 ч 5 мин».
+      formatShowRuntime(l, runtime.show),
       if (details.genres.isNotEmpty) details.genres.take(3).join(', '),
-    ].join('  ·  ');
+    ].where((s) => s.isNotEmpty).join('  ·  ');
+    // UI-056: «10 серий · 7 ч 10 мин · осталось 2 ч 30 мин» of the tab.
+    final seasonLine = formatSeasonRuntime(l, runtime.season(season));
     final badges = techBadges(_targetTech, null);
     // UI-049: watched marks need a library that can clear them.
     final canMark = canMarkEpisodes(context);
@@ -499,6 +504,24 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
                               : null,
                         ),
                     ],
+                  ),
+                ),
+              ),
+            ),
+          if (seasons.isNotEmpty && seasonLine.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: d.pageInsets.left,
+                  right: d.pageInsets.right,
+                  top: d.isTv ? 10 : 12,
+                ),
+                child: Text(
+                  seasonLine,
+                  key: const ValueKey('show-runtime-season'),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontSize: d.type.caption + 1,
+                    color: KColors.textSecondary,
                   ),
                 ),
               ),
