@@ -1,0 +1,45 @@
+==> Booting kinolune-os-0.0.1-tui.1-x86_64.iso (UEFI, 4 vCPU, 4096 MiB), serial on 127.0.0.1:22611
+==> OK GRUB menu shows 'Install Kinolune OS'
+==> OK live system booted to the full-screen installer
+==> OK language list
+==> OK TUI disk screen (English)
+==> OK TUI offers the empty NVMe
+==> OK TUI explains why the ISO drive is not offered
+==> OK TUI exit dialog
+==> OK text menu (English, language taken from the TUI)
+==> OK disk list printed
+==> OK back in the menu
+==> OK os-release read in the live shell
+==> OK podman images listed
+==> OK disks listed
+==> OK tty1 owner read
+==> OK shell commands finished
+==> OK installer dry run finished
+==> OK TUI started from the shell
+==> OK TUI: disk
+==> OK TUI: layout
+==> OK TUI: host name
+==> OK TUI: user
+==> OK TUI: network
+==> OK TUI: summary asks for the disk name
+==> OK TUI: a wrong disk name is refused
+==> OK TUI: dry run through the installer finished
+==> OK TUI exited
+==> live system: Kinolune OS|Installer; payload: ghcr.io/denishumen/alpha-os:stable
+==> OK TUI install: started
+==> OK TUI install: disk
+==> OK TUI install: layout
+==> OK TUI install: host name (data partition, 20 GiB system)
+==> OK TUI install: user
+==> OK TUI install: network
+==> OK TUI install: summary
+==> OK TUI install: progress screen
+==> OK TUI install: success screen
+==> OK TUI install: save screen
+==> OK TUI install: answer file saved
+==> OK TUI install: exited
+==> OK saved answer file checked
+==> Booting the installed NVMe alone (same OVMF NVRAM)
+==> OK installed system booted to 'kinolune-iso login:' (Kinolune OS)
+==> ISO INSTALL TEST PASSED (serial: distro/.work/iso/serial-installed.log)
+==> ISO BOOT SMOKE TEST PASSED (serial transcript: distro/.work/iso/serial.log)
