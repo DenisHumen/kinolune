@@ -70,6 +70,8 @@ func TestRejects(t *testing.T) {
 		"small root":      {`{"version":1,"disk":{"path":"/dev/sda","data_partition":true,"root_size_gib":8},"user":{"name":"admin","password":"x"}}`, "at least 16 GiB"},
 		"bad hostname":    {`{` + base + `,"hostname":"My_NAS"}`, "not a valid host name"},
 		"reserved user":   {`{"version":1,"disk":{"path":"/dev/sda"},"user":{"name":"root","password":"x"}}`, "reserved"},
+		"sysusers admin":  {`{"version":1,"disk":{"path":"/dev/sda"},"user":{"name":"alpha-admin","password":"x"}}`, "reserved"},
+		"sysusers group":  {`{"version":1,"disk":{"path":"/dev/sda"},"user":{"name":"kinolune","password":"x"}}`, "reserved"},
 		"bad user":        {`{"version":1,"disk":{"path":"/dev/sda"},"user":{"name":"Denis","password":"x"}}`, "user.name"},
 		"no password":     {`{"version":1,"disk":{"path":"/dev/sda"},"user":{"name":"admin"}}`, "password or password_hash is required"},
 		"both passwords":  {`{"version":1,"disk":{"path":"/dev/sda"},"user":{"name":"admin","password":"x","password_hash":"` + hash + `"}}`, "not both"},
