@@ -1,15 +1,15 @@
-iso: kinolune-os-0.0.1-iso.1-x86_64.iso
-size_bytes: 1355087872
+iso: kinolune-os-0.0.1-iso.2-x86_64.iso
+size_bytes: 1355083776
 size_mib: 1292
 limit_bytes: 2040109465
 payload: ghcr.io/denishumen/alpha-os:stable
-installer: localhost/kinolune-installer:0.0.1-iso.1
-payload_digest: sha256:02c72f19957c11d501954245a9c92efde80af54ef6fccab912848785a052e71c
+installer: localhost/kinolune-installer:0.0.1-iso.2
+payload_digest: sha256:5bf7f5fe9d72fc9ede9ec47eeb212b9b414da596d6760198f0d9e9277d239d47
 payload_unpacked_bytes: 2155912776
 installer_unpacked_bytes: 2210701339
-LiveOS: total 1154876
-LiveOS: -rw-r--r-- 1 root root 1182593024 Nov 25 09:29 squashfs.img
-squashfs: Filesystem size 1182589278 bytes (1154872.34 Kbytes / 1127.81 Mbytes)
+LiveOS: total 1154872
+LiveOS: -rw-r--r-- 1 root root 1182588928 Nov 25 09:40 squashfs.img
+squashfs: Filesystem size 1182586426 bytes (1154869.56 Kbytes / 1127.80 Mbytes)
 squashfs: Compression zstd
 squashfs: Block size 131072
 squashfs: Duplicates are removed
