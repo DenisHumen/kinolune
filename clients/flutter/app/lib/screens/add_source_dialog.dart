@@ -21,6 +21,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../errors/error_view.dart';
 import '../errors/friendly_errors.dart';
 import '../integration/library.dart';
+import '../platform/local_path.dart';
 import '../l10n/l10n.dart';
 import '../services/app_services.dart';
 import '../sources/discovery.dart';
@@ -619,15 +620,8 @@ class _SourceFormState extends State<SourceForm> {
     return host != null && host.isNotEmpty && host == found ? name : null;
   }
 
-  /// `file:///a/b` (how the core stores folders) as a path.
-  static String _localPath(String address) {
-    if (!address.startsWith('file://')) return address;
-    try {
-      return Uri.parse(address).toFilePath();
-    } on UnsupportedError {
-      return address;
-    }
-  }
+  /// `file:///a/b` (how the core stores folders) as a native path.
+  static String _localPath(String address) => displayLocalPath(address);
 
   @override
   void dispose() {

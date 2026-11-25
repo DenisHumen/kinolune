@@ -12,6 +12,33 @@
 # Bump it deliberately (one PR per bump) and re-run the VM checks in distro/README.md.
 ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:d440aea898005f376bbf0bbe06c216abdba68dcdb6dfa5cb0fa246cd03fa8d8a
 
+# Our Go daemons are built with the Go toolchain of the same pinned Fedora base
+# (no second base image to pin); only the static binaries reach the OS image.
+# alpha-updated has no third-party modules, so the build needs no module proxy.
+FROM ${BASE_IMAGE} AS go-build
+# hadolint ignore=DL3041
+RUN dnf -y install --setopt=install_weak_deps=False golang && dnf clean all
+COPY updated/ /src/updated/
+# In bootc images /root is a symlink into /var (empty at build time), so the
+# default ~/.cache/go-build cannot be created: keep Go's cache and GOPATH in /tmp.
+ENV GOCACHE=/tmp/go-cache GOPATH=/tmp/go
+RUN cd /src/updated && \
+    CGO_ENABLED=0 GOTOOLCHAIN=local GOFLAGS=-trimpath \
+    go build -ldflags=-s -o /out/alpha-updated ./cmd/alpha-updated
+
+# Admin backend (DIST-013), built with the Go toolchain of the same pinned
+# Fedora base; only the binaries reach the OS image. alpha-admin is static;
+# alpha-admin-auth links libpam (cgo), which the base image has. Go modules
+# (godbus, msteinert/pam) come from the module proxy, checked against go.sum.
+FROM ${BASE_IMAGE} AS admin-build
+# hadolint ignore=DL3041
+RUN dnf -y install --setopt=install_weak_deps=False golang gcc pam-devel && dnf clean all
+COPY admin/ /src/admin/
+RUN cd /src/admin && \
+    export GOTOOLCHAIN=local GOFLAGS="-trimpath -mod=readonly" GOCACHE=/tmp/gocache GOPATH=/tmp/gopath && \
+    CGO_ENABLED=0 go build -ldflags=-s -o /out/alpha-admin ./cmd/alpha-admin && \
+    CGO_ENABLED=1 go build -tags pam -ldflags=-s -o /out/alpha-admin-auth ./cmd/alpha-admin-auth
+
 FROM ${BASE_IMAGE}
 
 COPY packages.txt /usr/share/alpha/packages.txt
@@ -24,6 +51,10 @@ RUN set -eux; \
     rm -rf /var/cache/dnf /var/lib/dnf /var/log/dnf* /var/log/hawkey.log
 
 COPY rootfs/ /
+# Update agent (DIST-009), see distro/updated/README.md.
+COPY --from=go-build /out/alpha-updated /usr/libexec/alpha/alpha-updated
+# Admin backend (DIST-013), see distro/admin/README.md.
+COPY --from=admin-build /out/alpha-admin /out/alpha-admin-auth /usr/libexec/alpha/
 # Public cosign key of the project (distro/keys/alpha-os.pub, committed by the owner).
 COPY keys/ /usr/share/alpha/keys/
 
@@ -52,14 +83,17 @@ RUN set -eux; \
         off) echo "WARNING: signature policy is off, this image accepts unsigned updates" ;; \
         *) echo "unknown ALPHA_SIGNATURE_POLICY=${policy}"; exit 1 ;; \
     esac; \
+    # Kinolune OS name, os-release, issue, motd (DIST-003, see the script).
+    /usr/libexec/alpha/alpha-branding "${ALPHA_OS_VERSION}"; \
     printf 'ALPHA_OS_VERSION=%s\nALPHA_IMAGE_REPO=%s\nALPHA_SIGNATURE_POLICY=%s\n' \
         "${ALPHA_OS_VERSION}" "${ALPHA_IMAGE_REPO}" "${policy}" > /usr/share/alpha/version; \
-    # Updates are driven by our own agent (alpha-updated), never by the stock timer
-    # that applies an update and reboots on its own (05 §4.2 p.1).
-    systemctl mask bootc-fetch-apply-updates.timer; \
+    # Updates are driven by our own agent (alpha-updated, DIST-009), never by the
+    # stock timer that applies an update and reboots on its own (05 §4.2 p.1).
+    # Masked (not just disabled) so a preset or a dependency cannot bring it back.
+    systemctl mask bootc-fetch-apply-updates.timer bootc-fetch-apply-updates.service; \
     # Enable/disable services according to rootfs/usr/lib/systemd/system-preset/.
     # Cockpit is shipped but off; the admin UI turns it on for LAN only (05 §5.1).
-    systemctl preset alpha-media.service alpha-admin.service alpha-updated.service \
+    systemctl preset alpha-media.service alpha-admin.service alpha-admin-auth.socket alpha-updated.service alpha-updated.socket \
         smb.service wsdd.service avahi-daemon.service firewalld.service smartd.service \
         chronyd.service sshd.service cockpit.socket; \
     # Firewall: default zone "home", only the services we need (05 §5.2).
@@ -73,8 +107,8 @@ RUN set -eux; \
     rm -rf /run/dnf /run/cockpit /run/selinux-policy /var/log/* /var/cache/* /var/tmp/* /tmp/*; \
     bootc container lint
 
-LABEL org.opencontainers.image.title="alpha-os" \
-      org.opencontainers.image.description="NAS OS prototype for project_alpha (image-based, bootc)" \
+LABEL org.opencontainers.image.title="Kinolune OS" \
+      org.opencontainers.image.description="Kinolune OS: NAS OS of the Kinolune project, based on Fedora Linux (image-based, bootc)" \
       org.opencontainers.image.licenses="MPL-2.0" \
       org.opencontainers.image.source="https://github.com/DenisHumen/kinolune" \
       org.opencontainers.image.version="${ALPHA_OS_VERSION}" \

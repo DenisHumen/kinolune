@@ -116,7 +116,7 @@ flowchart TB
 
   subgraph Distro["distro/ — NAS-ОС (bootc)"]
     Inst["alpha-installer (Go)"]
-    Adm["alpha-admin (Go + web)"]
+    Adm["alpha-admin (Go + web): REST поверх D-Bus, PAM, TLS"]
     Upd["alpha-updated (Go)"]
     Media["alpha-media = медиасервер"]
   end

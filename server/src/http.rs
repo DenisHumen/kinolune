@@ -4,27 +4,35 @@
 //! Every route is registered from the `#[utoipa::path]` of its handler
 //! ([`api_router`]), so the OpenAPI document ([`crate::api`]) cannot miss a
 //! route or describe one that does not exist (SRV-002).
+//!
+//! Every `/api/` request with an `Authorization: Bearer` header has its
+//! access token checked first ([`authenticate`], SRV-003): an invalid,
+//! expired or revoked one gets 401; a valid one becomes the
+//! [`Principal`] of the request.
 
 use std::time::Instant;
 
 use std::net::SocketAddr;
 
-use axum::Router;
 use axum::extract::connect_info::Connected;
 use axum::extract::ws::WebSocketUpgrade;
 use axum::extract::{ConnectInfo, FromRef, Path, Query, Request, State};
-use axum::http::StatusCode;
+use axum::http::{StatusCode, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Json, Response};
 use axum::serve::IncomingStream;
+use axum::{Extension, Router};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use crate::auth::api as auth_api;
+use crate::auth::{Auth, AuthError, Principal};
 use crate::tls::TlsListener;
 
+use crate::activity::Activity;
 use crate::api::{
     ApiDoc, ApiError, ApiVersion, DbHealth, DeviceInfo, Devices, Health, InviteResponse, Status,
 };
@@ -43,6 +51,12 @@ impl Connected<IncomingStream<'_, TcpListener>> for PeerAddr {
     }
 }
 
+impl Connected<IncomingStream<'_, crate::net::FilteredListener>> for PeerAddr {
+    fn connect_info(stream: IncomingStream<'_, crate::net::FilteredListener>) -> Self {
+        Self(*stream.remote_addr())
+    }
+}
+
 impl Connected<IncomingStream<'_, TlsListener>> for PeerAddr {
     fn connect_info(stream: IncomingStream<'_, TlsListener>) -> Self {
         Self(*stream.remote_addr())
@@ -53,6 +67,20 @@ impl Connected<IncomingStream<'_, TlsListener>> for PeerAddr {
 pub(crate) struct AppState {
     library: Library,
     hub: Hub,
+    activity: Activity,
+    auth: Auth,
+}
+
+impl FromRef<AppState> for Activity {
+    fn from_ref(state: &AppState) -> Self {
+        state.activity.clone()
+    }
+}
+
+impl FromRef<AppState> for Auth {
+    fn from_ref(state: &AppState) -> Self {
+        state.auth.clone()
+    }
 }
 
 impl FromRef<AppState> for Library {
@@ -83,13 +111,79 @@ pub(crate) fn api_router() -> OpenApiRouter<AppState> {
         .routes(routes!(invite))
         .routes(routes!(devices))
         .routes(routes!(revoke))
+        .routes(routes!(crate::activity::system_activity))
+        .routes(routes!(auth_api::setup))
+        .routes(routes!(auth_api::login))
+        .routes(routes!(auth_api::login_pin))
+        .routes(routes!(auth_api::challenge))
+        .routes(routes!(auth_api::login_device))
+        .routes(routes!(auth_api::refresh))
+        .routes(routes!(auth_api::logout))
+        .routes(routes!(auth_api::me))
+        .routes(routes!(auth_api::profiles))
+        .routes(routes!(auth_api::list_users, auth_api::create_user))
+        .routes(routes!(auth_api::update_user, auth_api::delete_user))
 }
 
-pub(crate) fn router(library: Library, hub: Hub) -> Router {
+pub(crate) fn router(library: Library, hub: Hub, activity: Activity, auth: Auth) -> Router {
     let (router, _spec) = api_router().split_for_parts();
     router
-        .with_state(AppState { library, hub })
+        .with_state(AppState {
+            library,
+            hub,
+            activity,
+            auth: auth.clone(),
+        })
+        .layer(middleware::from_fn_with_state(auth, authenticate))
         .layer(middleware::from_fn(log_request))
+}
+
+/// What a LAN peer may reach before the first administrator exists: the
+/// trust of the local machine never extends to the network.
+fn open_before_setup(path: &str) -> bool {
+    matches!(path, "/health" | "/healthz" | "/api/v1/auth/setup")
+}
+
+/// Checks the access token of `/api/` requests that carry one. Requests
+/// without a token pass: each handler decides what it needs. Before the
+/// first administrator exists, peers other than the machine itself reach
+/// only [`open_before_setup`] paths (setup needs the one-time code).
+async fn authenticate(State(auth): State<Auth>, mut request: Request, next: Next) -> Response {
+    let path = request.uri().path();
+    if !auth.has_admin() && !open_before_setup(path) {
+        let local = request
+            .extensions()
+            .get::<ConnectInfo<PeerAddr>>()
+            .is_some_and(|ConnectInfo(PeerAddr(peer))| crate::net::is_local(peer.ip()));
+        if !local {
+            return AuthError::Forbidden(
+                "the server is not set up yet: create the administrator first",
+            )
+            .into_response();
+        }
+    }
+    let checked = path.starts_with("/api/")
+        && path != auth_api::REFRESH_PATH
+        && path != auth_api::LOGOUT_PATH;
+    if checked && let Some(value) = request.headers().get(header::AUTHORIZATION) {
+        let token = value
+            .to_str()
+            .ok()
+            .and_then(|v| v.split_once(' '))
+            .filter(|(scheme, _)| scheme.eq_ignore_ascii_case("bearer"))
+            .map(|(_, token)| token.trim().to_owned());
+        let Some(token) = token else {
+            return AuthError::Unauthorized("expected `Authorization: Bearer <token>`")
+                .into_response();
+        };
+        match auth.authenticate(token).await {
+            Ok(principal) => {
+                request.extensions_mut().insert(principal);
+            }
+            Err(e) => return e.into_response(),
+        }
+    }
+    next.run(request).await
 }
 
 /// A JSON error response ([`ApiError`]).
@@ -97,17 +191,17 @@ fn error(status: StatusCode, message: impl Into<String>) -> Response {
     (status, Json(ApiError::new(message))).into_response()
 }
 
-/// Administration of the family is allowed from this machine only, until
-/// user accounts exist (SRV-003). Returns the refusal for other peers.
-fn local_only(peer: SocketAddr) -> Option<Response> {
-    if peer.ip().is_loopback() {
-        None
-    } else {
-        Some(error(
-            StatusCode::FORBIDDEN,
-            "allowed from the server itself only",
-        ))
-    }
+/// Administration of the family: an administrator's password session, or
+/// the server itself (loopback) before the first administrator exists
+/// (SRV-003). Returns the refusal.
+fn admin_only(
+    auth: &Auth,
+    who: Option<&Extension<Principal>>,
+    peer: SocketAddr,
+) -> Option<Response> {
+    auth.require_admin(who.map(|Extension(p)| p), peer.ip())
+        .err()
+        .map(IntoResponse::into_response)
 }
 
 /// Kind of pairing code.
@@ -133,27 +227,32 @@ struct InviteQuery {
 
 /// Opens a pairing invitation.
 ///
-/// A new code and its QR payload, replacing an open invitation. Allowed
-/// from the server itself only (loopback) until user accounts exist.
+/// A new code and its QR payload, replacing an open invitation. For an
+/// administrator (or the server itself before the first administrator
+/// exists).
 #[utoipa::path(
     post,
     path = "/api/v1/pair/invite",
     tag = "pairing",
     operation_id = "createInvite",
     params(InviteQuery),
+    security((), ("bearer" = [])),
     responses(
         (status = 200, description = "A new invitation", body = InviteResponse),
         (status = 400, description = "Invalid query"),
-        (status = 403, description = "Not from the server itself", body = ApiError),
+        (status = 401, description = "Sign-in required", body = ApiError),
+        (status = 403, description = "Not an administrator", body = ApiError),
         (status = 500, description = "The invitation could not be made", body = ApiError),
     )
 )]
 async fn invite(
     ConnectInfo(PeerAddr(peer)): ConnectInfo<PeerAddr>,
     State(pairing): State<Pairing>,
+    State(auth): State<Auth>,
+    who: Option<Extension<Principal>>,
     Query(query): Query<InviteQuery>,
 ) -> Response {
-    if let Some(denied) = local_only(peer) {
+    if let Some(denied) = admin_only(&auth, who.as_ref(), peer) {
         return denied;
     }
     match pairing.invite(query.kind == Some(InviteKind::Qr)) {
@@ -173,22 +272,27 @@ async fn invite(
 
 /// Lists the devices of the family, revoked ones too.
 ///
-/// Allowed from the server itself only (loopback) until user accounts exist.
+/// For an administrator (or the server itself before the first
+/// administrator exists).
 #[utoipa::path(
     get,
     path = "/api/v1/devices",
     tag = "pairing",
     operation_id = "listDevices",
+    security((), ("bearer" = [])),
     responses(
         (status = 200, description = "The family", body = Devices),
-        (status = 403, description = "Not from the server itself", body = ApiError),
+        (status = 401, description = "Sign-in required", body = ApiError),
+        (status = 403, description = "Not an administrator", body = ApiError),
     )
 )]
 async fn devices(
     ConnectInfo(PeerAddr(peer)): ConnectInfo<PeerAddr>,
     State(pairing): State<Pairing>,
+    State(auth): State<Auth>,
+    who: Option<Extension<Principal>>,
 ) -> Response {
-    if let Some(denied) = local_only(peer) {
+    if let Some(denied) = admin_only(&auth, who.as_ref(), peer) {
         return denied;
     }
     Json(Devices {
@@ -204,17 +308,21 @@ async fn devices(
 
 /// Revokes a device and rotates the family key.
 ///
-/// Allowed from the server itself only (loopback) until user accounts exist.
+/// Its connections close and every session bound to it ends (its tokens stop
+/// working at once). For an administrator (or the server itself before the
+/// first administrator exists).
 #[utoipa::path(
     delete,
     path = "/api/v1/devices/{id}",
     tag = "pairing",
     operation_id = "revokeDevice",
     params(("id" = String, Path, description = "Device id")),
+    security((), ("bearer" = [])),
     responses(
         (status = 204, description = "Revoked"),
         (status = 400, description = "The device cannot be revoked", body = ApiError),
-        (status = 403, description = "Not from the server itself", body = ApiError),
+        (status = 401, description = "Sign-in required", body = ApiError),
+        (status = 403, description = "Not an administrator", body = ApiError),
         (status = 404, description = "No such device", body = ApiError),
         (status = 410, description = "Already revoked", body = ApiError),
     )
@@ -222,16 +330,22 @@ async fn devices(
 async fn revoke(
     ConnectInfo(PeerAddr(peer)): ConnectInfo<PeerAddr>,
     State(pairing): State<Pairing>,
+    State(auth): State<Auth>,
+    who: Option<Extension<Principal>>,
     Path(id): Path<String>,
 ) -> Response {
-    if let Some(denied) = local_only(peer) {
+    if let Some(denied) = admin_only(&auth, who.as_ref(), peer) {
         return denied;
     }
-    let result = tokio::task::spawn_blocking(move || pairing.revoke(&id))
+    let device = id.clone();
+    let result = tokio::task::spawn_blocking(move || pairing.revoke(&device))
         .await
         .unwrap_or_else(|e| std::panic::resume_unwind(e.into_panic()));
     match result {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Ok(()) => {
+            auth.revoke_device(id).await;
+            StatusCode::NO_CONTENT.into_response()
+        }
         Err(pa_pairing::Error::Unknown(_)) => error(StatusCode::NOT_FOUND, "no such device"),
         Err(pa_pairing::Error::Revoked(_)) => error(StatusCode::GONE, "already revoked"),
         Err(e) => error(StatusCode::BAD_REQUEST, e.to_string()),
@@ -250,6 +364,8 @@ async fn revoke(
     responses(
         (status = 101, description = "WebSocket: pairing messages follow"),
         (status = 400, description = "Not a WebSocket upgrade"),
+        (status = 401, description = "Invalid access token", body = ApiError),
+        (status = 403, description = "From the network before the first administrator exists", body = ApiError),
     )
 )]
 async fn pair_socket(State(pairing): State<Pairing>, upgrade: WebSocketUpgrade) -> Response {
@@ -271,6 +387,8 @@ async fn pair_socket(State(pairing): State<Pairing>, upgrade: WebSocketUpgrade) 
     responses(
         (status = 101, description = "WebSocket: sync protocol frames follow"),
         (status = 400, description = "Not a WebSocket upgrade"),
+        (status = 401, description = "Invalid access token", body = ApiError),
+        (status = 403, description = "From the network before the first administrator exists", body = ApiError),
         (status = 503, description = "The hub has no free connection slot", body = ApiError),
     )
 )]
@@ -363,4 +481,122 @@ async fn log_request(request: Request, next: Next) -> Response {
         "request"
     );
     response
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use tower::ServiceExt as _;
+
+    async fn call(
+        app: &Router,
+        method: &str,
+        path: &str,
+        peer: &str,
+        body: Option<String>,
+    ) -> StatusCode {
+        let body = body.map_or_else(Body::empty, Body::from);
+        let mut request = Request::builder()
+            .method(method)
+            .uri(path)
+            .body(body)
+            .unwrap();
+        request
+            .extensions_mut()
+            .insert(ConnectInfo(PeerAddr(peer.parse().unwrap())));
+        app.clone().oneshot(request).await.unwrap().status()
+    }
+
+    /// The local-machine trust before the first administrator is loopback
+    /// only: a LAN peer reaches /health and the setup with the one-time code.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn lan_peers_get_no_local_trust_before_setup() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config = crate::Config {
+            listen: "127.0.0.1:0".parse().unwrap(),
+            tls: crate::config::TlsConfig {
+                enabled: false,
+                ..Default::default()
+            },
+            ..crate::Config::default()
+        };
+        let server = crate::Server::bind(&config, tmp.path()).await.unwrap();
+        let app = router(
+            server.library().clone(),
+            server.hub().clone(),
+            server.activity().clone(),
+            server.auth().clone(),
+        );
+        const LOCAL: &str = "127.0.0.1:40000";
+        const MAPPED: &str = "[::ffff:127.0.0.1]:40000";
+        const LAN: &str = "192.168.1.5:40000";
+        const LAN6: &str = "[fe80::1]:40000";
+
+        assert_eq!(
+            call(&app, "GET", "/api/v1/users", LOCAL, None).await,
+            StatusCode::OK
+        );
+        assert_eq!(
+            call(&app, "GET", "/api/v1/users", MAPPED, None).await,
+            StatusCode::OK
+        );
+        for peer in [LAN, LAN6] {
+            assert_eq!(
+                call(&app, "GET", "/health", peer, None).await,
+                StatusCode::OK
+            );
+            for (method, path) in [
+                ("GET", "/api/v1/users"),
+                ("GET", "/api/v1/devices"),
+                ("POST", "/api/v1/pair/invite"),
+                ("GET", "/api/v1/pair"),
+                ("GET", "/api/v1/sync"),
+                ("POST", "/api/v1/auth/challenge"),
+            ] {
+                assert_eq!(
+                    call(&app, method, path, peer, None).await,
+                    StatusCode::FORBIDDEN,
+                    "{method} {path} from {peer}"
+                );
+            }
+        }
+        // Setup from the LAN needs the one-time code.
+        let setup = |code: Option<&str>| {
+            let mut body =
+                serde_json::json!({"name": "Admin", "password": "correct horse battery"});
+            if let Some(code) = code {
+                body["setup_code"] = code.into();
+            }
+            Some(body.to_string())
+        };
+        let path = "/api/v1/auth/setup";
+        assert_eq!(
+            call(&app, "POST", path, LAN, setup(None)).await,
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(
+            call(&app, "POST", path, LAN, setup(Some("AAAA-AAAA-AAAA-AAAA"))).await,
+            StatusCode::FORBIDDEN
+        );
+        let code = std::fs::read_to_string(tmp.path().join(crate::auth::SETUP_CODE_FILE)).unwrap();
+        let code = code.trim().to_lowercase();
+        assert_eq!(
+            call(&app, "POST", path, LAN, setup(Some(&code))).await,
+            StatusCode::CREATED
+        );
+        // Set up: the network gets ordinary sign-in, the machine no free pass.
+        assert_eq!(
+            call(&app, "GET", "/api/v1/users", LAN, None).await,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            call(&app, "GET", "/api/v1/users", LOCAL, None).await,
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            call(&app, "POST", "/api/v1/auth/challenge", LAN, None).await,
+            StatusCode::OK
+        );
+    }
 }

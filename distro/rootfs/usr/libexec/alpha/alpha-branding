@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MPL-2.0
+# Kinolune OS branding (DIST-003), run once at image build time:
+#   /usr/libexec/alpha/alpha-branding VERSION
+#
+# Fedora trademark guidelines: a modified build must not be called "Fedora" and must not
+# use Fedora logos. So every user-visible place names Kinolune OS; the only mention of
+# Fedora is the factual attribution "based on Fedora Linux". Technical identifiers stay:
+#   ID_LIKE=fedora and VERSION_ID=<Fedora release> - dnf, bootc, image builders and
+#     scripts detect the family and the release by them;
+#   /etc/fedora-release and /etc/redhat-release -> fedora-release - tools that probe the
+#     distribution family by file name (python "distro", ansible facts, vendor installers);
+#   package names, repo files and keys under /etc/yum.repos.d and /etc/pki.
+# distro/tests/branding.sh checks the result in the built image.
+set -euo pipefail
+
+VERSION="${1:?version required}"
+NAME="Kinolune OS"
+URL="https://github.com/DenisHumen/kinolune"
+# VERSION_ID of the base: dnf and bootc-image-builder need the Fedora release here.
+BASE_VERSION_ID="$(. /usr/lib/os-release && echo "${VERSION_ID}")"
+[[ -n "${BASE_VERSION_ID}" ]] || { echo "base os-release has no VERSION_ID" >&2; exit 1; }
+case "${VERSION}" in
+    *-*) RELEASE_TYPE=development ;;
+    *) RELEASE_TYPE=stable ;;
+esac
+
+# os-release(5). Accent colour lune.400 #49D1D8 (design/brand/README.md).
+cat > /usr/lib/os-release <<EOF
+# ${NAME}: NAS OS of the Kinolune project, based on Fedora Linux ${BASE_VERSION_ID}.
+# VERSION_ID is the release of the base (dnf, bootc and image builders read it),
+# the version of ${NAME} itself is VERSION / IMAGE_VERSION.
+NAME="${NAME}"
+VERSION="${VERSION}"
+ID=kinolune-os
+ID_LIKE=fedora
+VERSION_ID=${BASE_VERSION_ID}
+VERSION_CODENAME=""
+PRETTY_NAME="${NAME} ${VERSION}"
+RELEASE_TYPE=${RELEASE_TYPE}
+VARIANT="NAS"
+VARIANT_ID=nas
+IMAGE_ID=kinolune-os
+IMAGE_VERSION="${VERSION}"
+ANSI_COLOR="0;38;2;73;209;216"
+LOGO=kinolune-logo-icon
+DEFAULT_HOSTNAME="kinolune"
+HOME_URL="${URL}"
+DOCUMENTATION_URL="${URL}/tree/main/distro"
+SUPPORT_URL="${URL}/discussions"
+BUG_REPORT_URL="${URL}/issues"
+EOF
+
+# system-release(5)-style one-liner; /etc/system-release points here, while
+# /etc/fedora-release and /etc/redhat-release keep pointing to the base file.
+printf '%s release %s\n' "${NAME}" "${VERSION}" > /usr/lib/kinolune-release
+ln -sfn ../usr/lib/kinolune-release /etc/system-release
+# The rpm macro file of fedora-release-common keeps %fedora / %dist: build tooling.
+
+# Console login banner (agetty expands \S to PRETTY_NAME in ANSI_COLOR) and the
+# network one (no escapes there).
+cat > /usr/lib/issue <<'EOF'
+\S
+Kernel \r on \m (\l)
+
+EOF
+printf '%s %s\n' "${NAME}" "${VERSION}" > /usr/lib/issue.net
+
+# The "based on Fedora Linux" attribution lives in the motd shown after login.
+mkdir -p /usr/lib/motd.d
+cat > /usr/lib/motd.d/10-kinolune-os <<EOF
+
+  ${NAME} ${VERSION} - based on Fedora Linux ${BASE_VERSION_ID}
+  Docs: ${URL}/tree/main/distro
+
+EOF
+
+# Logos: the base has no fedora-logos; if a package ever pulls it in, the build
+# must swap it (dnf swap fedora-logos generic-logos) - distro/tests/branding.sh fails.
+if rpm -q fedora-logos >/dev/null 2>&1; then
+    echo "fedora-logos is installed: add 'dnf swap fedora-logos generic-logos' to the package step" >&2
+    exit 1
+fi
