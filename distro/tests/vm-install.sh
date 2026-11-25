@@ -199,7 +199,7 @@ vm_start installed \
 wait_ssh
 vm systemctl is-system-running --wait >/dev/null || true
 
-status="$(vm bootc status --format=json)"
+status="$(vm bootc status --format=json | tee "${W}/status-installed.json")"
 img="$(python3 -c 'import json,sys; i=json.load(sys.stdin)["status"]["booted"]["image"]["image"]; print(i["transport"], i["image"])' <<< "${status}")"
 check "booted image tracks the registry (${img})" test "${img}" = "registry ${VM_REPO}:dev"
 check "hostname" test "$(vm hostname)" = kinolune-test
@@ -226,7 +226,11 @@ vm "printf '[[registry]]\nlocation = \"10.0.2.2:${REGISTRY_PORT}\"\ninsecure = t
 "${DISTRO_DIR}/scripts/build-image.sh" "${LOCAL_REPO}:v2" "0.0.1-install.2"
 "${ENGINE}" tag "${LOCAL_REPO}:v2" "${LOCAL_REPO}:dev"
 "${ENGINE}" push -q "${LOCAL_REPO}:dev" >/dev/null
-check "bootc upgrade --check sees the new image" grep -qi "update available\|Version: 0.0.1-install.2\|digest" \
-    <<< "$(vm bootc upgrade --check 2>&1)"
+vm bootc upgrade --check 2>&1 | tee "${W}/upgrade-check.txt"
+vm bootc status --format=json > "${W}/status-after-check.json"
+# cachedUpdate is what `upgrade --check` found under the tracked tag; it must differ from the booted image.
+read -r booted_digest cached < <(python3 -c 'import json,sys; s=json.load(sys.stdin)["status"]["booted"]; print(s["image"]["imageDigest"], (s.get("cachedUpdate") or {}).get("imageDigest", "-"))' \
+    < "${W}/status-after-check.json")
+check "bootc upgrade --check found a new image in the registry (${cached})" test "${cached}" != - -a "${cached}" != "${booted_digest}"
 
 log "ALL CHECKS PASSED"
