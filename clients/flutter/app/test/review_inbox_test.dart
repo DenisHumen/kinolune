@@ -216,4 +216,118 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget);
     expect(_key('review-search-title'), findsNothing);
   });
+
+  group('META-036: the title and its adjustments apart', () {
+    // BUG-023: an exact original title, two years off its premiere.
+    const split = MatchSignals(
+      title: 0.94,
+      titleSimilarity: 1,
+      yearAdjust: -0.08,
+      kindAdjust: 0.02,
+      tier: 'exact',
+      matchedTitle: 'Plan 9 from Outer Space',
+      fileYear: 1959,
+      year: 1957,
+      fileKind: 'movie',
+      kind: 'movie',
+    );
+    // The same stored before the split: the score is all there is.
+    const old = MatchSignals(
+      title: 0.752,
+      tier: 'exact',
+      fileYear: 1959,
+      year: 1957,
+      fileKind: 'movie',
+      kind: 'movie',
+    );
+
+    test('the reason line in every language', () {
+      expect(
+        reviewWhy(ru, split),
+        'Почему: название совпало на 100 % · год отличается на 2 (−8 %)',
+      );
+      expect(
+        reviewWhy(en, split),
+        'Why: title matches by 100% · year differs by 2 (−8%)',
+      );
+      final uk = lookupAppLocalizations(const Locale('uk'));
+      expect(
+        reviewWhy(uk, split),
+        contains(uk.reviewWhyYearOff(2, '−8')),
+      );
+      // The remake penalty and another type are their own parts.
+      const remake = MatchSignals(
+        title: 0.752,
+        titleSimilarity: 1,
+        yearAdjust: -0.08,
+        remakeAdjust: -0.188,
+        kindAdjust: -0.02,
+        fileYear: 1960,
+        year: 1957,
+      );
+      expect(
+        reviewWhy(ru, remake),
+        'Почему: название совпало на 100 % · год отличается на 3 (−8 %) · '
+        'возможно, ремейк (−19 %) · тип не совпал (−2 %)',
+      );
+      // Old rows read as before.
+      expect(
+        reviewWhy(ru, old),
+        'Почему: название совпало на 75 % · '
+        '${ru.reviewWhyYearDiffers(1959, 1957)}',
+      );
+      expect(
+        reviewSignals(ru, split).map((x) => (x.text, x.good)),
+        [(ru.reviewWhyTitle(100), true), (ru.reviewWhyYearOff(2, '−8'), false)],
+      );
+    });
+
+    testWidgets('the inbox row says 100 %, not 75 %', (t) async {
+      final inbox = FakeReviewInbox(
+        entries: [
+          const ReviewEntry(
+            workId: 951,
+            itemId: 'm951',
+            state: ReviewState.check,
+            title: 'План 9 из открытого космоса',
+            localTitle: 'Plan 9 from Outer Space',
+            year: 1957,
+            confidence: 0.75,
+            samplePath: 'Movies/Plan 9 from Outer Space (1959).mkv',
+            signals: split,
+          ),
+          const ReviewEntry(
+            workId: 952,
+            itemId: 'm952',
+            state: ReviewState.check,
+            title: 'Старая запись',
+            confidence: 0.75,
+            samplePath: 'Movies/Old Row (1959).mkv',
+            signals: old,
+          ),
+        ],
+      );
+      await _open(t, inbox: inbox);
+      await _openInbox(t);
+      final row = _key('review-entry-951');
+      expect(row, findsOneWidget);
+      expect(
+        find.descendant(
+          of: row,
+          matching: find.textContaining(
+            'название совпало на 100 % · год отличается на 2 (−8 %)',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: _key('review-entry-952'),
+          matching: find.textContaining('название совпало на 75 %'),
+        ),
+        findsOneWidget,
+      );
+      await capture(t, 'meta-036-inbox');
+    });
+  });
 }

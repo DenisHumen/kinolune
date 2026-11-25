@@ -493,9 +493,24 @@ pub struct MatchSignals {
     /// `tmdb` (search), `anime_offline_database` (the local anime
     /// database), `anilist`.
     pub provider: String,
-    /// Title similarity of the title index (title tiers, year ±1, kind),
-    /// `0..=1`.
+    /// Score of the title index with the remake penalty and the marker
+    /// cap (title tiers, year, kind), `0..=1`: the sum of the parts below.
     pub title: f64,
+    /// Similarity of the titles alone, `0..=1` (META-036); absent in rows
+    /// stored before it, whose `title` then is all there is.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title_similarity: Option<f64>,
+    /// What the years added to `title` in the title index: +0.04 the same,
+    /// +0.02 one apart, −0.08 further apart (META-036).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub year_adjust: Option<f64>,
+    /// What the remake rule took from `title`: a movie of another year
+    /// (more than one apart) is another movie, ×0.8 (META-036).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remake_adjust: Option<f64>,
+    /// What the type (movie or series, anime) added to `title` (META-036).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind_adjust: Option<f64>,
     /// How the title matched (`exact`, `loose`, `compact`, `base`, `head`, `fuzzy`).
     pub tier: String,
     /// The candidate's title that matched.
@@ -993,17 +1008,19 @@ fn rank_all(work: &WorkQuery, records: &[TitleRecord]) -> Option<Ranked> {
         .map(|c| (c.record, index.record(c.record)))
         .collect();
     let relative = pair::relative(&evidence, &pairs);
-    // (candidate, title score, score with pair features)
+    // (candidate, title score, score with pair features, remake penalty)
     let scored: Vec<_> = candidates
         .into_iter()
         .map(|c| {
             let mut score = f64::from(c.score);
+            let mut remake = None;
             // A movie of another year is another movie (remakes).
             let record = index.record(c.record);
             if work.kind == "movie"
                 && let (Some(a), Some(b)) = (work.year, record.year)
                 && a.abs_diff(i64::from(b)) > 1
             {
+                remake = Some(score * 0.8 - score);
                 score *= 0.8;
             }
             // `Fairy Tail OVA` is not the series `Fairy Tail` for sure
@@ -1013,17 +1030,17 @@ fn rank_all(work: &WorkQuery, records: &[TitleRecord]) -> Option<Ranked> {
                 score = score.min(MARKER_CAP);
             }
             let with_pair = score + f64::from(relative.get(&c.record).copied().unwrap_or(0.0));
-            (c, score, with_pair)
+            (c, score, with_pair, remake)
         })
         .collect();
     let mut best = 0;
-    for (i, (_, _, score)) in scored.iter().enumerate() {
+    for (i, (_, _, score, _)) in scored.iter().enumerate() {
         if *score > scored[best].2 {
             best = i;
         }
     }
-    let (candidate, title_score, mut score) = scored.get(best).cloned()?;
-    let tied = scored.iter().enumerate().any(|(i, (_, t, s))| {
+    let (candidate, title_score, mut score, _) = scored.get(best).cloned()?;
+    let tied = scored.iter().enumerate().any(|(i, (_, t, s, _))| {
         i != best && (*s >= score - TIE || (*t >= title_score - TIE && *s >= score - PAIR_TIE))
     });
     if tied {
@@ -1034,12 +1051,16 @@ fn rank_all(work: &WorkQuery, records: &[TitleRecord]) -> Option<Ranked> {
     let signals = order
         .iter()
         .map(|&i| {
-            let (c, title_score, _) = &scored[i];
+            let (c, title_score, _, remake) = &scored[i];
             let record = index.record(c.record);
             let f = pair::features(&evidence, record);
             MatchSignals {
                 provider: "tmdb".to_owned(),
                 title: round3(*title_score),
+                title_similarity: Some(round3(f64::from(c.similarity))),
+                year_adjust: Some(round3(f64::from(c.year_adjust))),
+                remake_adjust: remake.map(round3),
+                kind_adjust: Some(round3(f64::from(c.kind_adjust))),
                 tier: format!("{:?}", c.tier).to_lowercase(),
                 matched_title: record.titles.get(c.title).cloned(),
                 file_year: work.year,
