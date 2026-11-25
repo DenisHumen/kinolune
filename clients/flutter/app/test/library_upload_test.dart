@@ -248,7 +248,10 @@ void main() {
       ).plan(const [UploadRequest('/p/Big.Movie.2020.mkv')]);
       await enqueuePlan(c, 7, plan);
       // The first try loses the connection half way ...
-      for (var i = 0; i < 50; i++) {
+      // Only event-queue turns, no real delay (a real delay lets the
+      // automatic retry finish the upload first); 50 turns were sometimes
+      // not enough on a slow CI runner, so allow many more.
+      for (var i = 0; i < 2000; i++) {
         await pumpEventQueue();
         if (files.exists(7, 'Фильмы/Big.Movie.2020.mkv.part')) break;
       }
