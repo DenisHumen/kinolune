@@ -2267,10 +2267,10 @@ project_alpha/
   - Что: аккаунты GitHub Sponsors, Open Collective (по возможности с фискальным хостом), Liberapay, Ko-fi; `.github/FUNDING.yml` (без российских площадок, ADR-0142).
   - deps: — · size: S · parallel: yes · веха: M0 · ref: S §4, §7
   - done when: кнопка Sponsor в репозитории ведёт на все площадки.
-- [ ] **COMM-002** GitHub Discussions и запросы функций
+- [x] **COMM-002** GitHub Discussions и запросы функций
   - Что: категории (Q&A, Ideas с голосованием, Show and tell, Announcements, «Ошибки распознавания»); процесс «идея → голосование → статус → задача в ROADMAP».
   - deps: DEC-001 · size: S · parallel: yes · веха: M0 · ref: 01 §3 п.11
-  - done when: шаблоны обсуждений созданы; процесс описан в CONTRIBUTING.
+  - done when: шаблоны обсуждений созданы; процесс описан в CONTRIBUTING. Сделано: категории Q&A, Ideas, Polls, Show and tell, Announcements, General и Recognition errors (`recognition-errors`) в Discussions; формы на украинском, английском и русском в `.github/DISCUSSION_TEMPLATE/` (имя файла = slug: `q-a`, `ideas`, `recognition-errors`, `show-and-tell`, `announcements`; у Polls форм GitHub не поддерживает, General — свободная тема), в форме ошибок распознавания — только обезличенный путь `<lib>/…`; путь «идея → голоса/Poll → решение → задача в ROADMAP → draft PR → `[x]`» — в разделе Discussions в `.github/CONTRIBUTING.md`.
 - [x] **COMM-003** README на русском и английском
   - Что: что это, статус, скриншоты (без чужого арта), ссылки на ROADMAP, скачивание, донаты, документацию; бейджи CI.
   - deps: REPO-001 · size: S · parallel: yes · веха: M0 · ref: S §1
