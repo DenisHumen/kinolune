@@ -239,6 +239,7 @@ void main() {
     for (final (form, size) in [
       (FormFactor.desktop, const Size(1280, 800)),
       (FormFactor.phone, const Size(390, 844)),
+      (FormFactor.tv, const Size(1920, 1080)),
     ]) {
       testWidgets('Streams header shows name and avatar (${form.name})', (
         t,
@@ -269,7 +270,7 @@ void main() {
         );
         await t.tap(find.byKey(const ValueKey('twitch-account')));
         await settle(t, 4);
-        await t.tap(find.byKey(const ValueKey('twitch-account-refresh')));
+        await t.tap(find.text('Update name and avatar'));
         await settle(t, 6);
         expect(find.text('Viewer_Renamed'), findsOneWidget);
         await t.pumpWidget(const SizedBox());

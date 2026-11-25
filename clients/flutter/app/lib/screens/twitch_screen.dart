@@ -246,12 +246,10 @@ class _AccountButton extends StatelessWidget {
           itemBuilder: (_) => [
             // TWI-032: a new avatar or name on Twitch shows up now.
             PopupMenuItem(
-              key: const ValueKey('twitch-account-refresh'),
               onTap: () => unawaited(twitch.refreshAccount(force: true)),
               child: Text(l.twitchAccountRefresh),
             ),
             PopupMenuItem(
-              key: const ValueKey('twitch-sign-out'),
               onTap: () => unawaited(twitch.signOut()),
               child: Text(l.twitchSignOut),
             ),
