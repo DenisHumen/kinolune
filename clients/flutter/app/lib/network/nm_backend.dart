@@ -84,18 +84,19 @@ class NmBackend implements NetworkBackend {
   Future<void> _watchReasons(String dev) async {
     _reasons.clear();
     await _watch?.cancel();
-    _watch = DBusSignalStream(
-      _client,
-      sender: _nm,
-      interface: _device,
-      name: 'StateChanged',
-      path: DBusObjectPath(dev),
-    ).listen((sig) {
-      if (sig.values.length >= 3) {
-        final r = _u32(sig.values[2]);
-        if (r != null && r != 0) _reasons.add(r);
-      }
-    }, onError: (_) {});
+    _watch =
+        DBusSignalStream(
+          _client,
+          sender: _nm,
+          interface: _device,
+          name: 'StateChanged',
+          path: DBusObjectPath(dev),
+        ).listen((sig) {
+          if (sig.values.length >= 3) {
+            final r = _u32(sig.values[2]);
+            if (r != null && r != 0) _reasons.add(r);
+          }
+        }, onError: (_) {});
     // The match rule is added in the background; give it a moment.
     await Future<void>.delayed(const Duration(milliseconds: 100));
   }
