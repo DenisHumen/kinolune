@@ -6,7 +6,7 @@
 #
 #   distro/scripts/build-iso.sh            # builds the OS image, this image and the ISO
 #
-# See distro/installer/README.md ("Live-ISO") and docs/adr/NNNN-live-iso.md.
+# See distro/installer/README.md ("Live-ISO") and docs/adr/0169-live-iso.md.
 #
 # Same pinned base as distro/Containerfile on purpose: squashfs stores identical files
 # once, so the payload's base layers cost (almost) nothing on top of this live system.

@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
-# ADR-NNNN. ISO установщика Kinolune OS: `image-builder generic-iso` из live-образа на той же базе, payload офлайн, текстовое меню на tty1
+# ADR-0169. ISO установщика Kinolune OS: `image-builder generic-iso` из live-образа на той же базе, payload офлайн, текстовое меню на tty1
 
 - Статус: **предложен** (DIST-007)
 - Дата: 2026-11-25

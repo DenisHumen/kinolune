@@ -83,7 +83,7 @@ JSON, неизвестные поля — ошибка, все ошибки по
 
 ## Live-ISO (DIST-007)
 
-ISO установщика собирает `distro/scripts/build-iso.sh` (решения — [ADR-NNNN](../../docs/adr/NNNN-live-iso.md)):
+ISO установщика собирает `distro/scripts/build-iso.sh` (решения — [ADR-0169](../../docs/adr/0169-live-iso.md)):
 
 ```bash
 distro/scripts/build-iso.sh                       # → distro/.work/iso/kinolune-os-<версия>-x86_64.iso (+ .sha256, iso-info.txt)
