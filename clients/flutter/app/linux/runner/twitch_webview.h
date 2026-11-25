@@ -15,4 +15,11 @@
 // view is added to [overlay], whose main child is [view].
 void twitch_webview_register(FlView* view, GtkOverlay* overlay);
 
+// BUG-028: whether the web view goes into its own Wayland subsurface (a
+// transient popup) instead of the overlay. Flutter draws into a subsurface
+// on Wayland, which covers the overlay; on X11 the overlay works. The
+// environment variable KINOLUNE_TWITCH_WEBKIT_LAYER (overlay | subsurface)
+// overrides the choice.
+bool twitch_webview_use_subsurface(GdkDisplay* display);
+
 #endif  // RUNNER_TWITCH_WEBVIEW_H_

@@ -3357,6 +3357,14 @@
   "settingsDiagnosticsClear": "Delete logs and crash reports",
   "settingsDiagnosticsCleared": "Logs and crash reports deleted",
   "settingsDiagnosticsSavedTitle": "Report saved",
+  "settingsDiagnosticsSavedBody": "Saved to {path}. Nothing was sent. To report a problem, open a GitHub issue and attach this file; you can look through it first.",
+  "@settingsDiagnosticsSavedBody": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "settingsDiagnosticsOpenIssue": "Open GitHub issue",
   "settingsDiagnosticsClose": "Close",
   "settingsDiagnosticsFailed": "Report not saved: {error}",
@@ -8146,6 +8154,67 @@
   "commonScreenErrorBack": "Back",
   "@commonScreenErrorBack": {
     "description": "BUG-026: leaves the failed screen."
+  },
+  "reviewWhyYearOff": "year differs by {years} ({delta}%)",
+  "@reviewWhyYearOff": {
+    "description": "Review reason (META-036): the years of the file and the candidate differ by {years}; {delta} is what that changed in the score, signed whole percent such as −8.",
+    "placeholders": {
+      "years": {
+        "type": "int"
+      },
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewWhyRemake": "maybe a remake ({delta}%)",
+  "@reviewWhyRemake": {
+    "description": "Review reason (META-036): a movie of another year may be another movie; {delta} is the penalty, signed whole percent.",
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewWhyKindOff": "type differs ({delta}%)",
+  "@reviewWhyKindOff": {
+    "description": "Review reason (META-036): a movie against a series or the other way round; {delta} is the penalty, signed whole percent.",
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "formatTotal": "{time} total",
+  "@formatTotal": {
+    "description": "UI-056: total runtime of a show, a season or a movie, e.g. «21 h 40 min total».",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "formatLeft": "{time} left",
+  "@formatLeft": {
+    "description": "UI-056: time left to watch of a show, a season or a movie.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "formatAllWatched": "watched",
+  "@formatAllWatched": {
+    "description": "UI-056: instead of the time left when every episode is watched."
+  },
+  "formatHours": "{hours, plural, one{{hours} h} other{{hours} h}}",
+  "@formatHours": {
+    "description": "UI-056: a runtime in whole hours (from 100 h on, or with no minutes).",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
   },
   "settingsDiagnosticsSavedFolder": "Folder",
   "@settingsDiagnosticsSavedFolder": {

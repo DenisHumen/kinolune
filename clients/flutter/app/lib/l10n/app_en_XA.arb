@@ -1212,6 +1212,7 @@
   "settingsDiagnosticsClear": "[Ðéļéţé ļóĝš áñð çŕášĥ ŕéþóŕţš············]",
   "settingsDiagnosticsCleared": "[Ļóĝš áñð çŕášĥ ŕéþóŕţš ðéļéţéð············]",
   "settingsDiagnosticsSavedTitle": "[Ŕéþóŕţ šáṽéð·····]",
+  "settingsDiagnosticsSavedBody": "[Šáṽéð ţó···· {path}. Ñóţĥíñĝ ŵáš šéñţ. Ţó ŕéþóŕţ á þŕóƀļéɱ, óþéñ á ĜíţĤúƀ íššúé áñð áţţáçĥ ţĥíš ƒíļé; ýóú çáñ ļóóķ ţĥŕóúĝĥ íţ ƒíŕšţ.··············································]",
   "settingsDiagnosticsOpenIssue": "[Óþéñ ĜíţĤúƀ íššúé·······]",
   "settingsDiagnosticsClose": "[Çļóšé··]",
   "settingsDiagnosticsFailed": "[Ŕéþóŕţ ñóţ šáṽéð:······· {error}]",
@@ -2336,11 +2337,11 @@
   "commonScreenErrorMessage": "[Ţĥé éŕŕóŕ íš šáṽéð íñ ţĥé áþþ ļóĝ. Ţŕý áĝáíñ óŕ ĝó ƀáçķ.·······················]",
   "commonScreenErrorRetry": "[Ţŕý áĝáíñ····]",
   "commonScreenErrorBack": "[Ɓáçķ··]",
-  "settingsDiagnosticsSavedFolder": "[Ƒóļðéŕ···]",
-  "settingsDiagnosticsSavedFile": "[Ƒíļé··]",
-  "settingsDiagnosticsSavedNote": "[Ñóţĥíñĝ ŵáš šéñţ. Ţó ŕéþóŕţ á þŕóƀļéɱ, óþéñ á ĜíţĤúƀ íššúé áñð áţţáçĥ ţĥíš ƒíļé; ýóú çáñ ļóóķ ţĥŕóúĝĥ íţ ƒíŕšţ.·············································]",
-  "settingsDiagnosticsOpenFolder": "[Óþéñ ƒóļðéŕ·····]",
-  "settingsDiagnosticsShare": "[Šĥáŕé··]",
-  "settingsDiagnosticsOpenFolderFailed": "[Çóúļðñ'ţ óþéñ ţĥé ƒóļðéŕ··········]",
-  "settingsDiagnosticsShareFailed": "[Çóúļðñ'ţ óþéñ šĥáŕíñĝ·········]"
+  "reviewWhyYearOff": "[ýéáŕ ðíƒƒéŕš ƀý······ {years} ({delta}%)]",
+  "reviewWhyRemake": "[ɱáýƀé á ŕéɱáķé (·······{delta}%)]",
+  "reviewWhyKindOff": "[ţýþé ðíƒƒéŕš (······{delta}%)]",
+  "formatTotal": "[{time} ţóţáļ··]",
+  "formatLeft": "[{time} ļéƒţ··]",
+  "formatAllWatched": "[ŵáţçĥéð···]",
+  "formatHours": "{hours, plural, one{{hours} ĥ·} other{{hours} ĥ·}}"
 }

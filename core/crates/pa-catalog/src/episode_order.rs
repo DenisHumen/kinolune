@@ -27,6 +27,7 @@ use pa_library::rusqlite::{Connection, OptionalExtension, params};
 
 use crate::items::{self, Item, ItemRef};
 use crate::progress::{ItemProgress, key_of, profile};
+use crate::runtime::{ShowRuntime, show_runtime};
 use crate::{Catalog, Error};
 
 /// How a show numbers its episodes.
@@ -78,6 +79,9 @@ pub struct ShowEpisodes {
     pub available: Vec<EpisodeOrder>,
     /// By season, then episode; specials (season 0) first.
     pub episodes: Vec<ShowEpisode>,
+    /// Total runtime and time left of the show and of its seasons in
+    /// [`order`](Self::order) (UI-056).
+    pub runtime: ShowRuntime,
 }
 
 fn work_of(show: ItemRef) -> Result<i64, Error> {
@@ -226,10 +230,12 @@ pub(crate) fn show_episodes(
             .cmp(&(b.item.season.unwrap_or(1), b.item.episode))
             .then_with(|| a.item.rel_path.cmp(&b.item.rel_path))
     });
+    let runtime = show_runtime(conn, work, order)?;
     Ok(ShowEpisodes {
         order,
         available,
         episodes,
+        runtime,
     })
 }
 
