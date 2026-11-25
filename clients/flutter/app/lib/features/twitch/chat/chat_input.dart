@@ -30,9 +30,13 @@ class TwitchChatInput extends StatefulWidget {
     required this.controller,
     this.onSignIn,
     this.onAllowSending,
+    this.ownAvatar,
   });
 
   final ChatController controller;
+
+  /// The sender's own avatar before the field (TWI-032); null: none.
+  final Widget? ownAvatar;
 
   /// Signed out: the "Sign in" button (hidden when null).
   final VoidCallback? onSignIn;
@@ -304,6 +308,10 @@ class TwitchChatInputState extends State<TwitchChatInput> {
     final blocked = _sending || _wait > 0;
     return Row(
       children: [
+        if (widget.ownAvatar case final avatar?) ...[
+          avatar,
+          const SizedBox(width: 8),
+        ],
         Expanded(
           child: TextField(
             key: const ValueKey('twitch-chat-input'),

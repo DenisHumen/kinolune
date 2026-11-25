@@ -8,7 +8,7 @@ import 'library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `small`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`
 
 /// How a show numbers its episodes.
 enum CoreEpisodeOrder {
@@ -19,6 +19,77 @@ enum CoreEpisodeOrder {
 
   /// AniDB entries as seasons (from anime mappings).
   anidb,
+}
+
+/// Runtime of a season or a whole show (UI-056).
+class CoreRuntimeTotal {
+  /// Episodes in the library.
+  final int episodes;
+
+  /// Of them, watched.
+  final int watched;
+
+  /// Sum of the episode durations, ms.
+  final PlatformInt64 totalMs;
+
+  /// What is left to watch, ms.
+  final PlatformInt64 remainingMs;
+
+  /// A duration in the total is the metadata runtime or unknown («≈»).
+  final bool estimated;
+
+  /// The same for an unwatched episode, in the time left.
+  final bool remainingEstimated;
+
+  const CoreRuntimeTotal({
+    required this.episodes,
+    required this.watched,
+    required this.totalMs,
+    required this.remainingMs,
+    required this.estimated,
+    required this.remainingEstimated,
+  });
+
+  @override
+  int get hashCode =>
+      episodes.hashCode ^
+      watched.hashCode ^
+      totalMs.hashCode ^
+      remainingMs.hashCode ^
+      estimated.hashCode ^
+      remainingEstimated.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreRuntimeTotal &&
+          runtimeType == other.runtimeType &&
+          episodes == other.episodes &&
+          watched == other.watched &&
+          totalMs == other.totalMs &&
+          remainingMs == other.remainingMs &&
+          estimated == other.estimated &&
+          remainingEstimated == other.remainingEstimated;
+}
+
+/// Runtime of one season tab.
+class CoreSeasonRuntime {
+  /// Season in the episode order; 0 = specials.
+  final int season;
+  final CoreRuntimeTotal total;
+
+  const CoreSeasonRuntime({required this.season, required this.total});
+
+  @override
+  int get hashCode => season.hashCode ^ total.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreSeasonRuntime &&
+          runtimeType == other.runtimeType &&
+          season == other.season &&
+          total == other.total;
 }
 
 /// An episode numbered in the chosen order.
@@ -64,14 +135,22 @@ class CoreShowEpisodes {
   final List<CoreEpisodeOrder> available;
   final List<CoreShowEpisode> episodes;
 
+  /// Total runtime and time left of the show and its seasons (UI-056).
+  final CoreShowRuntime runtime;
+
   const CoreShowEpisodes({
     required this.order,
     required this.available,
     required this.episodes,
+    required this.runtime,
   });
 
   @override
-  int get hashCode => order.hashCode ^ available.hashCode ^ episodes.hashCode;
+  int get hashCode =>
+      order.hashCode ^
+      available.hashCode ^
+      episodes.hashCode ^
+      runtime.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -80,5 +159,26 @@ class CoreShowEpisodes {
           runtimeType == other.runtimeType &&
           order == other.order &&
           available == other.available &&
-          episodes == other.episodes;
+          episodes == other.episodes &&
+          runtime == other.runtime;
+}
+
+/// Runtime of a show: the regular seasons together, and each season.
+class CoreShowRuntime {
+  /// All regular seasons; specials are not in it.
+  final CoreRuntimeTotal show_;
+  final List<CoreSeasonRuntime> seasons;
+
+  const CoreShowRuntime({required this.show_, required this.seasons});
+
+  @override
+  int get hashCode => show_.hashCode ^ seasons.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreShowRuntime &&
+          runtimeType == other.runtimeType &&
+          show_ == other.show_ &&
+          seasons == other.seasons;
 }

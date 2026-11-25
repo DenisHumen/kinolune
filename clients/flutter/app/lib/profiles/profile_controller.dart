@@ -527,6 +527,17 @@ class ProfileController extends ChangeNotifier {
     return _all.firstWhere((e) => e.id == id, orElse: () => p);
   }
 
+  /// Sets only the avatar of [id] (TWI-032: the Twitch avatar comes and
+  /// goes by itself). No PIN: an avatar protects nothing.
+  Future<void> setAvatar(int id, String ref) async {
+    final s = store;
+    final p = _all.where((e) => e.id == id).firstOrNull;
+    if (s == null || p == null || p.avatar == ref) return;
+    await _managed(() => s.updateProfile(id, p.settings.copyWith(avatar: ref)));
+    await _reload();
+    notifyListeners();
+  }
+
   /// Sets or removes (null) the PIN of [id]. The last parent PIN is not
   /// removed while a restricted profile or a lock needs it.
   Future<void> setPin(int id, String? pin) async {

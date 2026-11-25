@@ -14,6 +14,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../l10n/l10n.dart';
 import '../../../platform/form_factor.dart';
+import '../../../screens/twitch/twitch_widgets.dart' show TwitchAccountAvatar;
 import '../../../services/app_services.dart';
 import '../../../theme/kinolune_theme.dart';
 import 'chat_controller.dart';
@@ -116,6 +117,33 @@ class TwitchChatPanel extends StatefulWidget {
 }
 
 class _TwitchChatPanelState extends State<TwitchChatPanel> {
+  /// The signed-in user's avatar at the input (TWI-032); null outside the
+  /// app (the chat bench) or signed out.
+  Widget? _ownAvatar(BuildContext context) {
+    final twitch = context
+        .getInheritedWidgetOfExactType<Services>()
+        ?.notifier
+        ?.twitch;
+    if (twitch == null || twitch.account == null) return null;
+    return ListenableBuilder(
+      listenable: twitch,
+      builder: (context, _) {
+        final a = twitch.account;
+        if (a == null) return const SizedBox.shrink();
+        final name = twitch.accountName ?? a.login;
+        return Tooltip(
+          message: name,
+          child: TwitchAccountAvatar(
+            login: a.login,
+            name: name,
+            url: twitch.accountProfile?.avatarUrl,
+            size: 24,
+          ),
+        );
+      },
+    );
+  }
+
   ChatController? _controller;
   final _input = GlobalKey<TwitchChatInputState>();
 
@@ -284,6 +312,7 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
             controller: _controller!,
             onSignIn: widget.onSignIn,
             onAllowSending: widget.onAllowSending,
+            ownAvatar: _ownAvatar(context),
           ),
       ],
     );

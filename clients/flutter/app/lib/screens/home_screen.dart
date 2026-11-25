@@ -313,6 +313,8 @@ class _ContinueRow extends StatelessWidget {
                 '${episodeCode(l, item)} · $remaining',
               ContinueKind.twitchVod when e.subtitle != null =>
                 '${e.subtitle} · $remaining',
+              // UI-056: the same formula as the movie page.
+              ContinueKind.movie => formatMovieProgress(l, e.progress),
               _ => remaining,
             },
             badge: _kindBadge(l, e.kind),

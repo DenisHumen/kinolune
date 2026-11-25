@@ -253,6 +253,30 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
     setState(() => _folders = [..._folders, f]);
   }
 
+  Widget? _twitchAvatarSwitch(BuildContext context) {
+    final twitch = Services.of(context).twitch;
+    final account = twitch.account;
+    if (!_avatar.isTwitch && (account == null || _settings.isKid)) return null;
+    final l = context.l10n;
+    return SettingsSwitchTile(
+      key: const ValueKey('profile-avatar-twitch-toggle'),
+      icon: Icons.live_tv_outlined,
+      title: l.profilesAvatarFromTwitch,
+      subtitle: l.profilesAvatarFromTwitchSubtitle,
+      value: _avatar.isTwitch,
+      onChanged: (on) => setState(() {
+        if (!on) {
+          _avatar = _avatar.base;
+        } else if (account != null) {
+          _avatar = _avatar.withTwitch(
+            account.userId,
+            twitch.avatarOf(account.userId),
+          );
+        }
+      }),
+    );
+  }
+
   Future<void> _save() async {
     final l = context.l10n;
     final name = _name.text.trim();
@@ -415,6 +439,10 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
                       onChanged: (a) => setState(() => _avatar = a),
                     ),
                   ),
+                  // TWI-032: the Twitch avatar of the signed-in account
+                  // instead of the colour or picture (they come back when
+                  // it is off).
+                  ?_twitchAvatarSwitch(context),
                   SettingsSection(
                     key: const ValueKey('profile-section-just-watch'),
                     icon: Icons.smart_display_outlined,
