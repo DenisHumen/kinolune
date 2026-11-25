@@ -2276,9 +2276,9 @@ project_alpha/
   - deps: REPO-001 · size: S · parallel: yes · веха: M0 · ref: S §1
   - done when: README отражает M0; ссылки проверяются в CI.
 - [ ] **COMM-004** Good first issues из ROADMAP
-  - Что: скрипт создаёт GitHub issues для S-задач с закрытыми deps и меткой `good first issue`, со ссылкой на строку ROADMAP; синхронизация статуса.
+  - Что: скрипт создаёт GitHub issues с меткой `good first issue` для S-задач с закрытыми deps, которые проходят правила отбора (без шагов владельца, ключей, оборудования, живых прогонов, LEGAL/SUB/DIST/SRV/SYNC/DEC/PLAY-APL; метки `[gfi]` и `[no-gfi]` в строке задачи — ручное решение), со ссылкой на задачу по ID; синхронизация статуса (tools/roadmap/README.md).
   - deps: REPO-012 · size: S · parallel: yes · веха: M1 · ref: —
-  - done when: в репо есть ≥ 10 актуальных good first issues.
+  - done when: в репо есть ≥ 10 актуальных good first issues, ни одно не требует владельца, ключей, оборудования или живого стенда.
 - [ ] **COMM-005** (owner) Каналы общения и анонсы
   - Что: выбор площадок (Matrix, Telegram, Discord), правила; шаблон анонса релиза; публикация changelog в Discussions.
   - deps: DEC-001 · size: S · parallel: yes · веха: M1 · ref: S §7
