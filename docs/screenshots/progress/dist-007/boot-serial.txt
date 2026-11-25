@@ -1,0 +1,159 @@
+[=3hBdsDxe: loading Boot0002 "UEFI QEMU DVD-ROM QM00011 " from PciRoot(0x0)/Pci(0x1F,0x2)/Sata(0x5,0xFFFF,0x0)
+BdsDxe: starting Boot0002 "UEFI QEMU DVD-ROM QM00011 " from PciRoot(0x0)/Pci(0x1F,0x2)/Sata(0x5,0xFFFF,0x0)
+GRUB version 2.12
+
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││││└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘     Use the ▲ and ▼ keys to select which entry is highlighted.                                                                                          
+
+      Press enter to boot the selected OS, `e' to edit the commands before booting or `c' for a command-line.                                              *Install Kinolune OS                                                                                                                                         Install Kinolune OS (basic graphics)                                                                                                                        Install Kinolune OS (copy to RAM, the USB stick can be removed)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                The highlighted entry will be executed automatically in 5s.                                                                                                    The highlighted entry will be executed automatically in 4s.                                                                                                    The highlighted entry will be executed automatically in 3s.                                                                                                    The highlighted entry will be executed automatically in 2s.                                                                                                    The highlighted entry will be executed automatically in 1s.                                                                                                    The highlighted entry will be executed automatically in 0s.                                                                                                   Booting `Install Kinolune OS'
+
+  Kinolune OS 0.0.1-iso.1
+
+  1) English
+  2) Українська
+  3) Русский
+
+Language / Мова / Язык [1-3]: 1
+
+  Kinolune OS 0.0.1-iso.1 - installer
+
+The full-screen installer is coming in the next version. For now Kinolune OS is
+installed from an answer file: a small JSON file with the disk, host name, user and
+network. Example: /usr/share/alpha/installer/answers.example.json
+Field reference: https://github.com/DenisHumen/kinolune/tree/main/distro/installer
+
+Answer file: not chosen yet
+
+  1) Show disks
+  2) Find an answer file on a USB stick (kinolune-answers.json or answers.json)
+  3) Write an answer file from the example (nano editor)
+  4) Check the answer file: installation plan, nothing is written
+  5) Install Kinolune OS from the answer file
+  6) Command line (type exit to come back)
+  7) Reboot
+  8) Power off
+
+Choose an action [1-8]: 1
+
+  QEMU NVMe Ctrl   34 GB  NVMe     /dev/nvme0n1  S/N …rget
+- QEMU DVD-ROM    1.4 GB  optical  /dev/sr0      S/N …0011
+      excluded: optical
+      PMBR partition table, 0 partition(s)
+      iso9660 "Kinolune-OS-Installer" on /dev/sr0
+      /dev/sr0 is mounted at /run/initramfs/live
+- loop device     1.2 GB  virtual  /dev/loop0
+      excluded: virtual-device
+      squashfs on /dev/loop0
+      /dev/loop0 is mounted at /run/rootfsbase
+
+Press Enter to go back to the menu 
+
+  Kinolune OS 0.0.1-iso.1 - installer
+
+The full-screen installer is coming in the next version. For now Kinolune OS is
+installed from an answer file: a small JSON file with the disk, host name, user and
+network. Example: /usr/share/alpha/installer/answers.example.json
+Field reference: https://github.com/DenisHumen/kinolune/tree/main/distro/installer
+
+Answer file: not chosen yet
+
+  1) Show disks
+  2) Find an answer file on a USB stick (kinolune-answers.json or answers.json)
+  3) Write an answer file from the example (nano editor)
+  4) Check the answer file: installation plan, nothing is written
+  5) Install Kinolune OS from the answer file
+  6) Command line (type exit to come back)
+  7) Reboot
+  8) Power off
+
+Choose an action [1-8]: 6
+
+[root@kinolune /]# echo O""SR=$(. /etc/os-release; echo "$NAME|$VARIANT"); echo PAY""LOAD=$(podman images --format '{{.Repository}}:{{.Tag}}' | tr '\n' ' '); echo DI""SKS=$(alpha-installer disks --all | tr -s ' ' | tr '\n' ' '); echo TT""Y1=$(systemctl is-active alpha-live-installer@tty1.service)/$(systemctl is-active kmsconvt@tty1.service); printf 'SMOKE-%s\n' done
+
+OSR=Kinolune OS|Installer
+PAYLOAD=ghcr.io/denishumen/alpha-os:stable
+DISKS= QEMU NVMe Ctrl 34 GB NVMe /dev/nvme0n1 S/N …rget - QEMU DVD-ROM 1.4 GB optical /dev/sr0 S/N …0011 excluded: optical PMBR partition table, 0 partition(s) iso9660 "Kinolune-OS-Installer" on /dev/sr0 /dev/sr0 is mounted at /run/initramfs/live - loop device 1.2 GB virtual /dev/loop0 excluded: virtual-device squashfs on /dev/loop0 /dev/loop0 is mounted at /run/rootfsbase
+TTY1=active/inactive
+SMOKE-done
+[root@kinolune /]# printf '%s' '{"version":1,"disk":{"path":"/dev/nvme0n1"},"user":{"name":"admin","password":"smoke-test-pw"}}' > /root/answers.json; alpha-installer install --answers /root/answers.json --dry-run; echo DRY""RUN=$?
+
+Kinolune OS installation plan
+
+Disk:     QEMU NVMe Ctrl — /dev/nvme0n1, 34 GB, S/N kinolunetarget
+          the disk looks empty; it will be erased anyway
+          Other disks are not touched.
+
+Layout (GPT, UEFI):
+  #  device          label       size              fs     mount
+  1  /dev/nvme0n1p1  EFI-SYSTEM  1 GiB             vfat   /boot/efi
+  2  /dev/nvme0n1p2  boot        2 GiB             ext4   /boot
+  3  /dev/nvme0n1p3  root        ~29.0 GiB (rest)  btrfs  /  (/var = subvolume @var)
+
+Image:    containers-storage:ghcr.io/denishumen/alpha-os:stable
+Updates:  ghcr.io/denishumen/alpha-os:stable (channel stable)
+          signature policy enforced (--enforce-container-sigpolicy)
+Hostname: kinolune
+User:     admin (wheel), password set from the answer file, stored as yescrypt
+Network:  DHCP on any wired interface
+Language: ru
+
+Commands:
+  wipefs --all --force /dev/nvme0n1
+  sfdisk --wipe always --wipe-partitions always /dev/nvme0n1 <<EOF
+    label: gpt
+    /dev/nvme0n1p1 : size=1024MiB, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, name="EFI-SYSTEM"
+    /dev/nvme0n1p2 : size=2048MiB, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, name="boot"
+    /dev/nvme0n1p3 : type=4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709, name="root"
+    EOF
+  udevadm settle --timeout=30
+  mkfs.vfat -F 32 -n EFI-SYSTEM /dev/nvme0n1p1
+  mkfs.ext4 -F -q -L boot /dev/nvme0n1p2
+  mkfs.btrfs -f -q -L root /dev/nvme0n1p3
+  (mount /dev/nvme0n1p3 at /run/alpha-installer/target with /boot and /boot/efi)
+  podman run --rm --privileged --pid=host --pull=never --security-opt label=type:unconfined_t -v /dev:/dev -v /var/lib/containers:/var/lib/containers -v /run/alpha-installer/target:/run/alpha-installer/target ghcr.io/denishumen/alpha-os:stable bootc install to-filesystem --target-imgref ghcr.io/denishumen/alpha-os:stable --enforce-container-sigpolicy --skip-finalize /run/alpha-installer/target
+  (btrfs subvolume @var for /var, /etc/fstab, /etc/hostname, user, network, /var/lib/alpha/install.json, SELinux labels)
+
+Dry run: nothing was written.
+DRYRUN=0
+[root@kinolune /]# printf '%s' '{"version":1,"disk":{"path":"/dev/nvme0n1","data_partition":true,"root_size_gib":20},"hostname":"kinolune-iso","user":{"name":"admin","password":"smoke-test-pw"},"image":{"enforce_signature_policy":false},"kernel_args":["console=ttyS0,115200"]}' > /root/answers.json; alpha-installer install --answers /root/answers.json --yes 2>&1 | tail -n 40; echo INST""ALL=${PIPESTATUS[0]}
+
++ udevadm settle --timeout=30
+==> Creating vfat on /dev/nvme0n1p1 (EFI-SYSTEM)
++ wipefs --all --force /dev/nvme0n1p1
++ mkfs.vfat -F 32 -n EFI-SYSTEM /dev/nvme0n1p1
+==> Creating ext4 on /dev/nvme0n1p2 (boot)
++ wipefs --all --force /dev/nvme0n1p2
++ mkfs.ext4 -F -q -L boot /dev/nvme0n1p2
+==> Creating btrfs on /dev/nvme0n1p3 (root)
++ wipefs --all --force /dev/nvme0n1p3
++ mkfs.btrfs -f -q -L root /dev/nvme0n1p3
+==> Creating btrfs on /dev/nvme0n1p4 (kinolune-data)
++ wipefs --all --force /dev/nvme0n1p4
++ mkfs.btrfs -f -q -L kinolune-data /dev/nvme0n1p4
+==> Mounting the target at /run/alpha-installer/target
++ mount -t btrfs -o compress=zstd:1 /dev/nvme0n1p3 /run/alpha-installer/target
++ mount -t ext4 /dev/nvme0n1p2 /run/alpha-installer/target/boot
++ mount -t vfat -o umask=0077 /dev/nvme0n1p1 /run/alpha-installer/target/boot/efi
+==> Installing containers-storage:ghcr.io/denishumen/alpha-os:stable (tracks ghcr.io/denishumen/alpha-os:stable)
++ podman run --rm --privileged --pid=host --pull=never --security-opt label=type:unconfined_t -v /dev:/dev -v /var/lib/containers:/var/lib/containers -v /run/alpha-installer/target:/run/alpha-installer/target ghcr.io/denishumen/alpha-os:stable bootc install to-filesystem --target-imgref ghcr.io/denishumen/alpha-os:stable --skip-finalize --karg console=ttyS0,115200 /run/alpha-installer/target
+Deploying container image...done (5 seconds)
++ blkid -s UUID -o value /dev/nvme0n1p1
++ blkid -s UUID -o value /dev/nvme0n1p2
++ blkid -s UUID -o value /dev/nvme0n1p3
++ blkid -s UUID -o value /dev/nvme0n1p4
+==> Moving /var into the btrfs subvolume @var
++ btrfs subvolume create /run/alpha-installer/target/@var
++ cp -a --reflink=auto /run/alpha-installer/target/ostree/deploy/default/var/. /run/alpha-installer/target/@var/
++ mount --bind /run/alpha-installer/target/@var /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0/var
+==> Hostname kinolune-iso
+==> User admin (wheel)
++ chpasswd --root /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0 --crypt-method YESCRYPT <<< (secret)
+==> Applying SELinux labels
++ setfiles -F -r /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0 /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0/etc/selinux/targeted/contexts/files/file_contexts /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0/etc/hostname /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0/etc/fstab /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0/etc/passwd /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0/etc/shadow /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0/etc/group /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0/etc/gshadow /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0/var
++ umount /run/alpha-installer/target/ostree/deploy/default/deploy/a89fb23d0d76ca166dadd73b8dbc61725b0fd6e1d58b74932d347cf496520c63.0/var
+==> Installed Kinolune OS to /dev/nvme0n1; it tracks ghcr.io/denishumen/alpha-os:stable
+==> Unmounting the target
++ umount /run/alpha-installer/target/boot/efi
++ umount /run/alpha-installer/target/boot
++ umount /run/alpha-installer/target
++ sync
+INSTALL=0

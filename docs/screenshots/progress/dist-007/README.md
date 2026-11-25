@@ -10,8 +10,8 @@
 | [grub-menu.png](grub-menu.png) | меню GRUB ISO (UEFI): «Install Kinolune OS», «… (basic graphics)», «… (copy to RAM …)» |
 | [installer-menu-ru.png](installer-menu-ru.png) | tty1 после выбора языка «Русский»: меню `alpha-live-installer` |
 | [installer-disks-ru.png](installer-disks-ru.png) | пункт 1: виртуальный NVMe предложен, DVD с ISO и loop squashfs исключены |
-| [boot-serial.log](boot-serial.log) | последовательная консоль: `distro/tests/iso-boot.sh` с `INSTALL=1` — меню, диски, `os-release`, payload, `--dry-run`, офлайн-установка на NVMe |
-| [installed-serial.log](installed-serial.log) | загрузка установленного с ISO диска до `kinolune-iso login:` |
+| [boot-serial.txt](boot-serial.txt) | последовательная консоль: `distro/tests/iso-boot.sh` с `INSTALL=1` — меню, диски, `os-release`, payload, `--dry-run`, офлайн-установка на NVMe |
+| [installed-serial.txt](installed-serial.txt) | загрузка установленного с ISO диска до `kinolune-iso login:` |
 
 Числа: payload (образ ОС) 2.16 GB в распакованном виде, live-образ 2.21 GB; благодаря общей базе и удалению дубликатов squashfs весит 1128 MiB, ISO — 1292 MiB.
 
