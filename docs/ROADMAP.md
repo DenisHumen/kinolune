@@ -1407,10 +1407,10 @@ project_alpha/
   - Что: бинарники для linux gnu и musl (x64, arm64), служба Windows, launchd на macOS, systemd unit, Docker multi-arch (amd64 и arm64) в GHCR с cosign; примеры с `/dev/dri` и NVIDIA CDI.
   - deps: SRV-001, CI-011 · size: M · parallel: yes · веха: M4 · ref: 04 §4.4, 05 §4.3
   - done when: `docker run` и `systemctl start` поднимают сервер; образ подписан.
-- [ ] **SRV-019** Сервер сообщает «идёт просмотр» (для обновлений ОС)
+- [x] **SRV-019** Сервер сообщает «идёт просмотр» (для обновлений ОС)
   - Что: `GET /api/v1/system/activity` → `{busy, sessions, reason}`: сервер сам знает, что сейчас нельзя перезагружаться — идёт просмотр (отдаваемые потоки direct play/HLS/транскод и heartbeat-ы `pb.update` `playing` от клиентов через хаб синхронизации в пределах TTL), запись или загрузка Twitch, сканирование; `reason` — `playback`, `recording` или `scan`. Агент обновлений ОС (DIST-009) спрашивает его перед применением обновления и перед перезагрузкой и откладывает, пока занято. Доступен только с самой машины (loopback) без токена пользователя, с других адресов — отказ.
   - deps: SRV-001 · size: S · parallel: yes · веха: M8 · ref: DIST-009
-  - done when: тесты: простой → не занят; heartbeat `playing` → занят до истечения TTL; запрос не с loopback → отказ; эндпоинт в `docs/api/openapi.json` с контракт-тестом.
+  - done when: тесты: простой → не занят; heartbeat `playing` → занят до истечения TTL; запрос не с loopback → отказ; эндпоинт в `docs/api/openapi.json` с контракт-тестом. Сделано: `server/src/activity.rs` (`ActivityGuard` для потоков, записей и сканов, `Hub::playing_now` по `ttl_ms`), отказ не с loopback и через прокси, API 1.1; тесты `server/tests/activity.rs`.
 
 ### 3.15. MUS — музыкальный плеер
 
