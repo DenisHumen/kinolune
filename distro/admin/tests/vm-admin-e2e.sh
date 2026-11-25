@@ -39,7 +39,7 @@ cleanup() {
         return
     fi
     if [[ -f "${WORK_DIR}/qemu.pid" ]]; then
-        "${qemu_exec[@]}" kill "$(cat "${WORK_DIR}/qemu.pid")" 2>/dev/null || true
+        "${qemu_exec[@]}" sh -c "kill \$(cat ${WORK_DIR}/qemu.pid)" 2>/dev/null || true
         rm -f "${WORK_DIR}/qemu.pid"
     fi
     "${ENGINE}" rm -f "${REGISTRY_NAME}" >/dev/null 2>&1 || true
@@ -91,8 +91,8 @@ for _ in $(seq 1 24); do
 done
 vm systemctl is-active --quiet alpha-admin.service || { vm journalctl -u alpha-admin -b --no-pager | tail -30; die "alpha-admin is not active"; }
 vm systemctl is-active --quiet alpha-admin-auth.socket || die "alpha-admin-auth.socket is not active"
-[[ "$(vm stat -c '%a %U' /run/alpha-admin/auth.sock)" == "600 alpha-admin" ]] || die "auth socket permissions"
-[[ "$(vm stat -c '%U %a' /var/lib/alpha/admin)" == "alpha-admin 700" ]] || die "state dir permissions"
+[[ "$(vm "stat -c '%a %U' /run/alpha-admin/auth.sock")" == "600 alpha-admin" ]] || die "auth socket permissions"
+[[ "$(vm "stat -c '%U %a' /var/lib/alpha/admin")" == "alpha-admin 700" ]] || die "state dir permissions"
 [[ "$(vm 'stat -c %U /proc/$(systemctl show -p MainPID --value alpha-admin)')" == "alpha-admin" ]] \
     || die "alpha-admin does not run as its own user"
 vm "ss -ltnp | grep -q ':443 .*alpha-admin'" || die "alpha-admin is not listening on 443"

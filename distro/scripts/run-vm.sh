@@ -45,4 +45,4 @@ log "Starting VM (${VM_CPUS} vCPU, ${VM_MEM_MB} MiB), ssh on 127.0.0.1:${VM_SSH_
     -device virtio-net-pci,netdev=n0 \
     -display none -serial "file:${SERIAL}" \
     -daemonize -pidfile "${PIDFILE}"
-log "VM pid $(cat "${PIDFILE}"), serial log: ${SERIAL}"
+log "VM pid $("${qemu_exec[@]}" cat "${PIDFILE}"), serial log: ${SERIAL}"
