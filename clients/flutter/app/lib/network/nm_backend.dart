@@ -51,6 +51,7 @@ const _keySae = 0x400;
 // NMDeviceStateReason: the network turned the secret down.
 const _reasonNoSecrets = 7;
 const _reasonSupplicantDisconnect = 8;
+const _reasonSupplicantTimeout = 11;
 const _reasonSsidNotFound = 53;
 
 /// NetworkManager on [client] (the system bus by default).
@@ -70,6 +71,39 @@ class NmBackend implements NetworkBackend {
   final DBusClient _client;
   final Duration _connectTimeout;
   String? _connecting;
+
+  /// Device state reasons seen during the last join (for the live check).
+  List<int> get lastReasons => List.unmodifiable(_reasons);
+  final List<int> _reasons = [];
+  StreamSubscription<DBusSignal>? _watch;
+
+  /// Follows the Wi-Fi device's `StateChanged(new, old, reason)` while
+  /// joining: the reason a wrong password gives (NO_SECRETS after
+  /// SUPPLICANT_DISCONNECT) is often gone from `StateReason` by the time
+  /// the activation is reported down.
+  Future<void> _watchReasons(String dev) async {
+    _reasons.clear();
+    await _watch?.cancel();
+    _watch = DBusSignalStream(
+      _client,
+      sender: _nm,
+      interface: _device,
+      name: 'StateChanged',
+      path: DBusObjectPath(dev),
+    ).listen((sig) {
+      if (sig.values.length >= 3) {
+        final r = _u32(sig.values[2]);
+        if (r != null && r != 0) _reasons.add(r);
+      }
+    }, onError: (_) {});
+    // The match rule is added in the background; give it a moment.
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  }
+
+  Future<void> _unwatch() async {
+    await _watch?.cancel();
+    _watch = null;
+  }
 
   DBusRemoteObject _obj(String path) =>
       DBusRemoteObject(_client, name: _nm, path: DBusObjectPath(path));
@@ -330,6 +364,7 @@ class NmBackend implements NetworkBackend {
         .where((s) => s.ssid == network.ssid)
         .firstOrNull;
     _connecting = network.ssid;
+    await _watchReasons(dev);
     try {
       if (saved != null) {
         if (password != null && network.security.needsPassword) {
@@ -365,6 +400,7 @@ class NmBackend implements NetworkBackend {
       return _errorResult(e);
     } finally {
       _connecting = null;
+      await _unwatch();
     }
   }
 
@@ -378,6 +414,7 @@ class NmBackend implements NetworkBackend {
     final dev = await _wifiDevice();
     if (dev == null) return ConnectResult.failed;
     _connecting = ssid;
+    await _watchReasons(dev);
     try {
       return await _addAndActivate(
         _wifiSettings(ssid, security, password, hidden: true),
@@ -388,6 +425,7 @@ class NmBackend implements NetworkBackend {
       return _errorResult(e);
     } finally {
       _connecting = null;
+      await _unwatch();
     }
   }
 
@@ -452,19 +490,29 @@ class NmBackend implements NetworkBackend {
   }
 
   Future<ConnectResult> _failure(String dev, {required bool password}) async {
+    // Signals may still be on their way.
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final reasons = [..._reasons];
     try {
       final r = (await _obj(
         dev,
       ).getProperty(_device, 'StateReason')).asStruct();
-      final reason = _u32(r[1]) ?? 0;
-      if (reason == _reasonSsidNotFound) return ConnectResult.notFound;
-      if (password &&
-          (reason == _reasonNoSecrets ||
-              reason == _reasonSupplicantDisconnect)) {
-        return ConnectResult.wrongPassword;
-      }
+      reasons.add(_u32(r[1]) ?? 0);
     } on DBusMethodResponseException {
       // No reason to tell.
+    }
+    _reasons
+      ..clear()
+      ..addAll(reasons);
+    if (reasons.contains(_reasonSsidNotFound)) return ConnectResult.notFound;
+    if (password &&
+        reasons.any(
+          (r) =>
+              r == _reasonNoSecrets ||
+              r == _reasonSupplicantDisconnect ||
+              r == _reasonSupplicantTimeout,
+        )) {
+      return ConnectResult.wrongPassword;
     }
     return ConnectResult.failed;
   }
@@ -508,7 +556,10 @@ class NmBackend implements NetworkBackend {
   }
 
   @override
-  Future<void> close() => _client.close();
+  Future<void> close() async {
+    await _unwatch();
+    await _client.close();
+  }
 }
 
 // ------------------------------------------------------------------ helpers

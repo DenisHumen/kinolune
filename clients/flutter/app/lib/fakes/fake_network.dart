@@ -131,7 +131,7 @@ class FakeNetworkBackend implements NetworkBackend {
                 autoconnect: _saved[_active]?.autoconnect ?? true,
               ),
           ]
-        : const <WifiNetwork>[];
+        : <WifiNetwork>[];
     list.sort((a, b) {
       if (a.active != b.active) return a.active ? -1 : 1;
       if (a.saved != b.saved) return a.saved ? -1 : 1;

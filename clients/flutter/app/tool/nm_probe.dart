@@ -56,7 +56,7 @@ Future<Map<String, Object?>> _run(NmBackend nm, List<String> a) async {
       final n = s.networks.where((n) => n.ssid == a[1]).firstOrNull;
       if (n == null) return {'result': ConnectResult.notFound.name};
       final r = await nm.connect(n, password: a.length > 2 ? a[2] : null);
-      return {'result': r.name};
+      return {'result': r.name, 'reasons': nm.lastReasons};
     case 'hidden':
       final sec = switch (a[2]) {
         'open' => WifiSecurity.open,
@@ -68,7 +68,7 @@ Future<Map<String, Object?>> _run(NmBackend nm, List<String> a) async {
         security: sec,
         password: a.length > 3 ? a[3] : null,
       );
-      return {'result': r.name};
+      return {'result': r.name, 'reasons': nm.lastReasons};
     case 'forget':
       await nm.forget(a[1]);
       return {'ok': true};
