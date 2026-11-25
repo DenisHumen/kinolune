@@ -72,9 +72,9 @@ if [[ "$("${ENGINE}" inspect -f '{{.State.Running}}' "${ISO_HELPER_NAME}" 2>/dev
         "${ISO_HELPER_IMAGE}" sleep infinity >/dev/null
     helper bash -euc '
         dnf -y -q install --setopt=install_weak_deps=False podman image-builder squashfs-tools >/dev/null
-        # Nested podman: no systemd in the helper; builds share the host network.
+        # Nested podman: no systemd and no delegated cgroup controllers in the helper.
         mkdir -p /etc/containers/containers.conf.d
-        printf "[engine]\ncgroup_manager = \"cgroupfs\"\nevents_logger = \"file\"\n" \
+        printf "[containers]\ncgroups = \"disabled\"\npids_limit = 0\n[engine]\ncgroup_manager = \"cgroupfs\"\nevents_logger = \"file\"\n" \
             > /etc/containers/containers.conf.d/50-helper.conf
         image-builder version | head -n 3'
 fi
