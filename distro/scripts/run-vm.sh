@@ -4,12 +4,18 @@
 #   distro/scripts/run-vm.sh [DISK]
 # SSH: ssh -i distro/.work/vm_key -p $VM_SSH_PORT root@127.0.0.1
 # Set VM_UEFI=1 to boot with OVMF instead of SeaBIOS (the generic image supports both).
+# VM_EXTRA_DISKS="a.raw b.raw" attaches more virtio disks (vdb, vdc, ...).
+# QEMU_EXEC="docker exec <container>" runs QEMU through a helper container that has
+# qemu and /dev/kvm (the paths must be the same inside it).
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
 DISK="${1:-${WORK_DIR}/disk.raw}"
 [[ -f "${DISK}" ]] || die "disk not found: ${DISK}"
-[[ -w /dev/kvm ]] || die "/dev/kvm is not writable (add the user to the kvm group)"
+if [[ -z "${QEMU_EXEC:-}" ]]; then
+    [[ -w /dev/kvm ]] || die "/dev/kvm is not writable (add the user to the kvm group)"
+fi
+read -r -a qemu_exec <<< "${QEMU_EXEC:-}"
 
 PIDFILE="${WORK_DIR}/qemu.pid"
 SERIAL="${WORK_DIR}/serial.log"
@@ -18,19 +24,25 @@ firmware=()
 if [[ "${VM_UEFI:-0}" == 1 ]]; then
     code="${OVMF_CODE:-/usr/share/OVMF/OVMF_CODE_4M.fd}"
     vars_src="${OVMF_VARS:-/usr/share/OVMF/OVMF_VARS_4M.fd}"
-    cp -n "${vars_src}" "${WORK_DIR}/OVMF_VARS.fd"
+    "${qemu_exec[@]}" cp -n "${vars_src}" "${WORK_DIR}/OVMF_VARS.fd"
     firmware=(-drive "if=pflash,format=raw,readonly=on,file=${code}"
               -drive "if=pflash,format=raw,file=${WORK_DIR}/OVMF_VARS.fd")
 fi
 
+extra=()
+for d in ${VM_EXTRA_DISKS:-}; do
+    extra+=(-drive "file=${d},format=raw,if=virtio,cache=unsafe")
+done
+
 log "Starting VM (${VM_CPUS} vCPU, ${VM_MEM_MB} MiB), ssh on 127.0.0.1:${VM_SSH_PORT}"
-nice -n 10 qemu-system-x86_64 \
+"${qemu_exec[@]}" nice -n 10 qemu-system-x86_64 \
     -enable-kvm -machine q35 -cpu host \
     -smp "${VM_CPUS}" -m "${VM_MEM_MB}" \
     "${firmware[@]}" \
     -drive "file=${DISK},format=raw,if=virtio,cache=unsafe" \
+    "${extra[@]}" \
     -netdev "user,id=n0,hostfwd=tcp:127.0.0.1:${VM_SSH_PORT}-:22" \
     -device virtio-net-pci,netdev=n0 \
     -display none -serial "file:${SERIAL}" \
     -daemonize -pidfile "${PIDFILE}"
-log "VM pid $(cat "${PIDFILE}"), serial log: ${SERIAL}"
+log "VM pid $("${qemu_exec[@]}" cat "${PIDFILE}"), serial log: ${SERIAL}"

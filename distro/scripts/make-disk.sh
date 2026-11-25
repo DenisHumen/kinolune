@@ -39,7 +39,9 @@ truncate -s "${VM_DISK_SIZE}" "${DISK}"
 
 log "Installing ${SOURCE} -> ${DISK} (tracks ${TARGET})"
 # The installer runs from the pinned base image; it only needs bootc + bootupd.
-nice -n 10 "${ENGINE}" run --rm --privileged --pid=host --net=host \
+# INSTALL_CONTAINER_NAME names the installer container (shared build hosts).
+nice -n 10 "${ENGINE}" run --rm ${INSTALL_CONTAINER_NAME:+--name "${INSTALL_CONTAINER_NAME}"} \
+    --privileged --pid=host --net=host \
     --security-opt label=disable \
     -v /dev:/dev \
     -v /var/lib/containers:/var/lib/containers \

@@ -1671,10 +1671,10 @@ project_alpha/
   - Что: подписанный манифест `channels/<ch>.json` (minisign) хостится на GitHub Pages (SITE-004); когорты `hash(device_id) mod 100`; переход по digest; `halt` как стоп-кран; окно обслуживания с учётом активных сессий медиасервера.
   - deps: DIST-009, SITE-004 · size: M · parallel: yes · веха: M8 · ref: 05 §4.2 п.3, п.8
   - done when: тест: устройство вне когорты не обновляется; `halt` останавливает раскатку.
-- [ ] **DIST-013** `alpha-admin`: бэкенд (Go)
+- [x] **DIST-013** `alpha-admin`: бэкенд (Go)
   - Что: аутентификация (пользователи ОС и роли), REST поверх D-Bus (systemd, NetworkManager, firewalld, UDisks2, logind), прокси к alpha-updated, самоподписанный TLS.
   - deps: DIST-001 · size: L · parallel: yes · веха: M8 · ref: 05 §5.1
-  - done when: go-тесты на моках D-Bus; e2e в QEMU.
+  - done when: go-тесты на моках D-Bus; e2e в QEMU. Сделано: `distro/admin` — демон `alpha-admin` от собственного пользователя без root (песочница systemd, `IPAddressAllow` только LAN), изменения через D-Bus по polkit-правилу `50-alpha-admin.rules` (только наши действия); вход пользователями ОС через PAM-помощник `alpha-admin-auth` (socket-activated, root, `SO_PEERCRED`), входят только администраторы (`wheel`/`alpha-admin`), остальным — «Нет прав администратора»; сессии в памяти, cookie `__Host-` Secure/HttpOnly/SameSite=Strict, CSRF-токен + `Origin`, блокировка пары «учётная запись + адрес» и адреса, лимит попыток; REST: сервисы (статус, перезапуск, журнал), NetworkManager (статус, подключения up/down, Wi-Fi), firewalld (зоны, наши порты runtime+permanent), UDisks2 (диски, SMART, mount/unmount данных, системные ФС из `install.json` не трогаются), logind (перезагрузка/выключение с подтверждением и ингибиторами); прокси к сокету `alpha-updated`; самоподписанный ECDSA-сертификат в `/var/lib/alpha/admin`, отпечаток в `/api/v1/info`; OpenAPI; ADR-NNNN. Тесты: Go на фейковых systemd/logind/NM/firewalld/UDisks2 на приватном `dbus-daemon`, вход/блокировки/CSRF/прокси к фейковому `alpha-updated`, настоящий PAM в контейнере (`tests/pam-container.sh`), e2e в QEMU (`tests/vm-admin-e2e.sh`).
 - [ ] **DIST-014** `alpha-admin`: веб-интерфейс
   - Что: вход, дашборд (CPU, RAM, температуры, диски), сеть, пользователи, обновления (версия, release notes, применить или откатить, канал), «Расширенный режим (Cockpit)» только для LAN; управление обновлениями ОС из клиентского приложения через API медиасервера.
   - deps: DIST-013, DIST-009, DSN-003 · size: L · parallel: yes · веха: M8 · ref: 05 §5.1, §8 (фаза 2)

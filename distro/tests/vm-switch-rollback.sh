@@ -91,6 +91,10 @@ check_services() {
     for port in 8487 80; do
         vm "curl -fsS http://127.0.0.1:${port}/health" >/dev/null || die "no /health on :${port}"
     done
+    # alpha-admin (DIST-013): HTTPS with the self-signed certificate, :80 redirects.
+    vm "curl -fsSk https://127.0.0.1/healthz" >/dev/null || die "alpha-admin: no HTTPS on :443"
+    vm "curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1/" | grep -qx 301 \
+        || die "alpha-admin: :80 does not redirect to HTTPS"
     # alpha-updated (DIST-009) answers only on its unix socket, root:alpha-admin 0660.
     vm "curl -fsS --unix-socket /run/alpha-updated/api.sock http://localhost/healthz" >/dev/null \
         || die "alpha-updated does not answer on its socket"

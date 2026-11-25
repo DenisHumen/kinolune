@@ -17,6 +17,7 @@
 | `keys/` | публичный ключ cosign `alpha-os.pub` (кладёт владелец, см. ниже) |
 | `tests/signature-policy.sh` | DIST-002: устройство отклоняет неподписанный образ |
 | `scripts/run-vm.sh` | запуск диска в QEMU/KVM (2 vCPU, 3 GiB, SSH на `127.0.0.1:22522`, `VM_UEFI=1` для OVMF) |
+| `admin/` | `alpha-admin` (Go): бэкенд админки — вход пользователями ОС, REST поверх D-Bus, прокси к `alpha-updated`, самоподписанный TLS (DIST-013), см. [admin/README.md](admin/README.md) |
 | `installer/` | `alpha-installer` (Go): пока только обнаружение дисков (DIST-004), см. [installer/README.md](installer/README.md) |
 | `updated/` | `alpha-updated` (Go): агент обновлений — check, download-only, apply, rollback через bootc, API на unix-сокете, окно обслуживания (DIST-009), см. [updated/README.md](updated/README.md) |
 | `tests/vm-switch-rollback.sh` | сценарий фазы 0: switch → rollback → upgrade → rollback → digest-пин и возврат на тег |
@@ -26,6 +27,8 @@
 
 - **`alpha-media` и `alpha-admin` пока заглушки** (`/usr/libexec/alpha/alpha-stub`, Python): `alpha-media` (:8487), `alpha-admin` (:80). Каждая отвечает `GET /health` и `/healthz` JSON-ом с версией образа. Юниты с `DynamicUser=yes` и `ProtectSystem=strict`.
 - **`alpha-updated` — настоящий агент обновлений** (Go, DIST-009): бинарник `/usr/libexec/alpha/alpha-updated` собирается в стадии `go-build` `Containerfile`, API — только на unix-сокете `/run/alpha-updated/api.sock` (`root:alpha-admin 0660`, `alpha-updated.socket`), состояние — `/var/lib/alpha/updated`. Подробно — [updated/README.md](updated/README.md).
+- **Наши сервисы — заглушки** (`/usr/libexec/alpha/alpha-stub`, Python): `alpha-media` (:8487), `alpha-updated` (:7091, наружу не открыт). Каждая отвечает `GET /health` и `/healthz` JSON-ом с версией образа. Юниты с `DynamicUser=yes` и `ProtectSystem=strict`.
+- **`alpha-admin`** (DIST-013) — настоящий бэкенд админки: HTTPS на :443 с самоподписанным сертификатом, :80 перенаправляет и отвечает `/health`; только LAN; работает от пользователя `alpha-admin`, права на D-Bus — через polkit-правило, пароли проверяет PAM-помощник `alpha-admin-auth`. Подробно — [admin/README.md](admin/README.md).
 - **Samba**: SMB3, `vfs_fruit` для macOS, шара `Media` → `/var/srv/media` (гостевое чтение). **wsdd** (Windows), **Avahi** + nss-mdns (`<hostname>.local`).
 - **firewalld**: зона по умолчанию `home`; открыты samba, mdns, ws-discovery, http, https, 8487/tcp. (ssh и dhcpv6-client остаются из стандартной зоны `home` — на прототипе SSH нужен для тестов; выключение по умолчанию — в DIST-013.)
 - **smartd**, **chronyd**, **greenboot** (проверки появятся в DIST-011), **Cockpit** установлен, `cockpit.socket` выключен.
