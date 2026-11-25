@@ -4,7 +4,7 @@
 // The Rust core reads files, not Flutter assets, so the bundled database is
 // copied once per app build into the support directory and its path is
 // handed to the core. Release builds put the file into assets/anime-db
-// (data/anime-mappings/build.sh in release-app.yml); development builds
+// (tools/anime-mappings/build.sh in release-app.yml); development builds
 // may have none, and then the core starts from the first daily update.
 
 import 'dart:io';

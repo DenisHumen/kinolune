@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 #
-# Dependency policy for the Cargo workspace (CI-003), configured in deny.toml:
+# Dependency policy for the Cargo workspace (CI-003), configured in .cargo/deny.toml
+# (cargo-deny finds it next to the workspace Cargo.toml by itself):
 #   deny        — licences (ADR-0005 allow-list, no GPL/AGPL/SSPL/LGPL crates),
 #                 bans (no duplicates of core crates), sources (crates.io only)
 #   advisories  — RustSec advisories via cargo-deny and cargo-audit; also runs
@@ -87,7 +88,7 @@ jobs:
         run: |
           work="$RUNNER_TEMP/canary"
           mkdir -p "$work"
-          cp -r Cargo.toml Cargo.lock deny.toml rust-toolchain.toml core server tools "$work/"
+          cp -r Cargo.toml Cargo.lock .cargo rust-toolchain.toml core server tools "$work/"
           cd "$work"
           mkdir -p core/crates/gpl-canary/src
           : > core/crates/gpl-canary/src/lib.rs

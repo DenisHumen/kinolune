@@ -10,6 +10,8 @@ repos:
     rev: v8.30.1
     hooks:
       - id: gitleaks
+        # Config and reviewed false positives live in .github/gitleaks/ (REPO-014).
+        args: [--config=.github/gitleaks/gitleaks.toml, --gitleaks-ignore-path=.github/gitleaks/.gitleaksignore]
   - repo: https://github.com/fsfe/reuse-tool
     rev: v6.2.0
     hooks:

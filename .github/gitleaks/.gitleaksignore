@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: MPL-2.0
+# Reviewed gitleaks false positives (test fixtures, no real secrets). Format: commit:file:rule:line.
+# pa-proxy test: a dummy 32-hex token used to check that a wrong URL token is rejected.
+75f0940ac9f170fb7aba5ba4e0ded8c8d583a6d1:core/crates/pa-proxy/tests/proxy.rs:generic-api-key:141
+# pa-secrets test: a sample UUID-based secret key name in a key-syntax test.
+459063707349e04a13b8a6ae1919d3f1d2fc1b9b:core/crates/pa-secrets/src/key.rs:generic-api-key:97
+# pa-frb test: an OpenSSH private-key header used to check key-file detection (no key material).
+# pa-log tests and redactor tests: sample tokens that the redactor must cut.
+# pa-proxy / pa-secrets: the same reviewed fixtures in earlier commits.
+ec50104958bc8c82c207fbe89e0a2a36a7129414:core/crates/pa-frb/src/api/sources.rs:private-key:549
+211781fc54de31c4237b3d0239a3e58c4659a5a8:core/crates/pa-log/src/redact.rs:generic-api-key:329
+211781fc54de31c4237b3d0239a3e58c4659a5a8:core/crates/pa-log/tests/report.rs:generic-api-key:47
+0bec2615029c94e5cb310f1b7279f40d294d3898:core/crates/pa-frb/src/api/sources.rs:private-key:537
+e2bbf4c47b82101ee089a8b8355290eddc91cd6f:core/crates/pa-log/tests/report.rs:generic-api-key:47
+e2bbf4c47b82101ee089a8b8355290eddc91cd6f:core/crates/pa-log/src/redact.rs:generic-api-key:307
+89c37e23965af93b8749698bbde78002d4aad4e8:core/crates/pa-proxy/tests/proxy.rs:generic-api-key:141
+8f20071cdb2e298fa7ca7137d037dd05f316d463:core/crates/pa-secrets/src/key.rs:generic-api-key:97
+# SRV-002 contract test: the RFC 6455 sample WebSocket key ("the sample nonce"), not a secret.
+6a7cf27064afa2e890ac73a6fc2236c90e2eca9d:server/tests/contract/live.rs:generic-api-key:94
+# False positives reviewed 2026-11-25 (maintainer): DIST-032 VM log names test
+# Wi-Fi networks (kinolune-wpa2/kinolune-open), MUS-015 fixture uses the token
+# from the Last.fm API docs example, remote config holds public Twitch
+# persisted-query hashes.
+f8a72419aa7888bef4632ea751b54860bd91168c:docs/screenshots/progress/dist-032/wifi-hwsim-vm.txt:generic-api-key:4
+d859a8e4f826df32f875be4d413a826e848d3fba:docs/screenshots/progress/dist-032/wifi-hwsim-vm.txt:generic-api-key:4
+d7ca40290a1fd8e6982adbb1b6526afacf737a4c:core/crates/pa-scrobble/tests/fixtures/lastfm-token.json:generic-api-key:1
+d7ca40290a1fd8e6982adbb1b6526afacf737a4c:core/crates/pa-scrobble/tests/recorded.rs:generic-api-key:103
+d7ca40290a1fd8e6982adbb1b6526afacf737a4c:core/crates/pa-scrobble/tests/recorded.rs:generic-api-key:106
+d7d43d2c5c907881dc21e580a6c4de27629644ed:tools/remote-config/remote-config.next.json:generic-api-key:26
+778c76fd5e098d4a63f1edd31439ae1955f82b79:core/crates/pa-scrobble/tests/fixtures/lastfm-token.json:generic-api-key:1
+778c76fd5e098d4a63f1edd31439ae1955f82b79:core/crates/pa-scrobble/tests/recorded.rs:generic-api-key:103
+778c76fd5e098d4a63f1edd31439ae1955f82b79:core/crates/pa-scrobble/tests/recorded.rs:generic-api-key:106
+ac159c94a0dbcf8c52ba1be9fd8e1f9c8e89ab25:tools/remote-config/remote-config.next.json:generic-api-key:19

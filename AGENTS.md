@@ -2,7 +2,24 @@
 
 # AGENTS.md — инструкции для AI-агентов
 
-Общие правила для любого агента (Claude Code, Codex, Cursor, Copilot и др.), который работает в этом репозитории. Правила владельца и заметки для Claude Code — в [CLAUDE.md](CLAUDE.md); для людей — [CONTRIBUTING.md](CONTRIBUTING.md). В каталогах областей лежат свои короткие `AGENTS.md` с командами сборки и тестов: [core/](core/AGENTS.md), [clients/flutter/](clients/flutter/AGENTS.md), [clients/apple/](clients/apple/AGENTS.md), [server/](server/AGENTS.md), [distro/](distro/AGENTS.md). Ближайший к изменяемому файлу `AGENTS.md` уточняет этот.
+Общие правила для любого агента (Claude Code, Codex, Cursor, Copilot и др.), который работает в этом репозитории. Правила владельца и заметки для Claude Code — в [.claude/CLAUDE.md](.claude/CLAUDE.md); для людей — [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md). В каталогах областей лежат свои короткие `AGENTS.md` с командами сборки и тестов: [core/](core/AGENTS.md), [clients/flutter/](clients/flutter/AGENTS.md), [clients/apple/](clients/apple/AGENTS.md), [server/](server/AGENTS.md), [distro/](distro/AGENTS.md). Ближайший к изменяемому файлу `AGENTS.md` уточняет этот.
+
+## Структура репозитория
+
+С 2026-11-25 (REPO-014, [ADR-0168](docs/adr/0168-tidy-repository-root.md), [подробно](docs/dev/repo-layout.md)) в корне только то, что обязано там лежать:
+
+| Где | Что |
+|---|---|
+| `core/`, `server/`, `clients/`, `distro/`, `packaging/`, `design/`, `docs/` | код и документация по областям |
+| `tools/` | инструменты: сборка FFmpeg/mpv/libsmb2, `roadmap/`, `release/`, `qa/` (тестовые медиа — `tools/qa/media/`, модуль `just tests::…`), `anime-mappings/` (бывш. `data/`), `desktop-player-spike/` (бывш. `spikes/desktop-player`) |
+| `config/` | подписанный удалённый конфиг; **не переносить** — адрес вшит в выпущенные сборки |
+| `.github/` | workflows, шаблоны, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `gitleaks/` |
+| `.config/` | `mise.toml`, `xcode-version`, `nextest.toml` |
+| `.cargo/` | `deny.toml` (`cargo deny check` находит его сам), `audit.toml` |
+| `.claude/CLAUDE.md` | правила владельца для Claude Code |
+| `.justfile` | корневой justfile (только `mod`-строки) |
+
+Каталогов `site/`, `spikes/`, `data/`, `tests/` больше нет — не создавайте их заново.
 
 ## Проект за минуту
 
@@ -22,7 +39,7 @@
    ```
    Ветка `<type>/<ID>-<slug>`, type ∈ `feat|fix|docs|ci|build|chore|test|refactor|perf`. Несколько задач в одном PR — ветка по первому ID, все ID в заголовке.
 4. Сразу откройте draft PR (он «занимает» задачу): заголовок `<type>(<scope>): <summary> [<ID>]`, тело — по [шаблону](.github/pull_request_template.md).
-5. Меняйте только каталоги своего workstream (ROADMAP §0.4). Горячие файлы (§0.5: корневые `Cargo.toml`, `justfile`, `pubspec.yaml`, роутер, `.arb`, `ROADMAP.md`) — только минимальные добавляющие правки по правилам таблицы. Нужна правка в чужом каталоге — минимальная и с пометкой в PR.
+5. Меняйте только каталоги своего workstream (ROADMAP §0.4). Горячие файлы (§0.5: корневые `Cargo.toml`, `.justfile`, `pubspec.yaml`, роутер, `.arb`, `ROADMAP.md`) — только минимальные добавляющие правки по правилам таблицы. Нужна правка в чужом каталоге — минимальная и с пометкой в PR.
 6. В том же PR отметьте `[x]` только у своей задачи. Новая работа — новая задача в конце своего раздела отдельным коммитом `docs(roadmap): add <ID>`.
 7. Перед готовностью: rebase на `origin/main`, все проверки ниже зелёные, в описании PR честно указано, что проверено и на каких платформах, а что нет.
 
@@ -43,7 +60,7 @@
 | Rust: линтер | `cargo clippy --workspace --all-targets -- -D warnings` |
 | Rust: тесты | `cargo nextest run --workspace` (нет nextest — `cargo test --workspace`) |
 | Лицензии и SPDX | `reuse lint` |
-| Зависимости Rust: лицензии (ADR-0005), дубликаты, источники, уязвимости | `cargo deny check` (+ `cargo audit`) |
+| Зависимости Rust: лицензии (ADR-0005), дубликаты, источники, уязвимости | `cargo deny check` (+ `cargo audit`), конфиг — `.cargo/deny.toml` |
 | Секреты и SPDX в изменённых файлах | `pre-commit run --all-files` |
 
 На общей машине ограничивайте параллелизм: `nice cargo … -j4`.

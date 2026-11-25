@@ -32,7 +32,7 @@ python3 "$here/tape.py" "$misses" > "$out/tmdb-search.tape.jsonl"
     --json "$out/naive-t080.json" --md "$out/naive-t080.md" "$corpus"/*.jsonl
 
 # META-007: candidate recall of the local title index, no provider calls.
-# Needs the bundled anime-offline-database (data/anime-mappings/build.sh).
+# Needs the bundled anime-offline-database (tools/anime-mappings/build.sh).
 python3 "$here/catalog.py" > "$out/title-catalog.jsonl"
 # META-014: the anime series and films TMDB lists, for the synthetic TMDB of
 # the META-013 matcher on all kinds (not part of the scorer's index).
@@ -126,5 +126,5 @@ if [ -f "$aod" ]; then
             --md "$out/meta030-library-episodes$sfx.md" || true
     done
 else
-    echo "skipping candidate and scorer reports: $aod not found (run data/anime-mappings/build.sh)" >&2
+    echo "skipping candidate and scorer reports: $aod not found (run tools/anime-mappings/build.sh)" >&2
 fi

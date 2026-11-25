@@ -10,7 +10,7 @@ Sources (all open, no API key):
   * anime-offline-database (ODbL 1.0)   AniDB/MAL/AniList/Kitsu ids, type, episode count
 
 The anime-offline-database file is the pinned release from
-data/anime-mappings/upstream.env (check its SHA-256 before use). Raw responses
+tools/anime-mappings/upstream.env (check its SHA-256 before use). Raw responses
 are cached in --cache and never committed; only the small set of facts the
 generator needs goes to facts.json. Every work gets a list of `checks` that
 says which source confirmed which field, and `problems` for anything that did

@@ -509,7 +509,7 @@ mod tests {
     }
 
     /// `av1C` extradata of the SVT-AV1 HDR10 test sample
-    /// (`tests/media/synthetic/hdr/hdr10-av1-1080p.mkv`): 4-byte header,
+    /// (`tools/qa/media/synthetic/hdr/hdr10-av1-1080p.mkv`): 4-byte header,
     /// then the sequence header OBU (1920x1080, 10 bit, BT.2020 / PQ /
     /// BT.2020 NCL).
     const AV1C_HDR10: [u8; 20] = [

@@ -14,5 +14,9 @@ target/
 # Python bytecode
 __pycache__/
 
+# Claude Code: local worktrees and settings (the shared .claude/CLAUDE.md is tracked)
+.claude/worktrees/
+.claude/settings.local.json
+
 # Local progress page (python3 tools/roadmap/roadmap.py page --out .progress)
 .progress/

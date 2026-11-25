@@ -4,7 +4,7 @@
 //!
 //! The derived file is itself a database under **ODbL-1.0** (share-alike):
 //! it is plain JSONL (no encryption, ODbL §4.7), its header carries the
-//! attribution, and `data/anime-mappings/build.sh` reproduces it from the
+//! attribution, and `tools/anime-mappings/build.sh` reproduces it from the
 //! pinned upstream release (ODbL §4.6). It contains **only** ODbL data —
 //! nothing from Anime-Lists or Fribb (`docs/legal/anime-mappings.md` §2 п.4).
 
@@ -279,7 +279,7 @@ pub fn decompress(bytes: &[u8]) -> Result<std::borrow::Cow<'_, [u8]>> {
 
 /// zstd frame of `bytes` at the fast level: the device keeps downloaded
 /// updates compressed (the bundled file is compressed harder at build time
-/// by `data/anime-mappings/build.sh`).
+/// by `tools/anime-mappings/build.sh`).
 pub fn compress(bytes: &[u8]) -> Vec<u8> {
     ruzstd::encoding::compress_to_vec(bytes, ruzstd::encoding::CompressionLevel::Fastest)
 }

@@ -55,10 +55,11 @@ BUG-002 [P1] (SMB, ведёт отдельная сессия «SMB папка �
 - Агенты работают в своих worktree и пушат **только явно в свою ветку** (`git push origin HEAD:<ветка>`); в общем `.git/config` `push.default=current` (25.11 три стартовых коммита агентов ушли прямо в main из-за `upstream`).
 - Слияние — скриптами мейнтейнера (ROADMAP, ARB, FRB-привязки и en_XA перегенерируются на сервере сборки, ADR NNNN нумеруются при слиянии).
 - Сборки и тесты — только на сервере сборки; CI на GitHub медленный, используется как дополнительная проверка.
+- **25.11 структура репозитория изменилась (REPO-014):** `CONTRIBUTING`/`SECURITY`/`CODE_OF_CONDUCT` и gitleaks — в `.github/`, `CLAUDE.md` — в `.claude/`, `mise.toml` и `xcode-version` — в `.config/`, `deny.toml` — в `.cargo/`, корневой justfile — `.justfile`; `data/anime-mappings` → `tools/anime-mappings`, `tests/media` → `tools/qa/media`, `spikes/desktop-player` → `tools/desktop-player-spike`; `site/` и `spikes/android-player` удалены. Ветки, начатые раньше, сливают `main`. Подробно — `docs/dev/repo-layout.md`.
 
 ## Как продолжить с другого ПК
 
 1. `git clone https://github.com/DenisHumen/kinolune && cd kinolune && just bootstrap check`
-2. Прочитать `AGENTS.md`/`CLAUDE.md`, этот файл.
+2. Прочитать `AGENTS.md` (в начале — раздел «Структура репозитория»), `.claude/CLAUDE.md`, этот файл.
 3. `gh pr list` — готовые PR выше; `just roadmap next` — следующие задачи.
 4. Одна задача — одна ветка `feat/<ID>-slug`, `git commit -s`, PR с `[<ID>]`.

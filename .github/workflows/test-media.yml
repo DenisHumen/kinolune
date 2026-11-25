@@ -14,13 +14,13 @@ on:
     # push to a draft). Re-run manually: gh workflow run <file> --ref <branch>.
     types: [opened, reopened, ready_for_review]
     paths:
-      - "tests/media/**"
+      - "tools/qa/media/**"
       - "tools/qa/**"
       - ".github/workflows/test-media.yml"
   push:
     branches: [main]
     paths:
-      - "tests/media/**"
+      - "tools/qa/media/**"
       - "tools/qa/**"
 
 permissions:

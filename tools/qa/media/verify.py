@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MPL-2.0
-"""Checks test media against the expectations in tests/media/manifest.toml.
+"""Checks test media against the expectations in tools/qa/media/manifest.toml.
 
 Every present file is probed with ffprobe and compared with its `expect`,
 `streams` and `text` tables. Missing files are reported (synthetic: "run the
@@ -21,7 +21,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import manifest as mf  # noqa: E402
 
-ROOT = HERE.parents[2] / "tests" / "media"
+ROOT = HERE
 
 STREAM_FIELDS = {
     # manifest key -> ffprobe stream key

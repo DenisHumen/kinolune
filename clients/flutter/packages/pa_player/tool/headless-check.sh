@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MPL-2.0
 # Headless smoke test of the Linux example inside the PLAY-DSK-001 spike image
-# (spikes/desktop-player/docker: Flutter, libmpv, sway, grim).
+# (tools/desktop-player-spike/docker: Flutter, libmpv, sway, grim).
 #   docker run --rm -v <pkg-parent>:/src -w /src/pa_player pa-spike-dsk001 \
 #     bash tool/headless-check.sh /media/clip.mp4 [/media/a.flac ...]
 # Builds example/ (unless already built), runs it on a headless sway for

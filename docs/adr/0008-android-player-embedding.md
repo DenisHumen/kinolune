@@ -5,7 +5,7 @@
   статус меняется на «принято» или ADR пересматривается.
 - **Дата:** 2026-11-13
 - **Задача:** PLAY-AND-001 · следующая — PLAY-AND-002
-- **Спайк:** [`spikes/android-player/`](../../spikes/android-player/README.md)
+- **Спайк:** `spikes/android-player/` — удалён из дерева в REPO-014, см. историю git: [2800dc05](https://github.com/DenisHumen/kinolune/tree/2800dc05566bec0f7b948e6f9bd741c579d5afef/spikes/android-player)
 - **Связано:** ADR-0003 (нативные поверхности и движки плеера, DOC-001), ADR-0009 (десктоп, PLAY-DSK-001),
   исследование [02 §1.3, §2.2, §2.3, §2.7, §2.8](../research/02-client-stack-playback.md)
 
@@ -121,7 +121,7 @@ Flutter `Texture` композитит видео в SDR-поверхность 
 
 ## Что осталось проверить (блокирует статус «принято»)
 
-По тест-плану из [`spikes/android-player/README.md`](../../spikes/android-player/README.md) на NVIDIA SHIELD TV
+По тест-плану из [`spikes/android-player/README.md`](https://github.com/DenisHumen/kinolune/tree/2800dc05566bec0f7b948e6f9bd741c579d5afef/spikes/android-player/README.md) (история git, REPO-014) на NVIDIA SHIELD TV
 (Android 11) и Chromecast with Google TV / Google TV Streamer (Android 12/14) с HDR10+DV-телевизором:
 
 1. HDR10, HLG, DV P5/P8.1 (и P7 на Shield) включают нужный режим HDMI в вариантах A и B; в C — для сравнения;

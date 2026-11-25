@@ -18,7 +18,7 @@
 
 ## Как получено
 
-- **Десктоп**: `CLIPS='kinolune*' MODES=texture BACKENDS=wayland spikes/desktop-player/tools/run-in-docker.sh`, кадр `grim` обрезан до окна 1280×720.
+- **Десктоп**: `CLIPS='kinolune*' MODES=texture BACKENDS=wayland tools/desktop-player-spike/tools/run-in-docker.sh`, кадр `grim` обрезан до окна 1280×720.
 - **Android TV**: `flutter build apk --debug`, AVD `android-tv` API 34 (2 ядра, 2 GB), `adb exec-out screencap -p`.
   Замечания: с `-gpu swiftshader_indirect` главный Flutter-экран снимается чёрным (известный артефакт, см. README спайка),
   поэтому он снят с `-gpu guest`; в этом режиме вариант B на эмуляторе получил ANR при старте второго Flutter-движка

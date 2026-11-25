@@ -84,6 +84,6 @@ Database Contents License v1.0. The app ships a derived database
 (`assets/anime-db/anime-offline-ids.jsonl.zst`, zstd-compressed JSONL, next to
 the upstream `LICENSE.anime-offline-database`), which is itself under the
 ODbL v1.0. It is rebuilt from the pinned upstream release by
-`data/anime-mappings/build.sh` and updated on the device from the upstream
+`tools/anime-mappings/build.sh` and updated on the device from the upstream
 releases. Episode mappings from Anime-Lists are downloaded by the device from
 upstream and are not distributed with the app.

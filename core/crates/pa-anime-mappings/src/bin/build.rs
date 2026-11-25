@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 //! Build the bundled ODbL database from an upstream anime-offline-database
-//! JSONL. Used by `data/anime-mappings/build.sh`.
+//! JSONL. Used by `tools/anime-mappings/build.sh`.
 //!
 //! Usage: `anime-mappings-build <upstream.jsonl> <out.jsonl> <release-tag>`
 

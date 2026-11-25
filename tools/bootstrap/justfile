@@ -11,7 +11,7 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPoli
 script := if os_family() == "windows" { "& '" + source_directory() / "bootstrap.ps1'" } else { "bash '" + source_directory() / "bootstrap.sh'" }
 check_flag := if os_family() == "windows" { "-Check" } else { "--check" }
 
-# Install pinned toolchains (rust-toolchain.toml, mise.toml, Android SDK), then check the machine
+# Install pinned toolchains (rust-toolchain.toml, .config/mise.toml, Android SDK), then check the machine
 run *args:
     @{{ script }} {{ args }}
 

@@ -55,5 +55,5 @@
 ## Ссылки
 
 - `docs/research/03-metadata-recognition.md` §4.2 [4], §4.3
-- `data/anime-mappings/README.md`, `docs/legal/anime-mappings.md`
+- `tools/anime-mappings/README.md`, `docs/legal/anime-mappings.md`
 - `tools/recognition-eval/baselines/v0/README.md` — отчёты `candidates*.md`

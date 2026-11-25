@@ -14,7 +14,7 @@
   "containerEnv": {
     "CARGO_TARGET_DIR": "${containerWorkspaceFolder}/target"
   },
-  "postCreateCommand": "mise trust --quiet ${containerWorkspaceFolder}/mise.toml && (just bootstrap || echo 'bootstrap incomplete: see the list above')",
+  "postCreateCommand": "mise trust --quiet ${containerWorkspaceFolder}/.config/mise.toml && (just bootstrap || echo 'bootstrap incomplete: see the list above')",
   "customizations": {
     "vscode": {
       "extensions": [

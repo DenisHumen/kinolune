@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MPL-2.0
-"""Generates the synthetic test-media set described in tests/media/manifest.toml.
+"""Generates the synthetic test-media set described in tools/qa/media/manifest.toml.
 
 Every synthetic file is produced from FFmpeg test sources (testsrc2, sine,
 aevalsrc) plus small writers in this directory (PGS, subtitles, HDR metadata),
@@ -8,7 +8,7 @@ so the whole set is reproducible and CC0. Binaries are NOT committed: run
 
     just tests::media            # or: python3 tools/qa/media/generate.py
 
-and then `just tests::media-verify`. See tests/media/README.md.
+and then `just tests::media-verify`. See tools/qa/media/README.md.
 
 Needs: FFmpeg >= 7.1 with libx264, libx265, libsvtav1, libvpx, libopus,
 libvorbis, libmp3lame, libtheora (GPL encoders run only on the developer's
@@ -34,7 +34,6 @@ import manifest as mf  # noqa: E402
 import pgs  # noqa: E402
 import texts  # noqa: E402
 
-REPO = HERE.parents[2]
 HDRMETA_DIR = HERE / "hdrmeta"
 HDRMETA_BIN = HDRMETA_DIR / "target" / "release" / "pa-hdrmeta"
 
@@ -568,7 +567,7 @@ def check_tools() -> list[str]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", type=Path, default=REPO / "tests" / "media", help="media root (default tests/media)")
+    ap.add_argument("--out", type=Path, default=HERE, help="media root (default tools/qa/media)")
     ap.add_argument("--only", nargs="*", help="recipe names to run (default: all)")
     ap.add_argument("-j", "--jobs", type=int, default=2, help="parallel recipes (max 4)")
     ap.add_argument("--list", action="store_true", help="list recipes and exit")

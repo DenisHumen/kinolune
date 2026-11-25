@@ -90,7 +90,7 @@ CARGO_TARGET_DIR=... tools/recognition-eval/corpus/gen/baselines.sh
 - **Ограничение каталога фильмов и сериалов:** в нём только работы корпуса, поэтому конкурентов у фильмов меньше, чем в настоящем кэше TMDB (аниме ищется среди всех 38 тыс. записей). Каталог нужно перезаписать из `pa_metadata::tmdb::titles::title_record`, когда появится ключ TMDB.
 - Скорость на сервере сборки (release): построение индекса ~1,5 с, поиск ~2 мс на файл.
 
-Воспроизведение: нужен бандл `data/anime-mappings/dist/anime-offline-ids.jsonl` (`data/anime-mappings/build.sh`, скачивает закреплённый релиз), дальше `baselines.sh` (переменная `AOD_BUNDLE` переопределяет путь; без бандла шаг пропускается).
+Воспроизведение: нужен бандл `tools/anime-mappings/dist/anime-offline-ids.jsonl` (`tools/anime-mappings/build.sh`, скачивает закреплённый релиз), дальше `baselines.sh` (переменная `AOD_BUNDLE` переопределяет путь; без бандла шаг пропускается).
 
 ## Скорер v0 (`scorer`, META-026)
 

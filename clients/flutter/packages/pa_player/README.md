@@ -102,7 +102,7 @@ C-компилятор `cc`: `media_kit_libs_linux` собирает стати�
 PLAY-DSK-001 `make`/`gcc` нет — их нужно доустановить (R01-REL: добавить в CI).
 
 ```bash
-# в образе spikes/desktop-player/docker (sway, grim, libmpv); /media — тестовые клипы ffmpeg
+# в образе tools/desktop-player-spike/docker (sway, grim, libmpv); /media — тестовые клипы ffmpeg
 bash tool/headless-check.sh /media/clip.mp4 /media/a.flac /media/b.m4a /media/a.opus /media/a.mp3 /media/a.wav
 ```
 

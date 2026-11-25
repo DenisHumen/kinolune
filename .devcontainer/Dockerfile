@@ -4,7 +4,7 @@
 # server, Android (SDK/NDK, cargo-ndk), Flutter Linux desktop, Go (distro),
 # podman. Apple targets build only on macOS.
 #
-# Versions come from rust-toolchain.toml, mise.toml and
+# Versions come from rust-toolchain.toml, .config/mise.toml and
 # tools/bootstrap/versions.env, so the container and `just bootstrap` agree.
 # Build context is the repository root (see devcontainer.json).
 
@@ -31,7 +31,7 @@ ENV HOME=/home/vscode \
     MISE_YES=1
 ENV PATH=/home/vscode/.local/share/mise/shims:/home/vscode/.local/bin:/home/vscode/.cargo/bin:/home/vscode/android-sdk/cmdline-tools/latest/bin:/home/vscode/android-sdk/platform-tools:$PATH
 
-COPY --chown=vscode:vscode tools/bootstrap/versions.env rust-toolchain.toml mise.toml /tmp/pa/
+COPY --chown=vscode:vscode tools/bootstrap/versions.env rust-toolchain.toml .config/mise.toml /tmp/pa/
 
 # Rust: rustup without a default toolchain, then the pinned one.
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
@@ -40,7 +40,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     && rustup toolchain install "$(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)" \
         --profile minimal --component clippy,rustfmt
 
-# mise (checksum-pinned) and every tool from mise.toml.
+# mise (checksum-pinned) and every tool from .config/mise.toml.
 RUN . /tmp/pa/versions.env \
     && case "$(uname -m)" in \
         x86_64) arch=x64; sum="$MISE_SHA256_LINUX_X64" ;; \
