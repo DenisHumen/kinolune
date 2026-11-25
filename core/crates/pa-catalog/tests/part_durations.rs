@@ -174,6 +174,32 @@ fn single_files_versions_and_extras_keep_their_own_duration() {
 }
 
 #[test]
+fn progress_of_a_split_movie_stays_on_the_whole_timeline() {
+    let (_dir, cat) = setup();
+    let charge = movie(&cat, "Charge");
+    // The player reports the EDL timeline of both parts: 3:00 of 4:00.
+    assert!(
+        cat.save_progress(charge.id, 3 * MIN, 4 * MIN, 1_000, false)
+            .unwrap(),
+        "the item has a key after the scan"
+    );
+    // Read back as is, not scaled onto the 2 minutes of part 1.
+    let p = cat.progress(charge.id).unwrap().expect("progress");
+    assert_eq!((p.position_ms, p.duration_ms), (3 * MIN, 4 * MIN));
+    let row = cat
+        .continue_watching(10)
+        .unwrap()
+        .into_iter()
+        .find(|c| c.item.id == charge.id)
+        .expect("Charge in Continue watching");
+    assert_eq!(row.item.duration_ms, Some(4 * MIN));
+    assert_eq!(
+        (row.progress.position_ms, row.progress.duration_ms),
+        (3 * MIN, 4 * MIN)
+    );
+}
+
+#[test]
 fn a_missing_or_unprobed_part_is_left_out_of_the_sum() {
     let (_dir, cat) = setup();
     let conn = Connection::open(cat.path()).unwrap();
