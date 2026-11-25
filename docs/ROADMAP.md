@@ -307,6 +307,10 @@ project_alpha/
   - Что: docker-compose с Samba (SMB2/3, signing, encryption), NFS-ganesha, WebDAV (nginx, Apache, `rclone serve`), SFTP и FTP; деградация сети через `tc netem`; общий тест-сьют `pa-vfs`.
   - deps: NET-001, NET-003, NET-004 · size: M · parallel: yes · веха: M1 · ref: 01 §1.5, 02 §4
   - done when: контракт-тесты Vfs запускаются против всех серверов в CI.
+- [x] **CI-013** Gradle в CI без падений на HTTP 429 от Maven Central
+  - Что: Android-job (`flutter.yml` Android build smoke, `flavors.yml` Android store bundle, `pa-core.yml` Android example APK, `release-app.yml` Android APKs, `android-core.yml`, `ffi-bindings.yml`) падали до сборки: Gradle получал 429 Too Many Requests от `repo.maven.apache.org` и отключал репозиторий. Кэш Gradle user home (зависимости, плагины, wrapper) через `gradle/actions/setup-gradle`, закреплённый по SHA: пишет только `main`, PR и релиз читают; повторы с экспоненциальной паузой (`org.gradle.internal.repository.max.tentatives=8`, пауза от 2 с с удвоением) и длинные HTTP-таймауты в `~/.gradle/gradle.properties` только в CI (`tools/ci/gradle-network.sh`), `settings.gradle` приложения не меняется. Зеркало Google для Maven Central не подключено: init-скрипт поменял бы порядок репозиториев у включённой сборки `flutter_tools/gradle` (у неё нет своих репозиториев, пришлось бы заново добавлять plugin portal) — это не «чисто».
+  - deps: — · size: S · parallel: yes · веха: M0 · ref: падения CI 2026-11-25 (Maven 429)
+  - done when: все Android-job используют кэш Gradle и повторы; zizmor и actionlint без замечаний; ручной прогон Android-workflow на ветке зелёный. Сделано: `tools/ci/gradle-network.sh` (идемпотентный), `setup-gradle` в четырёх Flutter-Android job, шаг повторов во всех шести; в `release-app.yml` кэш выключен (`cache-disabled`, решение мейнтейнера 2026-11-25: подписанные выпуски без общего кэша), повторы остаются.
 
 ### 3.3. CORE — ядро на Rust, FFI, общие сервисы
 
@@ -2763,7 +2767,7 @@ project_alpha/
 |---|---|---|---|
 | DEC | 8 | SYNC | 20 |
 | REPO | 15 | SRV | 19 |
-| CI | 12 | MUS | 20 |
+| CI | 13 | MUS | 20 |
 | CORE | 16 | TWI | 40 |
 | NET | 24 | DIST | 33 |
 | LIB | 27 | DSN | 23 |
