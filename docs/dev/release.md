@@ -2,6 +2,27 @@
 
 Порядок выпуска Kinolune (PKG-025, решение владельца после сбоя alpha.17: скрипт без права на запуск нашёлся только через час сборки на GitHub). Тег ставится только когда прошли обе проверки. Сборка и публикация — `.github/workflows/release-app.yml`, шаги владельца (ключи, секреты) — [packaging/app/README.md](../../packaging/app/README.md).
 
+## 0. Release PR: версия и changelog (release-please, REPO-010)
+
+`.github/workflows/release-please.yml` на каждом push в main открывает или обновляет по одному release PR на компоненту: `app` (`clients/flutter/app`), `core`, `server`, `tvos` (`clients/apple/TVApp`), `distro`. Настройки — `release-please-config.json`, текущие версии — `.release-please-manifest.json`.
+
+- Заголовок: `chore(release): release app 0.1.0-alpha.22`. В PR — новая версия в манифесте и раздел в `CHANGELOG.md` компоненты (`clients/flutter/app/CHANGELOG.md` и т. д.).
+- Версии — alpha-серия (`versioning: prerelease`, `prerelease: true`, `prerelease-type: alpha`): `feat`, `fix` и даже breaking change на 0.x увеличивают только номер alpha (`0.1.0-alpha.21` → `0.1.0-alpha.22`). Другую версию задаёт строка `Release-As: 0.1.0-beta.1` в теле коммита или правка манифеста.
+- В changelog попадают `feat`, `fix`, `perf`, `revert` (по коммитам на main, то есть по заголовкам смёрженных PR); `docs`, `ci`, `chore`, `test`, `refactor`, `build`, `style` скрыты. Коммит идёт в changelog той компоненты, чьи файлы он меняет: изменения ядра — в `core/CHANGELOG.md`, не в `app`.
+- **Тег и GitHub Release release-please не создаёт** (`skip-github-release`), поэтому merge release PR ничего не собирает и не публикует: `release-app.yml` запускается только тегом `app-v*`, который ставит владелец (шаг 3).
+- PR от `GITHUB_TOKEN` не запускает CI. Чтобы прогнать проверки на release PR — закрыть и снова открыть его.
+- Нужна настройка репозитория «Allow GitHub Actions to create and approve pull requests» (Settings → Actions → General), без неё workflow падает на создании PR.
+
+Выпуск по команде владельца:
+
+1. Смёржить release PR нужной компоненты — в main появятся новая версия в манифесте и `CHANGELOG.md`.
+2. Взять раздел этой версии из `CHANGELOG.md` за основу `notes.md` (первая строка — заголовок, дальше «Что нового»; для приложения стоит добавить заметное из `core/CHANGELOG.md`).
+3. Шаги 1–3 ниже на коммите merge, тег — ровно той версии, что в release PR (`app-v0.1.0-alpha.22`).
+
+Пока смёрженный release PR не помечен как выпущенный (`autorelease: tagged`), release-please не открывает новые release PR. Workflow сам переставляет метку `autorelease: pending` → `autorelease: tagged`, как только на origin появляется тег из заголовка PR. Если тег не будет ставиться, снять метку вручную: `gh pr edit <N> --remove-label "autorelease: pending" --add-label "autorelease: tagged"`.
+
+Выпуск без release PR (тег прямо с main) сбивает манифест: следующий release PR снова предложит ту же версию. Тогда поправить версию в `.release-please-manifest.json` отдельным PR.
+
 ## 1. precheck на сервере сборки (10–20 минут)
 
 ```sh

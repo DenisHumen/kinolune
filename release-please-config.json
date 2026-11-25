@@ -1,41 +1,37 @@
 {
-  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/v17.6.0/schemas/config.json",
+  "bootstrap-sha": "75d50e79fdf5f968f7e62c6d5c2ed6236e03ed1a",
+  "release-type": "simple",
+  "versioning": "prerelease",
+  "prerelease": true,
+  "prerelease-type": "alpha",
+  "bump-minor-pre-major": true,
+  "include-component-in-tag": true,
+  "include-v-in-tag": true,
+  "tag-separator": "-",
   "separate-pull-requests": true,
+  "skip-github-release": true,
+  "pull-request-title-pattern": "chore(release): release${component} ${version}",
+  "pull-request-header": "Release PR от release-please: только версия и changelog. Тег и GitHub Release при merge не создаются, выпуск — по команде владельца (docs/dev/release.md). · Version and changelog only: merging creates no tag and no GitHub release.",
+  "signoff": "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>",
+  "changelog-sections": [
+    { "type": "feat", "section": "Новое · Features" },
+    { "type": "fix", "section": "Исправления · Bug Fixes" },
+    { "type": "perf", "section": "Производительность · Performance" },
+    { "type": "revert", "section": "Откаты · Reverts" },
+    { "type": "docs", "section": "Документация · Documentation", "hidden": true },
+    { "type": "refactor", "section": "Рефакторинг · Refactoring", "hidden": true },
+    { "type": "test", "section": "Тесты · Tests", "hidden": true },
+    { "type": "build", "section": "Сборка · Build", "hidden": true },
+    { "type": "ci", "section": "CI", "hidden": true },
+    { "type": "chore", "section": "Прочее · Chores", "hidden": true },
+    { "type": "style", "section": "Стиль · Style", "hidden": true }
+  ],
   "packages": {
-    "core": {
-      "component": "core",
-      "include-component-in-tag": true,
-      "include-v-in-tag": true,
-      "release-type": "simple",
-      "tag-separator": "-"
-    },
-    "server": {
-      "component": "server",
-      "include-component-in-tag": true,
-      "include-v-in-tag": true,
-      "release-type": "simple",
-      "tag-separator": "-"
-    },
-    "clients/flutter/app": {
-      "component": "app",
-      "include-component-in-tag": true,
-      "include-v-in-tag": true,
-      "release-type": "simple",
-      "tag-separator": "-"
-    },
-    "clients/apple/TVApp": {
-      "component": "tvos",
-      "include-component-in-tag": true,
-      "include-v-in-tag": true,
-      "release-type": "simple",
-      "tag-separator": "-"
-    },
-    "distro": {
-      "component": "distro",
-      "include-component-in-tag": true,
-      "include-v-in-tag": true,
-      "release-type": "simple",
-      "tag-separator": "-"
-    }
+    "clients/flutter/app": { "component": "app" },
+    "core": { "component": "core" },
+    "server": { "component": "server" },
+    "clients/apple/TVApp": { "component": "tvos" },
+    "distro": { "component": "distro" }
   }
 }

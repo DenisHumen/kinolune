@@ -1,25 +1,73 @@
 # SPDX-License-Identifier: MPL-2.0
+#
+# REPO-010: release-please in manifest mode (release-please-config.json,
+# .release-please-manifest.json). On every push to main it opens or updates
+# one release PR per component (app, core, server, tvos, distro) with the next
+# alpha version and a Conventional Commits changelog.
+#
+# Releases stay manual (docs/dev/release.md): `skip-github-release` (input and
+# config) means release-please never creates a tag or a GitHub release, so
+# merging a release PR cannot start release-app.yml (it runs only on an
+# `app-v*` tag the owner pushes after precheck and dry runs).
+#
+# release-please refuses to open new release PRs while a merged one still has
+# the label `autorelease: pending` (normally its own github-release step
+# relabels it). The first step does that relabelling instead, but only once
+# the owner has pushed the matching tag.
+#
+# Needs the repository setting «Allow GitHub Actions to create and approve
+# pull requests» (Settings → Actions → General). PRs opened with GITHUB_TOKEN
+# start no workflows; close and reopen a release PR to run CI on it.
 name: Release please
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
-  group: release-please-${{ github.ref }}
+  group: release-please
   cancel-in-progress: false
 
 jobs:
   release-please:
+    name: Release PRs
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # push the release-please--branches--* branches
+      pull-requests: write # open and update release PRs
+      issues: write # labels on release PRs
     steps:
+      - name: Mark merged release PRs whose tag is pushed as tagged
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/issues?state=closed&labels=autorelease:%20pending&per_page=100" \
+            --jq '.[] | select(.pull_request.merged_at != null) | "\(.number)\t\(.title)"' |
+          while IFS=$'\t' read -r number title; do
+            re='^chore\(release\): release ([a-z]+) ([0-9]+\.[0-9]+\.[0-9]+[^ ]*)$'
+            if ! [[ "$title" =~ $re ]]; then
+              echo "::warning::#$number: unexpected release PR title, relabel it by hand"
+              continue
+            fi
+            tag="${BASH_REMATCH[1]}-v${BASH_REMATCH[2]}"
+            if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --silent 2>/dev/null; then
+              gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$number/labels" \
+                -f 'labels[]=autorelease: tagged' --silent
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$number/labels/autorelease:%20pending" --silent
+              echo "#$number: $tag is pushed, marked as tagged"
+            else
+              echo "::notice::#$number is merged but $tag is not pushed yet: no new release PRs until the owner tags it"
+            fi
+          done
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          skip-github-release: true
