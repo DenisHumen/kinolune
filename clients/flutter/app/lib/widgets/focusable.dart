@@ -485,9 +485,15 @@ class _KButtonState extends State<KButton> {
                   Icon(widget.icon, color: fg, size: d.type.callout + 6),
                   const SizedBox(width: 8),
                 ],
-                Text(
-                  widget.label,
-                  style: theme.textTheme.labelLarge?.copyWith(color: fg),
+                // A long label on a phone (ru/uk) ends with «…» instead of
+                // overflowing the pill (UI-056).
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelLarge?.copyWith(color: fg),
+                  ),
                 ),
               ],
             ),

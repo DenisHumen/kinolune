@@ -161,6 +161,10 @@ abstract class Preferences {
   static const twitchFavoritesSort = 'twitch_favorites_sort';
   static const twitchFavoritesFilter = 'twitch_favorites_filter';
 
+  /// The signed-in Twitch user's name and avatar (TWI-032): JSON
+  /// `TwitchAccountProfile`; no token.
+  static const twitchAccountProfile = 'twitch_account_profile';
+
   /// Offline downloads (NET-019): Wi-Fi only (`false` = also over mobile
   /// data; on by default).
   static const offlineWifiOnly = 'offline_wifi_only';

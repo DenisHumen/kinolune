@@ -1424,6 +1424,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreReviewItem dco_decode_core_review_item(dynamic raw);
 
   @protected
+  CoreRuntimeTotal dco_decode_core_runtime_total(dynamic raw);
+
+  @protected
   CoreSavedFile dco_decode_core_saved_file(dynamic raw);
 
   @protected
@@ -1445,6 +1448,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSearchGroup dco_decode_core_search_group(dynamic raw);
 
   @protected
+  CoreSeasonRuntime dco_decode_core_season_runtime(dynamic raw);
+
+  @protected
   CoreSecretStoreInfo dco_decode_core_secret_store_info(dynamic raw);
 
   @protected
@@ -1461,6 +1467,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreShowEpisodes dco_decode_core_show_episodes(dynamic raw);
+
+  @protected
+  CoreShowRuntime dco_decode_core_show_runtime(dynamic raw);
 
   @protected
   CoreSidecarSubtitle dco_decode_core_sidecar_subtitle(dynamic raw);
@@ -1951,6 +1960,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreSearchGroup> dco_decode_list_core_search_group(dynamic raw);
+
+  @protected
+  List<CoreSeasonRuntime> dco_decode_list_core_season_runtime(dynamic raw);
 
   @protected
   List<CoreServiceKind> dco_decode_list_core_service_kind(dynamic raw);
@@ -3849,6 +3861,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreReviewItem sse_decode_core_review_item(SseDeserializer deserializer);
 
   @protected
+  CoreRuntimeTotal sse_decode_core_runtime_total(SseDeserializer deserializer);
+
+  @protected
   CoreSavedFile sse_decode_core_saved_file(SseDeserializer deserializer);
 
   @protected
@@ -3874,6 +3889,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSearchGroup sse_decode_core_search_group(SseDeserializer deserializer);
 
   @protected
+  CoreSeasonRuntime sse_decode_core_season_runtime(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSecretStoreInfo sse_decode_core_secret_store_info(
     SseDeserializer deserializer,
   );
@@ -3894,6 +3914,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreShowEpisodes sse_decode_core_show_episodes(SseDeserializer deserializer);
+
+  @protected
+  CoreShowRuntime sse_decode_core_show_runtime(SseDeserializer deserializer);
 
   @protected
   CoreSidecarSubtitle sse_decode_core_sidecar_subtitle(
@@ -4568,6 +4591,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreSearchGroup> sse_decode_list_core_search_group(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreSeasonRuntime> sse_decode_list_core_season_runtime(
     SseDeserializer deserializer,
   );
 
@@ -7039,6 +7067,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_runtime_total(
+    CoreRuntimeTotal self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_saved_file(CoreSavedFile self, SseSerializer serializer);
 
   @protected
@@ -7068,6 +7102,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_search_group(
     CoreSearchGroup self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_season_runtime(
+    CoreSeasonRuntime self,
     SseSerializer serializer,
   );
 
@@ -7104,6 +7144,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_show_episodes(
     CoreShowEpisodes self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_show_runtime(
+    CoreShowRuntime self,
     SseSerializer serializer,
   );
 
@@ -7971,6 +8017,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_search_group(
     List<CoreSearchGroup> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_season_runtime(
+    List<CoreSeasonRuntime> self,
     SseSerializer serializer,
   );
 

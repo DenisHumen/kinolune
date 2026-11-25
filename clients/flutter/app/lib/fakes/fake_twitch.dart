@@ -328,6 +328,20 @@ class FakeTwitchBackend implements TwitchBackend {
 
   bool _pendingLogin = false;
 
+  /// The signed-in viewer's own channel (TWI-032): `GET /helix/users`
+  /// with the user token. A test changes it to "change the avatar on
+  /// Twitch".
+  TwitchChannel me = const TwitchChannel(
+    userId: '7999',
+    login: 'demo_viewer',
+    displayName: 'Demo_Viewer',
+    avatarUrl: kDemoArtScheme,
+  );
+
+  /// Twitch no longer accepts the sign-in (401 after a failed refresh):
+  /// every Helix call asks to sign in again.
+  bool expired = false;
+
   void _helix(String name) {
     calls.add(name);
     if (!canSignIn) {
@@ -335,6 +349,9 @@ class FakeTwitchBackend implements TwitchBackend {
     }
     if (!signedIn) {
       throw const TwitchUnavailable(TwitchUnavailableReason.signedOut);
+    }
+    if (expired) {
+      throw const TwitchUnavailable(TwitchUnavailableReason.signIn);
     }
   }
 
@@ -345,9 +362,8 @@ class FakeTwitchBackend implements TwitchBackend {
   }
 
   @override
-  TwitchAccount? get account => signedIn
-      ? const TwitchAccount(userId: '7999', login: 'demo_viewer')
-      : null;
+  TwitchAccount? get account =>
+      signedIn ? TwitchAccount(userId: me.userId!, login: me.login) : null;
 
   @override
   Future<TwitchDeviceLogin> startLogin({bool chat = false}) async {
@@ -370,6 +386,7 @@ class FakeTwitchBackend implements TwitchBackend {
     }
     _pendingLogin = false;
     signedIn = true;
+    expired = false;
     return account;
   }
 
@@ -382,9 +399,14 @@ class FakeTwitchBackend implements TwitchBackend {
     List<String> logins = const [],
   }) async {
     _helix('users');
-    return _serve(
-      channels.where((c) => ids.contains(c.userId) || logins.contains(c.login)),
-    );
+    return [
+      if (ids.contains(me.userId) || logins.contains(me.login)) me,
+      ..._serve(
+        channels.where(
+          (c) => ids.contains(c.userId) || logins.contains(c.login),
+        ),
+      ),
+    ];
   }
 
   @override

@@ -714,6 +714,13 @@ def cmd_page(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_issues_sync(args: argparse.Namespace) -> int:
+    """Synchronize community issues; changes require the explicit --apply flag."""
+    import issue_sync
+
+    return issue_sync.cmd_sync(args)
+
+
 def main(argv: list[str] | None = None) -> int:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--file", default=str(DEFAULT_FILE), help="path to ROADMAP.md")
@@ -759,6 +766,24 @@ def main(argv: list[str] | None = None) -> int:
     p_page.add_argument("--now", help="timestamp text instead of the current UTC time")
     p_page.add_argument("--window", type=int, default=3, help="days of history for the forecast")
     p_page.set_defaults(func=cmd_page)
+
+    p_issues = sub.add_parser(
+        "issues", parents=[common], help="manage roadmap-derived community issues"
+    )
+    issue_commands = p_issues.add_subparsers(dest="issue_command", required=True)
+    p_sync = issue_commands.add_parser(
+        "sync", parents=[common], help="plan or apply good-first-issue synchronization"
+    )
+    p_sync.add_argument("--repo", help="owner/name (default $GITHUB_REPOSITORY)")
+    p_sync.add_argument(
+        "--apply", action="store_true",
+        help="create and close GitHub issues (default is a read-only dry run)",
+    )
+    p_sync.add_argument(
+        "--max-create", type=int, default=20, metavar="N",
+        help="create at most N issues in one run (default 20)",
+    )
+    p_sync.set_defaults(func=cmd_issues_sync)
 
     args = parser.parse_args(argv)
     return args.func(args)

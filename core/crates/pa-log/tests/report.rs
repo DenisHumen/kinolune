@@ -220,3 +220,87 @@ fn nothing_is_saved_without_opt_in() {
         all_files(tmp.path())
     );
 }
+
+/// BUG-024: `versions.txt` keeps the full build version as the app hands
+/// it over, `config.txt` lists every setting (unchanged ones too) and no
+/// secret survives in it.
+#[test]
+fn report_has_full_version_and_settings_without_secrets() {
+    let tmp = tempfile::tempdir().unwrap();
+    let d = open(tmp.path());
+    let info = ReportInfo {
+        versions: vec![
+            ("app".into(), "0.1.0-alpha.19+50 (full)".into()),
+            (
+                "platform_version".into(),
+                "Windows 11 Pro 10.0 (Build 26200)".into(),
+            ),
+        ],
+        config: vec![
+            ("ui_locale".into(), "(default)".into()),
+            ("library_hide_spoilers".into(), "true".into()),
+            ("image_cache_max_bytes".into(), "536870912".into()),
+            (
+                "twitch_access_token".into(),
+                "q8xzb3twitchoauthtoken5k2m9".into(),
+            ),
+            ("smb_password".into(), "hunter2".into()),
+            (
+                "tmdb_api_key".into(),
+                "9e107d9d372bb6826bd81d3542a419d6".into(),
+            ),
+            ("profiles_pin".into(), "1234".into()),
+            (
+                "last_source".into(),
+                "smb://alice:hunter2@nas.local/media".into(),
+            ),
+        ],
+        attachments: vec![],
+    };
+    let out = tmp.path().join("kinolune-diagnostics-20261121-123837.zip");
+    d.export_report(&out, &info).unwrap();
+    let entries = read_stored(&std::fs::read(&out).unwrap()).unwrap();
+    let text = |name: &str| {
+        entries
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, d)| String::from_utf8_lossy(d).into_owned())
+            .unwrap()
+    };
+    let versions = text("versions.txt");
+    assert!(
+        versions.contains("app: 0.1.0-alpha.19+50 (full)\n"),
+        "{versions}"
+    );
+    assert!(
+        versions.contains("platform_version: Windows 11 Pro 10.0 (Build 26200)\n"),
+        "{versions}"
+    );
+    let config = text("config.txt");
+    assert!(config.contains("ui_locale: (default)\n"), "{config}");
+    assert!(config.contains("library_hide_spoilers: true\n"), "{config}");
+    assert!(
+        config.contains("image_cache_max_bytes: 536870912\n"),
+        "{config}"
+    );
+    for key in [
+        "twitch_access_token",
+        "smb_password",
+        "tmdb_api_key",
+        "profiles_pin",
+    ] {
+        assert!(config.contains(&format!("{key}: <redacted>\n")), "{config}");
+    }
+    for secret in [
+        "q8xzb3twitchoauthtoken5k2m9",
+        "hunter2",
+        "9e107d9d372bb6826bd81d3542a419d6",
+        "1234",
+        "alice",
+    ] {
+        assert!(
+            !config.contains(secret),
+            "config.txt leaks {secret:?}: {config}"
+        );
+    }
+}

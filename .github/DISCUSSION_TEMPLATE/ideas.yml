@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MPL-2.0
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Голос (▲) за ідею допомагає визначити пріоритет, але не обіцяє реалізацію. Готові варіанти на вибір виносьте в **Polls**.
+        An upvote (▲) helps set priority but does not promise implementation. Put ready alternatives to a vote in **Polls**.
+        Голос (▲) за идею помогает расставить приоритеты, но не обещает реализацию. Готовые варианты на выбор выносите в **Polls**.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Проблема / Problem / Проблема
+      description: Чого бракує або що незручно зараз? / What is missing or awkward today? / Чего не хватает или что неудобно сейчас?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Пропозиція / Proposal / Предложение
+      description: Що має робити Kinolune? / What should Kinolune do? / Что должна делать Kinolune?
+    validations:
+      required: true
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Кому допоможе / Who benefits / Кому поможет
+    validations:
+      required: false

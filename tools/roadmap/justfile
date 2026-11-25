@@ -15,6 +15,10 @@ lint:
 next *args:
     @{{ python }} -B "{{ script }}" next {{ args }}
 
+# Good first issues from ROADMAP: `issues sync` is a dry run, `--apply` changes GitHub
+issues *args:
+    @{{ python }} -B "{{ script }}" issues {{ args }}
+
 # Unit tests of the roadmap tool
 test:
     @{{ python }} -B -m unittest discover -s "{{ source_directory() }}" -t "{{ source_directory() }}"

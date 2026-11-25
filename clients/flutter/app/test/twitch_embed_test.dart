@@ -11,6 +11,7 @@
 // network.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -578,6 +579,91 @@ void main() {
       expect(calls.last.method, 'dispose');
       await t.pumpWidget(const SizedBox());
       await settle(t, 2);
+    });
+
+    // BUG-028: on Wayland the runner keeps the page out of its own
+    // fullscreen and toggles the window instead; the view then has to take
+    // the whole window from the rectangle alone.
+    testWidgets('the player\'s fullscreen message gives the view the whole '
+        'window and back (BUG-028)', (t) async {
+      setSurface(t, _desktop);
+      final messenger = t.binding.defaultBinaryMessenger;
+      final calls = <MethodCall>[];
+      messenger.setMockMethodCallHandler(linuxTwitchWebViewChannel, (
+        call,
+      ) async {
+        calls.add(call);
+        return call.method == 'available' || call.method == 'create'
+            ? true
+            : null;
+      });
+      addTearDown(
+        () =>
+            messenger.setMockMethodCallHandler(linuxTwitchWebViewChannel, null),
+      );
+      Map<Object?, Object?> lastRect() =>
+          calls.lastWhere((c) => c.method == 'rect').arguments
+              as Map<Object?, Object?>;
+      Future<void> fromRunner(bool on) => messenger.handlePlatformMessage(
+        linuxTwitchWebViewChannel.name,
+        linuxTwitchWebViewChannel.codec.encodeMethodCall(
+          MethodCall('fullscreen', on),
+        ),
+        (_) {},
+      );
+
+      final services = await twitchServices();
+      await registerTwitchEmbed(
+        services.twitch,
+        engine: TwitchEmbedEngine.webKitGtk,
+      );
+      await t.pumpWidget(testApp(services, section: Section.twitch));
+      await settle(t);
+      await _tap(t, find.byKey(const ValueKey('twitch-favorite-pixelheron')));
+      await _tap(t, find.byKey(const ValueKey('twitch-watch-live')));
+      await t.pump(const Duration(seconds: 1));
+      await t.pump();
+      expect(lastRect()['visible'], isTrue);
+      expect(lastRect()['y'] as double, greaterThanOrEqualTo(44));
+
+      await fromRunner(true);
+      await settle(t, 4);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('twitch-embed')),
+          matching: find.byType(AppBar),
+        ),
+        findsNothing,
+      );
+      expect(lastRect()['visible'], isTrue);
+      expect(lastRect()['x'], 0);
+      expect(lastRect()['y'], 0);
+      expect(lastRect()['width'], _desktop.width);
+      expect(lastRect()['height'], _desktop.height);
+
+      await fromRunner(false);
+      await settle(t, 4);
+      expect(lastRect()['y'] as double, greaterThanOrEqualTo(44));
+      expect(lastRect()['height'] as double, lessThan(_desktop.height));
+
+      await t.pumpWidget(const SizedBox());
+      await settle(t, 2);
+    });
+
+    // BUG-028: Flutter draws into its own Wayland subsurface, above the
+    // window's surface, so an overlay child of the window is hidden under
+    // it (a black player on GNOME and KDE). The runner has to put the web
+    // view into a subsurface of its own on Wayland. A guard on the C++
+    // source, which no Dart test runs: removing that path fails here.
+    test('the runner gives the web view its own subsurface on Wayland '
+        '(BUG-028)', () {
+      final src = File('linux/runner/twitch_webview.cc').readAsStringSync();
+      expect(src, contains('GDK_IS_WAYLAND_DISPLAY'));
+      expect(src, contains('gtk_window_new(GTK_WINDOW_POPUP)'));
+      expect(src, contains('gtk_window_set_transient_for'));
+      expect(src, contains('twitch_webview_use_subsurface('));
+      // X11 keeps the overlay.
+      expect(src, contains('gtk_overlay_add_overlay'));
     });
   });
 

@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MPL-2.0
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Знеособте дані.** Замініть усе до кореня бібліотеки на `<lib>`; не вказуйте повні шляхи, імена користувачів, серверів і спільних папок, паролі, токени та приватні посилання. Імена папок і файлів усередині бібліотеки залиште як є — потрібні саме вони.
+        **Anonymize.** Replace everything up to the library root with `<lib>`; never post full paths, user, host or share names, passwords, tokens or private links. Keep folder and file names inside the library as they are — that is what we need.
+        **Обезличьте данные.** Замените всё до корня библиотеки на `<lib>`; не указывайте полные пути, имена пользователей, серверов и общих папок, пароли, токены и приватные ссылки. Имена папок и файлов внутри библиотеки оставьте как есть — нужны именно они.
+  - type: input
+    id: version
+    attributes:
+      label: Версія та платформа / Version and platform / Версия и платформа
+      placeholder: "0.1.0-alpha · Linux (Wayland)"
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Знеособлений шлях у бібліотеці / Anonymized path in the library / Обезличенный путь в библиотеке
+      placeholder: "<lib>/TV/Example.Show.S01.1080p/Example.Show.S01E02.mkv"
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Що мало бути / Expected match / Что должно было быть
+      description: Назва, рік, сезон і серія або ID (TMDB, IMDb, Shikimori). / Title, year, season and episode or ID (TMDB, IMDb, Shikimori). / Название, год, сезон и серия или ID (TMDB, IMDb, Shikimori).
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Що знайшла Kinolune / What Kinolune found / Что нашла Kinolune
+      description: Збіг, впевненість або причина перевірки із застосунку. / The match, confidence or review reason shown in the app. / Совпадение, уверенность или причина проверки из приложения.
+    validations:
+      required: true

@@ -25838,23 +25838,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreMatchSignals dco_decode_core_match_signals(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 14)
-      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    if (arr.length != 18)
+      throw Exception('unexpected arr length: expect 18 but see ${arr.length}');
     return CoreMatchSignals(
       provider: dco_decode_String(arr[0]),
       title: dco_decode_f_64(arr[1]),
-      tier: dco_decode_String(arr[2]),
-      matchedTitle: dco_decode_opt_String(arr[3]),
-      fileYear: dco_decode_opt_box_autoadd_i_32(arr[4]),
-      year: dco_decode_opt_box_autoadd_i_32(arr[5]),
-      fileKind: dco_decode_String(arr[6]),
-      kind: dco_decode_String(arr[7]),
-      durationError: dco_decode_opt_box_autoadd_f_64(arr[8]),
-      episodesOk: dco_decode_u_32(arr[9]),
-      episodesBad: dco_decode_u_32(arr[10]),
-      language: dco_decode_opt_box_autoadd_bool(arr[11]),
-      tied: dco_decode_bool(arr[12]),
-      lostMarker: dco_decode_opt_String(arr[13]),
+      titleSimilarity: dco_decode_opt_box_autoadd_f_64(arr[2]),
+      yearAdjust: dco_decode_opt_box_autoadd_f_64(arr[3]),
+      remakeAdjust: dco_decode_opt_box_autoadd_f_64(arr[4]),
+      kindAdjust: dco_decode_opt_box_autoadd_f_64(arr[5]),
+      tier: dco_decode_String(arr[6]),
+      matchedTitle: dco_decode_opt_String(arr[7]),
+      fileYear: dco_decode_opt_box_autoadd_i_32(arr[8]),
+      year: dco_decode_opt_box_autoadd_i_32(arr[9]),
+      fileKind: dco_decode_String(arr[10]),
+      kind: dco_decode_String(arr[11]),
+      durationError: dco_decode_opt_box_autoadd_f_64(arr[12]),
+      episodesOk: dco_decode_u_32(arr[13]),
+      episodesBad: dco_decode_u_32(arr[14]),
+      language: dco_decode_opt_box_autoadd_bool(arr[15]),
+      tied: dco_decode_bool(arr[16]),
+      lostMarker: dco_decode_opt_String(arr[17]),
     );
   }
 
@@ -26681,6 +26685,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreRuntimeTotal dco_decode_core_runtime_total(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return CoreRuntimeTotal(
+      episodes: dco_decode_u_32(arr[0]),
+      watched: dco_decode_u_32(arr[1]),
+      totalMs: dco_decode_i_64(arr[2]),
+      remainingMs: dco_decode_i_64(arr[3]),
+      estimated: dco_decode_bool(arr[4]),
+      remainingEstimated: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
   CoreSavedFile dco_decode_core_saved_file(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -26782,6 +26802,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreSeasonRuntime dco_decode_core_season_runtime(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return CoreSeasonRuntime(
+      season: dco_decode_i_32(arr[0]),
+      total: dco_decode_core_runtime_total(arr[1]),
+    );
+  }
+
+  @protected
   CoreSecretStoreInfo dco_decode_core_secret_store_info(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -26849,12 +26881,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreShowEpisodes dco_decode_core_show_episodes(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return CoreShowEpisodes(
       order: dco_decode_core_episode_order(arr[0]),
       available: dco_decode_list_core_episode_order(arr[1]),
       episodes: dco_decode_list_core_show_episode(arr[2]),
+      runtime: dco_decode_core_show_runtime(arr[3]),
+    );
+  }
+
+  @protected
+  CoreShowRuntime dco_decode_core_show_runtime(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return CoreShowRuntime(
+      show_: dco_decode_core_runtime_total(arr[0]),
+      seasons: dco_decode_list_core_season_runtime(arr[1]),
     );
   }
 
@@ -28557,6 +28602,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<CoreSearchGroup> dco_decode_list_core_search_group(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_core_search_group).toList();
+  }
+
+  @protected
+  List<CoreSeasonRuntime> dco_decode_list_core_season_runtime(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_season_runtime).toList();
   }
 
   @protected
@@ -32802,6 +32853,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_provider = sse_decode_String(deserializer);
     var var_title = sse_decode_f_64(deserializer);
+    var var_titleSimilarity = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_yearAdjust = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_remakeAdjust = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_kindAdjust = sse_decode_opt_box_autoadd_f_64(deserializer);
     var var_tier = sse_decode_String(deserializer);
     var var_matchedTitle = sse_decode_opt_String(deserializer);
     var var_fileYear = sse_decode_opt_box_autoadd_i_32(deserializer);
@@ -32817,6 +32872,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return CoreMatchSignals(
       provider: var_provider,
       title: var_title,
+      titleSimilarity: var_titleSimilarity,
+      yearAdjust: var_yearAdjust,
+      remakeAdjust: var_remakeAdjust,
+      kindAdjust: var_kindAdjust,
       tier: var_tier,
       matchedTitle: var_matchedTitle,
       fileYear: var_fileYear,
@@ -33816,6 +33875,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreRuntimeTotal sse_decode_core_runtime_total(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_episodes = sse_decode_u_32(deserializer);
+    var var_watched = sse_decode_u_32(deserializer);
+    var var_totalMs = sse_decode_i_64(deserializer);
+    var var_remainingMs = sse_decode_i_64(deserializer);
+    var var_estimated = sse_decode_bool(deserializer);
+    var var_remainingEstimated = sse_decode_bool(deserializer);
+    return CoreRuntimeTotal(
+      episodes: var_episodes,
+      watched: var_watched,
+      totalMs: var_totalMs,
+      remainingMs: var_remainingMs,
+      estimated: var_estimated,
+      remainingEstimated: var_remainingEstimated,
+    );
+  }
+
+  @protected
   CoreSavedFile sse_decode_core_saved_file(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_assetId = sse_decode_i_64(deserializer);
@@ -33944,6 +34022,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CoreSeasonRuntime sse_decode_core_season_runtime(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_season = sse_decode_i_32(deserializer);
+    var var_total = sse_decode_core_runtime_total(deserializer);
+    return CoreSeasonRuntime(season: var_season, total: var_total);
+  }
+
+  @protected
   CoreSecretStoreInfo sse_decode_core_secret_store_info(
     SseDeserializer deserializer,
   ) {
@@ -34021,11 +34109,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_order = sse_decode_core_episode_order(deserializer);
     var var_available = sse_decode_list_core_episode_order(deserializer);
     var var_episodes = sse_decode_list_core_show_episode(deserializer);
+    var var_runtime = sse_decode_core_show_runtime(deserializer);
     return CoreShowEpisodes(
       order: var_order,
       available: var_available,
       episodes: var_episodes,
+      runtime: var_runtime,
     );
+  }
+
+  @protected
+  CoreShowRuntime sse_decode_core_show_runtime(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_show_ = sse_decode_core_runtime_total(deserializer);
+    var var_seasons = sse_decode_list_core_season_runtime(deserializer);
+    return CoreShowRuntime(show_: var_show_, seasons: var_seasons);
   }
 
   @protected
@@ -36479,6 +36577,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <CoreSearchGroup>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_core_search_group(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreSeasonRuntime> sse_decode_list_core_season_runtime(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreSeasonRuntime>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_season_runtime(deserializer));
     }
     return ans_;
   }
@@ -41341,6 +41453,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.provider, serializer);
     sse_encode_f_64(self.title, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.titleSimilarity, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.yearAdjust, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.remakeAdjust, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.kindAdjust, serializer);
     sse_encode_String(self.tier, serializer);
     sse_encode_opt_String(self.matchedTitle, serializer);
     sse_encode_opt_box_autoadd_i_32(self.fileYear, serializer);
@@ -42064,6 +42180,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_core_runtime_total(
+    CoreRuntimeTotal self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.episodes, serializer);
+    sse_encode_u_32(self.watched, serializer);
+    sse_encode_i_64(self.totalMs, serializer);
+    sse_encode_i_64(self.remainingMs, serializer);
+    sse_encode_bool(self.estimated, serializer);
+    sse_encode_bool(self.remainingEstimated, serializer);
+  }
+
+  @protected
   void sse_encode_core_saved_file(
     CoreSavedFile self,
     SseSerializer serializer,
@@ -42158,6 +42288,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_core_season_runtime(
+    CoreSeasonRuntime self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.season, serializer);
+    sse_encode_core_runtime_total(self.total, serializer);
+  }
+
+  @protected
   void sse_encode_core_secret_store_info(
     CoreSecretStoreInfo self,
     SseSerializer serializer,
@@ -42225,6 +42365,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_core_episode_order(self.order, serializer);
     sse_encode_list_core_episode_order(self.available, serializer);
     sse_encode_list_core_show_episode(self.episodes, serializer);
+    sse_encode_core_show_runtime(self.runtime, serializer);
+  }
+
+  @protected
+  void sse_encode_core_show_runtime(
+    CoreShowRuntime self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_core_runtime_total(self.show_, serializer);
+    sse_encode_list_core_season_runtime(self.seasons, serializer);
   }
 
   @protected
@@ -44140,6 +44291,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_core_search_group(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_season_runtime(
+    List<CoreSeasonRuntime> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_season_runtime(item, serializer);
     }
   }
 
