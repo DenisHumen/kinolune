@@ -195,6 +195,14 @@ precedence = "override"
 SPDX-FileCopyrightText = "project_alpha contributors"
 SPDX-License-Identifier = "LGPL-2.1-or-later"
 
+# media_kit_video 2.0.1 (MIT, LICENSE next to it), our local override package
+# (BUG-001): unchanged except linux/texture_gl.cc, whose fix stays MIT.
+[[annotations]]
+path = "clients/flutter/packages/media_kit_video/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2021 Hitesh Kumar Saini"
+SPDX-License-Identifier = "MIT"
+
 # Java glue, manifest and settings copied unchanged from media_kit_libs_android_video
 # 1.3.8 (MIT, LICENSE next to them) for our local override package (PLAY-013).
 # Its build.gradle is ours and carries its own MPL-2.0 header.

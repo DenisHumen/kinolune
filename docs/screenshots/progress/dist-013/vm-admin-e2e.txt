@@ -1,0 +1,37 @@
+# alpha-admin QEMU e2e (distro/admin/tests/vm-admin-e2e.sh), 2026-11-25, KVM
+==> Starting local registry on 127.0.0.1:5063
+==> Building localhost:5063/alpha-os:admin-e2e (version 0.0.1-admin-e2e.1) with docker
+==> Installing docker://localhost:5063/alpha-os:admin-e2e -> distro/.work/disk.raw (tracks 10.0.2.2:5063/alpha-os:admin-e2e)
+==> Disk ready: distro/.work/disk.raw
+==> Starting VM (4 vCPU, 3072 MiB), ssh on 127.0.0.1:22563
+==> VM pid 279, serial log: distro/.work/serial.log
+==> OK booted 0.0.1-admin-e2e.1
+==> OK alpha-admin runs as alpha-admin on :443, :80 redirects, auth socket 0600
+==> OK test users, data disk and a fake alpha-updated socket in place
+OK https up, self-signed cert in /var/lib/alpha/admin, fingerprint 20:fe:88:16:a0:8d:4e:06…
+OK anonymous requests refused (401)
+OK PAM login of anna (wheel) -> admin, cookie Secure/HttpOnly/SameSite=Strict
+OK system: fedora os 0.0.1-admin-e2e.1 kernel 7.3.4-300.fc45.x86_64
+OK services over systemd D-Bus: 10/12 active
+OK restart smb.service via systemd D-Bus + polkit (new InvocationID)
+OK non-restartable unit and missing CSRF token refused (403)
+OK journal of alpha-admin.service: 6 lines
+OK network over NetworkManager D-Bus: state connected-global, 1 device(s)
+OK Wi-Fi radio off/on via NetworkManager D-Bus + polkit
+OK firewalld: open/close cockpit in zone home, runtime + permanent
+OK UDisks2: 3 drive(s) (system: ['VirtIO Disk']), 4 block(s), data disk /dev/vdb mountable
+OK UDisks2 mount/unmount of the data disk at /run/media/alpha-admin/media; system fs vda3 refused (403)
+OK update API proxied to the unix socket /run/alpha-updated/api.sock
+OK boris (no wheel) -> viewer: reads, cannot change (403)
+OK system account, root and locked account cannot log in
+OK 5 wrong passwords -> locked (429, Retry-After 300 s), even with the right one
+==> OK LAN client served, public address refused
+==> systemd-analyze security:
+→ Overall exposure level for alpha-admin.service: 1.5 OK :-)
+→ Overall exposure level for alpha-admin-auth@x.service: 1.7 OK :-)
+OK reboot asks for confirmation (1 inhibitor(s) reported)
+OK reboot confirmed via logind D-Bus + polkit
+OK alpha-admin up after reboot, login works
+==> OK rebooted through the API; same certificate after the reboot
+==> ALL CHECKS PASSED
+

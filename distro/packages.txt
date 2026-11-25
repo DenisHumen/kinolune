@@ -11,7 +11,8 @@ nss-mdns
 # Firewall
 firewalld
 
-# Disks and storage
+# Disks and storage (udisks2: D-Bus API of the admin backend, DIST-013)
+udisks2
 smartmontools
 mdadm
 btrfs-progs
@@ -19,6 +20,9 @@ btrfs-progs
 # Health checks for automatic rollback (wired up in DIST-011)
 greenboot
 greenboot-default-health-checks
+
+# Admin backend (DIST-013): polkit rules for its D-Bus calls
+polkit
 
 # "Advanced mode" admin console, disabled by default (05 §5.1)
 cockpit-system

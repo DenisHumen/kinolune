@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: MPL-2.0
+# One password check with PAM (service "alpha-admin": auth + account) for
+# the admin backend, started per connection by alpha-admin-auth.socket.
+# Root only because pam_unix reads /etc/shadow; everything else is locked down.
+[Unit]
+Description=Kinolune OS admin password check
+Documentation=https://github.com/DenisHumen/kinolune/tree/main/distro/admin
+CollectMode=inactive-or-failed
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/alpha/alpha-admin-auth
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+RuntimeMaxSec=20
+# /etc/shadow is mode 0000 on Fedora; pam_faillock (if enabled) writes /run/faillock.
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_AUDIT_WRITE
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=-/run/faillock
+ProtectHome=read-only
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM

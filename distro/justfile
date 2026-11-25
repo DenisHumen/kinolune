@@ -9,3 +9,19 @@ installer-disks *args:
 # Installer Go checks: gofmt, vet, tests on recorded lsblk/udev fixtures
 installer-test:
     cd installer && test -z "$(gofmt -l .)" && go vet ./... && go test ./...
+
+# Update agent (alpha-updated) Go checks: gofmt, vet, tests on a fake bootc
+updated-test:
+    cd updated && test -z "$(gofmt -l .)" && go vet ./... && go test -race ./...
+
+# Admin backend (alpha-admin) Go checks: gofmt, vet, tests on fake D-Bus services
+admin-test:
+    cd admin && test -z "$(gofmt -l .)" && go vet ./... && go test -race ./...
+
+# alpha-admin with real PAM in a throw-away Fedora container
+admin-pam-test:
+    admin/tests/pam-container.sh
+
+# alpha-admin end to end in QEMU (image build, install, API against the real OS)
+admin-vm-test:
+    admin/tests/vm-admin-e2e.sh

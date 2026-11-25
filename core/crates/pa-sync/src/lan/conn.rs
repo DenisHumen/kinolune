@@ -198,9 +198,19 @@ where
     let id = shared.lock().register(side, &hello, tx.clone());
     let _registered = Registered { shared, id };
     let dead_after = shared.config.dead_after;
+    // SYNC-017: anti-entropy now and then (the first tick fires at once,
+    // but the handshake already exchanged vectors).
+    let mut anti_entropy = tokio::time::interval(shared.config.anti_entropy);
+    anti_entropy.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    anti_entropy.tick().await;
     loop {
-        let (raw, msg) = next(&mut stream, dead_after).await?;
-        shared.lock().on_message(id, &raw, msg);
+        tokio::select! {
+            got = next(&mut stream, dead_after) => {
+                let (raw, msg) = got?;
+                shared.lock().on_message(id, &raw, msg);
+            }
+            _ = anti_entropy.tick() => shared.lock().anti_entropy(id),
+        }
     }
 }
 
