@@ -1488,9 +1488,6 @@
   "reviewWhyTitle": "название совпало на {percent} %",
   "reviewWhyYearSame": "год {year} совпадает",
   "reviewWhyYearDiffers": "в файле {fileYear} год, у кандидата {year}",
-  "reviewWhyYearOff": "год отличается на {years} ({delta} %)",
-  "reviewWhyRemake": "возможно, ремейк ({delta} %)",
-  "reviewWhyKindOff": "тип не совпал ({delta} %)",
   "reviewWhyLostMarker": "в имени файла «{word}», у кандидата нет",
   "reviewWhyTied": "другой кандидат с тем же названием",
   "reviewWhyEpisodesFit": "серии есть в его сезонах",
@@ -2339,5 +2336,8 @@
   "commonScreenErrorTitle": "На этом экране что-то пошло не так",
   "commonScreenErrorMessage": "Ошибка записана в журнал приложения. Повторите или вернитесь назад.",
   "commonScreenErrorRetry": "Повторить",
-  "commonScreenErrorBack": "Назад"
+  "commonScreenErrorBack": "Назад",
+  "reviewWhyYearOff": "год отличается на {years} ({delta} %)",
+  "reviewWhyRemake": "возможно, ремейк ({delta} %)",
+  "reviewWhyKindOff": "тип не совпал ({delta} %)"
 }

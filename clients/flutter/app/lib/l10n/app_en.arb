@@ -4190,36 +4190,6 @@
       }
     }
   },
-  "reviewWhyYearOff": "year differs by {years} ({delta}%)",
-  "@reviewWhyYearOff": {
-    "description": "Review reason (META-036): the years of the file and the candidate differ by {years}; {delta} is what that changed in the score, signed whole percent such as −8.",
-    "placeholders": {
-      "years": {
-        "type": "int"
-      },
-      "delta": {
-        "type": "String"
-      }
-    }
-  },
-  "reviewWhyRemake": "maybe a remake ({delta}%)",
-  "@reviewWhyRemake": {
-    "description": "Review reason (META-036): a movie of another year may be another movie; {delta} is the penalty, signed whole percent.",
-    "placeholders": {
-      "delta": {
-        "type": "String"
-      }
-    }
-  },
-  "reviewWhyKindOff": "type differs ({delta}%)",
-  "@reviewWhyKindOff": {
-    "description": "Review reason (META-036): a movie against a series or the other way round; {delta} is the penalty, signed whole percent.",
-    "placeholders": {
-      "delta": {
-        "type": "String"
-      }
-    }
-  },
   "reviewWhyLostMarker": "the file says “{word}”, this title does not",
   "@reviewWhyLostMarker": {
     "placeholders": {
@@ -8184,5 +8154,35 @@
   "commonScreenErrorBack": "Back",
   "@commonScreenErrorBack": {
     "description": "BUG-026: leaves the failed screen."
+  },
+  "reviewWhyYearOff": "year differs by {years} ({delta}%)",
+  "@reviewWhyYearOff": {
+    "description": "Review reason (META-036): the years of the file and the candidate differ by {years}; {delta} is what that changed in the score, signed whole percent such as −8.",
+    "placeholders": {
+      "years": {
+        "type": "int"
+      },
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewWhyRemake": "maybe a remake ({delta}%)",
+  "@reviewWhyRemake": {
+    "description": "Review reason (META-036): a movie of another year may be another movie; {delta} is the penalty, signed whole percent.",
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewWhyKindOff": "type differs ({delta}%)",
+  "@reviewWhyKindOff": {
+    "description": "Review reason (META-036): a movie against a series or the other way round; {delta} is the penalty, signed whole percent.",
+    "placeholders": {
+      "delta": {
+        "type": "String"
+      }
+    }
   }
 }
