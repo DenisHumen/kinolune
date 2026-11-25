@@ -12,5 +12,6 @@ not (
   | binary(smb_browse) | binary(large_library) | binary(write_servers)
   | binary(minidlna) | binary(dlna) | binary(lan_servers)
   | binary(nfo_jellyfin) | binary(folder_sync_servers) | binary(folder_auto_servers)
+  | binary(availability_servers)
 )
 """
