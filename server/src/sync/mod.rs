@@ -134,6 +134,16 @@ impl Hub {
         })
     }
 
+    /// Titles that devices are watching right now: their last `pb.update`
+    /// is `playing` or `paused` and within its TTL (SRV-019).
+    pub fn watching_now(&self) -> usize {
+        self.inner
+            .playback
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .watching(Instant::now())
+    }
+
     /// `device_id` of the hub.
     pub fn hub_id(&self) -> &str {
         &self.inner.hub_id

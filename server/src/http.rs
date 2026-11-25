@@ -32,6 +32,7 @@ use crate::auth::api as auth_api;
 use crate::auth::{Auth, AuthError, Principal};
 use crate::tls::TlsListener;
 
+use crate::activity::Activity;
 use crate::api::{
     ApiDoc, ApiError, ApiVersion, DbHealth, DeviceInfo, Devices, Health, InviteResponse, Status,
 };
@@ -66,7 +67,14 @@ impl Connected<IncomingStream<'_, TlsListener>> for PeerAddr {
 pub(crate) struct AppState {
     library: Library,
     hub: Hub,
+    activity: Activity,
     auth: Auth,
+}
+
+impl FromRef<AppState> for Activity {
+    fn from_ref(state: &AppState) -> Self {
+        state.activity.clone()
+    }
 }
 
 impl FromRef<AppState> for Auth {
@@ -103,6 +111,7 @@ pub(crate) fn api_router() -> OpenApiRouter<AppState> {
         .routes(routes!(invite))
         .routes(routes!(devices))
         .routes(routes!(revoke))
+        .routes(routes!(crate::activity::system_activity))
         .routes(routes!(auth_api::setup))
         .routes(routes!(auth_api::login))
         .routes(routes!(auth_api::login_pin))
@@ -116,12 +125,13 @@ pub(crate) fn api_router() -> OpenApiRouter<AppState> {
         .routes(routes!(auth_api::update_user, auth_api::delete_user))
 }
 
-pub(crate) fn router(library: Library, hub: Hub, auth: Auth) -> Router {
+pub(crate) fn router(library: Library, hub: Hub, activity: Activity, auth: Auth) -> Router {
     let (router, _spec) = api_router().split_for_parts();
     router
         .with_state(AppState {
             library,
             hub,
+            activity,
             auth: auth.clone(),
         })
         .layer(middleware::from_fn_with_state(auth, authenticate))
@@ -515,6 +525,7 @@ mod tests {
         let app = router(
             server.library().clone(),
             server.hub().clone(),
+            server.activity().clone(),
             server.auth().clone(),
         );
         const LOCAL: &str = "127.0.0.1:40000";

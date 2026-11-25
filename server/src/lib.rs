@@ -23,6 +23,7 @@
 //! shutdown future resolves, lets in-flight requests finish, withdraws the
 //! announcement, closes sync connections and checkpoints the databases.
 
+pub mod activity;
 pub mod announce;
 pub mod api;
 pub mod auth;
@@ -165,6 +166,7 @@ pub struct Server {
     listener: TcpListener,
     library: Library,
     hub: sync::Hub,
+    activity: activity::Activity,
     auth: auth::Auth,
     tls: Option<tls::TlsIdentity>,
     discovery: config::DiscoveryConfig,
@@ -242,6 +244,7 @@ impl Server {
             listener,
             library,
             hub,
+            activity: activity::Activity::default(),
             auth,
             tls,
             discovery: config.discovery.clone(),
@@ -284,6 +287,12 @@ impl Server {
     /// The sync hub.
     pub fn hub(&self) -> &sync::Hub {
         &self.hub
+    }
+
+    /// Running work that a reboot must not interrupt (SRV-019): streams,
+    /// recordings and scans hold a guard from [`activity::Activity::begin`].
+    pub fn activity(&self) -> &activity::Activity {
+        &self.activity
     }
 
     /// Accounts and tokens.
@@ -342,7 +351,12 @@ impl Server {
         if self.clients == net::Clients::Any {
             tracing::warn!("clients = \"any\": connections from the internet are accepted too");
         }
-        let app = http::router(self.library.clone(), self.hub.clone(), self.auth.clone());
+        let app = http::router(
+            self.library.clone(),
+            self.hub.clone(),
+            self.activity.clone(),
+            self.auth.clone(),
+        );
         // A device revoked by another family member loses its sessions too.
         let revocations = {
             let auth = self.auth.clone();

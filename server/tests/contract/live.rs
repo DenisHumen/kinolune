@@ -89,6 +89,10 @@ pub fn scenarios() -> Vec<(&'static str, Vec<Call>)> {
             vec![call("DELETE", "/api/v1/devices/nobody", 404)],
         ),
         (
+            "GET /api/v1/system/activity",
+            vec![call("GET", "/api/v1/system/activity", 200)],
+        ),
+        (
             "POST /api/v1/auth/setup",
             vec![
                 json("POST", "/api/v1/auth/setup", "{}", 400),
