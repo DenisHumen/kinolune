@@ -17,6 +17,7 @@ import '../../widgets/artwork.dart';
 import '../../widgets/cards.dart';
 import '../../widgets/focusable.dart';
 import '../../widgets/qr_code.dart';
+import '../../widgets/round_photo.dart';
 import '../../widgets/settings_tiles.dart' show copyLink;
 
 /// `18.4K` in the UI language.
@@ -111,6 +112,45 @@ class TwitchAvatar extends StatelessWidget {
           ),
         ),
         child: Center(child: image),
+      ),
+    );
+  }
+}
+
+/// The signed-in user's own avatar (TWI-032): the Twitch picture from the
+/// image cache, else the first letter of the name on a colour.
+class TwitchAccountAvatar extends StatelessWidget {
+  const TwitchAccountAvatar({
+    super.key,
+    required this.login,
+    required this.name,
+    required this.url,
+    this.size = 24,
+  });
+
+  final String login;
+  final String name;
+  final String? url;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final runes = name.trim().runes;
+    return RoundPhoto(
+      key: const ValueKey('twitch-account-avatar'),
+      url: url,
+      seed: 'avatar-$login',
+      size: size,
+      fallback: CircleAvatar(
+        backgroundColor: categoryColor(login),
+        child: Text(
+          runes.isEmpty ? '?' : String.fromCharCode(runes.first).toUpperCase(),
+          style: TextStyle(
+            fontSize: size * .42,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }

@@ -140,8 +140,18 @@ class CoreMatchSignals {
   /// `tmdb`, `anime_offline_database`, `anilist`.
   final String provider;
 
-  /// Title similarity, `0..=1`.
+  /// Title score with the year, remake and type adjustments, `0..=1`.
   final double title;
+
+  /// Similarity of the titles alone, `0..=1` (META-036); `None` in
+  /// rows stored before it.
+  final double? titleSimilarity;
+
+  /// What the years, the remake rule and the type added to `title`
+  /// (META-036).
+  final double? yearAdjust;
+  final double? remakeAdjust;
+  final double? kindAdjust;
 
   /// `exact`, `loose`, `compact`, `base`, `fuzzy`.
   final String tier;
@@ -180,6 +190,10 @@ class CoreMatchSignals {
   const CoreMatchSignals({
     required this.provider,
     required this.title,
+    this.titleSimilarity,
+    this.yearAdjust,
+    this.remakeAdjust,
+    this.kindAdjust,
     required this.tier,
     this.matchedTitle,
     this.fileYear,
@@ -198,6 +212,10 @@ class CoreMatchSignals {
   int get hashCode =>
       provider.hashCode ^
       title.hashCode ^
+      titleSimilarity.hashCode ^
+      yearAdjust.hashCode ^
+      remakeAdjust.hashCode ^
+      kindAdjust.hashCode ^
       tier.hashCode ^
       matchedTitle.hashCode ^
       fileYear.hashCode ^
@@ -218,6 +236,10 @@ class CoreMatchSignals {
           runtimeType == other.runtimeType &&
           provider == other.provider &&
           title == other.title &&
+          titleSimilarity == other.titleSimilarity &&
+          yearAdjust == other.yearAdjust &&
+          remakeAdjust == other.remakeAdjust &&
+          kindAdjust == other.kindAdjust &&
           tier == other.tier &&
           matchedTitle == other.matchedTitle &&
           fileYear == other.fileYear &&

@@ -244,6 +244,11 @@ class _AccountButton extends StatelessWidget {
           key: const ValueKey('twitch-account'),
           tooltip: l.twitchSignedInAs(account.login),
           itemBuilder: (_) => [
+            // TWI-032: a new avatar or name on Twitch shows up now.
+            PopupMenuItem(
+              onTap: () => unawaited(twitch.refreshAccount(force: true)),
+              child: Text(l.twitchAccountRefresh),
+            ),
             PopupMenuItem(
               onTap: () => unawaited(twitch.signOut()),
               child: Text(l.twitchSignOut),
@@ -254,9 +259,21 @@ class _AccountButton extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.account_circle_outlined),
-                const SizedBox(width: 6),
-                Text(account.login),
+                TwitchAccountAvatar(
+                  login: account.login,
+                  name: twitch.accountName ?? account.login,
+                  url: twitch.accountProfile?.avatarUrl,
+                ),
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
+                  child: Text(
+                    twitch.accountName ?? account.login,
+                    key: const ValueKey('twitch-account-name'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),

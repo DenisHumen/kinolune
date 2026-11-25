@@ -53,6 +53,18 @@ void main() {
       expect((vod as TwitchVodLink).startMs, 1500);
     });
 
+    test('a live stream link names a checked login (BUG-028)', () {
+      final live = AppLink.parse('kinolune://twitch/live/Dariya_Willis');
+      expect((live! as TwitchLiveLink).login, 'dariya_willis');
+      for (final bad in [
+        'kinolune://twitch/live/',
+        'kinolune://twitch/live/a-b',
+        'kinolune://twitch/live/a/b',
+      ]) {
+        expect(AppLink.parse(bad), isNull, reason: bad);
+      }
+    });
+
     test('channel logins are case-insensitive and checked', () {
       final c = AppLink.parse('kinolune://channel/Some_Streamer');
       expect((c! as ChannelLink).login, 'some_streamer');

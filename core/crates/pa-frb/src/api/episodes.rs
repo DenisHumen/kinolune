@@ -55,6 +55,72 @@ pub struct CoreShowEpisodes {
     /// Orders the core has data for; TMDB first.
     pub available: Vec<CoreEpisodeOrder>,
     pub episodes: Vec<CoreShowEpisode>,
+    /// Total runtime and time left of the show and its seasons (UI-056).
+    pub runtime: CoreShowRuntime,
+}
+
+/// Runtime of a season or a whole show (UI-056).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CoreRuntimeTotal {
+    /// Episodes in the library.
+    pub episodes: u32,
+    /// Of them, watched.
+    pub watched: u32,
+    /// Sum of the episode durations, ms.
+    pub total_ms: i64,
+    /// What is left to watch, ms.
+    pub remaining_ms: i64,
+    /// A duration in the total is the metadata runtime or unknown («≈»).
+    pub estimated: bool,
+    /// The same for an unwatched episode, in the time left.
+    pub remaining_estimated: bool,
+}
+
+/// Runtime of one season tab.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CoreSeasonRuntime {
+    /// Season in the episode order; 0 = specials.
+    pub season: i32,
+    pub total: CoreRuntimeTotal,
+}
+
+/// Runtime of a show: the regular seasons together, and each season.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreShowRuntime {
+    /// All regular seasons; specials are not in it.
+    pub show: CoreRuntimeTotal,
+    pub seasons: Vec<CoreSeasonRuntime>,
+}
+
+impl From<c::RuntimeTotal> for CoreRuntimeTotal {
+    fn from(t: c::RuntimeTotal) -> Self {
+        Self {
+            episodes: t.episodes,
+            watched: t.watched,
+            total_ms: t.total_ms,
+            remaining_ms: t.remaining_ms,
+            estimated: t.estimated,
+            remaining_estimated: t.remaining_estimated,
+        }
+    }
+}
+
+impl From<c::ShowRuntime> for CoreShowRuntime {
+    fn from(r: c::ShowRuntime) -> Self {
+        Self {
+            show: r.show.into(),
+            seasons: r
+                .seasons
+                .into_iter()
+                .filter_map(|s| {
+                    Some(CoreSeasonRuntime {
+                        season: i32::try_from(s.season).ok()?,
+                        total: s.total.into(),
+                    })
+                })
+                .collect(),
+        }
+    }
 }
 
 fn small(v: Option<i64>) -> Option<i32> {
@@ -76,6 +142,7 @@ impl From<c::ShowEpisodes> for CoreShowEpisodes {
                     item: e.item.into(),
                 })
                 .collect(),
+            runtime: s.runtime.into(),
         }
     }
 }
