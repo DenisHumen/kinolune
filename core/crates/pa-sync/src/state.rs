@@ -188,6 +188,65 @@ impl SyncState {
         }
     }
 
+    /// Every register with the stamp of the op that won it; the names are
+    /// those of [`OpBody::register`] (SYNC-017).
+    pub fn registers(&self) -> Vec<(String, &Stamp)> {
+        const S: char = '\u{1f}';
+        let mut out: Vec<(String, &Stamp)> = Vec::new();
+        let mut two = |kind: &str, a: &str, b: &dyn std::fmt::Display, stamp| {
+            out.push((format!("{kind}{S}{a}{S}{b}"), stamp));
+        };
+        for ((p, k), r) in &self.progress {
+            two("progress", p, k, &r.stamp);
+        }
+        for ((p, k), r) in &self.watched {
+            two("watched", p, k, &r.stamp);
+        }
+        for ((p, t), r) in &self.favorites {
+            two("favorite", p, t, &r.stamp);
+        }
+        for ((p, t), r) in &self.ratings {
+            two("rating", p, t, &r.stamp);
+        }
+        for ((p, t), r) in &self.playlists {
+            two("playlist", p, t, &r.stamp);
+        }
+        for ((p, t), r) in &self.playlist_items {
+            two("playlist_items", p, t, &r.stamp);
+        }
+        for (k, r) in &self.folder_rules {
+            two("folder_rule", "", k, &r.stamp);
+        }
+        for (k, r) in &self.settings {
+            two("setting", "", k, &r.stamp);
+        }
+        for ((p, t), r) in &self.twitch_follows {
+            two("twitch_follow", p, t, &r.stamp);
+        }
+        for (k, r) in &self.sources {
+            two("source", "", k, &r.stamp);
+        }
+        for (k, r) in &self.profiles {
+            two("profile", "", k, &r.stamp);
+        }
+        for ((p, t), r) in &self.categories {
+            two("category", p, t, &r.stamp);
+        }
+        for ((p, c, t), r) in &self.category_items {
+            out.push((format!("category_item{S}{p}{S}{c}{S}{t}"), &r.stamp));
+        }
+        for ((p, k, t), r) in &self.tags {
+            out.push((format!("tag{S}{p}{S}{k}{S}{t}"), &r.stamp));
+        }
+        out
+    }
+
+    /// Digest of this state (SYNC-017, [`crate::nodelog::Digest`]).
+    pub fn digest(&self) -> crate::nodelog::Digest {
+        let regs = self.registers();
+        crate::nodelog::Digest::from_leaves(regs.iter().map(|(r, s)| (r.as_str(), s.1)))
+    }
+
     /// Whether `key` is watched on `profile`.
     pub fn is_watched(&self, profile: &str, key: &MediaKey) -> bool {
         self.watched

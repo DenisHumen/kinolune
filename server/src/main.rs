@@ -20,7 +20,8 @@ Options:
 
 Environment (overrides the file):
   ALPHA_MEDIA_CONFIG      configuration file, same as --config
-  ALPHA_MEDIA_LISTEN      listen address, default 127.0.0.1:8487
+  ALPHA_MEDIA_LISTEN      listen address, default 0.0.0.0:8487
+  ALPHA_MEDIA_CLIENTS     lan (default: home network only), local or any
   ALPHA_MEDIA_DATA_DIR    state directory (library database, settings, cache)
   ALPHA_MEDIA_LOG         log filter, default info
   ALPHA_MEDIA_LOG_FORMAT  text or json

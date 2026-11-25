@@ -552,6 +552,10 @@ class _KindIcon extends StatelessWidget {
       InAppNoticeKind.live => (Icons.sensors, KColors.live),
       InAppNoticeKind.update => (Icons.system_update_alt, KColors.accentSoft),
       InAppNoticeKind.remoteInput => (Icons.phonelink, KColors.accent),
+      InAppNoticeKind.availability => (
+        Icons.cloud_off_outlined,
+        KColors.statusWarning,
+      ),
     };
     final size = tv ? 44.0 : 38.0;
     return ExcludeSemantics(

@@ -9,6 +9,7 @@ import 'dart:io' show Platform;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'offline_downloads.dart';
@@ -71,10 +72,16 @@ Future<String> offlineFolder(String dataDir) async {
   if (Platform.isAndroid) {
     try {
       final external = await getExternalStorageDirectory();
-      if (external != null) return '${external.path}/downloads/offline';
+      if (external != null) return offlineFolderIn(external.path);
     } catch (e) {
       debugPrint('External storage unavailable: $e');
     }
   }
-  return '$dataDir/downloads/offline';
+  return offlineFolderIn(dataDir);
 }
+
+/// `<base>/downloads/offline` joined with the separators of [context]
+/// (BUG-022: `C:\…\Kinolune\downloads\offline` on Windows).
+@visibleForTesting
+String offlineFolderIn(String base, {p.Context? context}) =>
+    (context ?? p.context).join(base, 'downloads', 'offline');

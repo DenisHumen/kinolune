@@ -639,6 +639,12 @@ class AppServices extends ChangeNotifier {
     const DisplayMatchSettings(),
   );
 
+  /// «Звук» (PLAY-AND-004): passthrough to a receiver that takes the
+  /// format, or always PCM. Auto by default.
+  final ValueNotifier<AudioOutputMode> audioOutputMode = ValueNotifier(
+    AudioOutputMode.auto,
+  );
+
   /// Daily update of the anime databases from GitHub (META-030): the
   /// anime-offline-database release and the Anime-Lists list. On by default.
   final ValueNotifier<bool> animeDataUpdates = ValueNotifier(true);
@@ -816,6 +822,9 @@ class AppServices extends ChangeNotifier {
     );
     displayMatch.value = _displayMatchOf(
       await preferences.read(Preferences.displayMatch),
+    );
+    audioOutputMode.value = AudioOutputMode.fromName(
+      await preferences.read(Preferences.audioOutputMode),
     );
     await _initAnimeDb(
       await preferences.read(Preferences.animeDataUpdates) != 'false',
@@ -1370,6 +1379,14 @@ class AppServices extends ChangeNotifier {
     );
   }
 
+  Future<void> setAudioOutputMode(AudioOutputMode value) async {
+    audioOutputMode.value = value;
+    await preferences.write(
+      Preferences.audioOutputMode,
+      value == AudioOutputMode.auto ? null : value.name,
+    );
+  }
+
   Future<void> setTrickplayGenerate(bool value) async {
     _applyTrickplay(value);
     await preferences.write(
@@ -1680,6 +1697,7 @@ class AppServices extends ChangeNotifier {
     audioProcessing.dispose();
     trickplayGenerate.dispose();
     displayMatch.dispose();
+    audioOutputMode.dispose();
     animeDataUpdates.dispose();
     animeFrameSearch.dispose();
     animeDbStatus.dispose();

@@ -1,0 +1,3 @@
+# Downloaded sources and built extensions are never committed.
+.cache/
+out/

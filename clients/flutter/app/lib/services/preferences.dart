@@ -86,6 +86,10 @@ abstract class Preferences {
   /// absent = defaults.
   static const displayMatch = 'playback_display_match';
 
+  /// «Звук» (PLAY-AND-004): 'decode' always decodes to PCM; absent = auto
+  /// (passthrough to a receiver that takes the format).
+  static const audioOutputMode = 'playback_audio_output';
+
   /// 'false' stops the daily update of the anime databases from GitHub
   /// (META-030); absent = on.
   static const animeDataUpdates = 'metadata_anime_data_updates';

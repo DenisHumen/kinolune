@@ -27,6 +27,7 @@ import '../../services/app_services.dart';
 import '../../services/external_links.dart';
 import '../../twitch/twitch_embed.dart';
 import '../../twitch/twitch_service.dart';
+import '../../widgets/error_boundary.dart';
 import 'twitch_embed_desktop.dart';
 import 'twitch_widgets.dart';
 
@@ -80,9 +81,17 @@ Future<void> openTwitchEmbed(
 }) => Navigator.of(context, rootNavigator: true).push(
   // A player screen like pa_player's: over the whole window (no sidebar),
   // so fullscreen leaves nothing but the video (TWI-029).
+  // BUG-026: a failure while building (a web view call the platform lacks)
+  // is an error screen with «Назад», not a gray window.
   MaterialPageRoute<void>(
-    builder: (_) =>
-        TwitchEmbedScreen(target: target, surface: surface, engine: engine),
+    builder: (_) => ErrorBoundary(
+      name: 'twitch-embed',
+      child: TwitchEmbedScreen(
+        target: target,
+        surface: surface,
+        engine: engine,
+      ),
+    ),
   ),
 );
 
@@ -401,6 +410,27 @@ class _Failed extends StatelessWidget {
   }
 }
 
+/// Runs one setup call of the web view; a call this platform lacks throws
+/// (synchronously or in its future) and is logged instead (BUG-026).
+void _setUp(String what, Future<void> Function() call) {
+  try {
+    unawaited(
+      call().catchError((Object e) {
+        debugPrint('Twitch embed web view: $what failed: $e');
+      }),
+    );
+  } catch (e) {
+    debugPrint('Twitch embed web view: $what failed: $e');
+  }
+}
+
+/// `setBackgroundColor` of `webview_flutter`: WKWebView on macOS has no
+/// background colour or opaque flag and throws `UnimplementedError` from
+/// the call itself, which made the embed screen fail in initState — a gray
+/// window in release builds (BUG-026).
+bool webViewBackgroundSupported(TargetPlatform platform) =>
+    platform != TargetPlatform.macOS;
+
 /// The embed page in `webview_flutter`: inline autoplay, the JavaScript
 /// channel, and links that leave the page opened outside the app.
 class WebViewTwitchSurface implements TwitchEmbedSurface {
@@ -422,18 +452,28 @@ class WebViewTwitchSurface implements TwitchEmbedSurface {
     _controller = WebViewController.fromPlatformCreationParams(params);
     final platform = _controller.platform;
     if (platform is AndroidWebViewController) {
-      unawaited(platform.setMediaPlaybackRequiresUserGesture(false));
+      _setUp(
+        'autoplay',
+        () => platform.setMediaPlaybackRequiresUserGesture(false),
+      );
     }
-    unawaited(_controller.setJavaScriptMode(JavaScriptMode.unrestricted));
-    unawaited(_controller.setBackgroundColor(Colors.black));
-    unawaited(
-      _controller.addJavaScriptChannel(
+    _setUp(
+      'JavaScript',
+      () => _controller.setJavaScriptMode(JavaScriptMode.unrestricted),
+    );
+    if (webViewBackgroundSupported(defaultTargetPlatform)) {
+      _setUp('background', () => _controller.setBackgroundColor(Colors.black));
+    }
+    _setUp(
+      'channel',
+      () => _controller.addJavaScriptChannel(
         twitchEmbedChannel,
         onMessageReceived: (m) => onMessage(m.message),
       ),
     );
-    unawaited(
-      _controller.setNavigationDelegate(
+    _setUp(
+      'navigation',
+      () => _controller.setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (request) {
             // The player itself loads in an iframe; the page never leaves
@@ -449,7 +489,10 @@ class WebViewTwitchSurface implements TwitchEmbedSurface {
         ),
       ),
     );
-    unawaited(_controller.loadHtmlString(html, baseUrl: baseUrl.toString()));
+    _setUp(
+      'page',
+      () => _controller.loadHtmlString(html, baseUrl: baseUrl.toString()),
+    );
   }
 
   late final WebViewController _controller;
