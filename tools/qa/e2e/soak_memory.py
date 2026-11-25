@@ -17,6 +17,11 @@ Environment (all optional):
     PA_E2E_SOAK_LIMIT_MB  allowed growth per 50 cycles (50)
 
 Too few cycles after the warm-up (fewer than 5) give a note, not a verdict.
+
+When the lines carry glibc's `inuse=<MB>` (live malloc allocations), the
+same slope is checked for it: RSS can grow from fragmentation, `inuse` only
+from memory somebody still holds — a leak fails the run even when the RSS
+window looks fine.
 """
 
 from __future__ import annotations
@@ -40,8 +45,14 @@ def slope(points: list[tuple[int, int]]) -> float:
     return sum((x - mx) * (y - my) for x, y in points) / den
 
 
-def verdict(cycles: list[tuple[int, int]], window: int, warmup: int, limit: float):
-    """(lines, failed) for the RSS samples `cycles` [(cycle, MB)]."""
+def verdict(
+    cycles: list[tuple[int, int]],
+    window: int,
+    warmup: int,
+    limit: float,
+    what: str = "RSS",
+):
+    """(lines, failed) for the `what` samples `cycles` [(cycle, MB)]."""
     tail = [c for c in cycles if c[0] > warmup][-window:]
     if len(tail) < 5:
         return [
@@ -54,8 +65,8 @@ def verdict(cycles: list[tuple[int, int]], window: int, warmup: int, limit: floa
     failed = projected > limit
     return [
         f"- window: cycles {tail[0][0]}–{tail[-1][0]} ({len(tail)}), "
-        f"RSS {tail[0][1]} → {tail[-1][1]} MB ({growth:+d} MB)",
-        f"- slope: {s:.2f} MB/cycle → {projected:.0f} MB per 50 cycles "
+        f"{what} {tail[0][1]} → {tail[-1][1]} MB ({growth:+d} MB)",
+        f"- {what} slope: {s:.2f} MB/cycle → {projected:.0f} MB per 50 cycles "
         f"(limit {limit:.0f} MB): {'FAIL' if failed else 'ok'}",
     ], failed
 
@@ -68,6 +79,7 @@ def main(argv: list[str]) -> int:
     warmup = int(os.environ.get("PA_E2E_SOAK_WARMUP", "10"))
     limit = float(os.environ.get("PA_E2E_SOAK_LIMIT_MB", "50"))
     cycles: list[tuple[int, int]] = []
+    inuse: list[tuple[int, int]] = []
     native: list[str] = []
     with open(argv[1], encoding="utf-8", errors="replace") as log:
         for line in log:
@@ -76,6 +88,8 @@ def main(argv: list[str]) -> int:
                 continue
             cycles.append((int(m.group(1)), int(m.group(2))))
             fields = dict(FIELD.findall(m.group(3)))
+            if "inuse" in fields:
+                inuse.append((int(m.group(1)), int(fields["inuse"])))
             if fields:
                 native.append(
                     f"{m.group(1)}: rss {m.group(2)}"
@@ -93,6 +107,11 @@ def main(argv: list[str]) -> int:
         for n in native:
             print(f"  - {n}")
     lines, failed = verdict(cycles, window, warmup, limit)
+    if len(inuse) == len(cycles):
+        more, leaked = verdict(inuse, window, warmup, limit, "malloc in use")
+        if not more[0].startswith("- not enough"):
+            lines += more
+            failed = failed or leaked
     print("\n".join(lines))
     return 1 if failed else 0
 

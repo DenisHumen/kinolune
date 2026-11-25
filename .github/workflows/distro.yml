@@ -87,6 +87,9 @@ jobs:
       - name: Signature policy test (unsigned image is rejected)
         run: sudo env "PATH=$PATH" ENGINE=podman distro/tests/signature-policy.sh "$LOCAL_TAG"
 
+      - name: Branding test (Kinolune OS, no Fedora brand, fastfetch logo)
+        run: sudo env "PATH=$PATH" ENGINE=podman distro/tests/branding.sh "$LOCAL_TAG"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sbom-pr-${{ github.event.pull_request.number }}
@@ -170,6 +173,9 @@ jobs:
 
       - name: Signature policy test (unsigned image is rejected)
         run: sudo env "PATH=$PATH" ENGINE=podman distro/tests/signature-policy.sh "$LOCAL_TAG"
+
+      - name: Branding test (Kinolune OS, no Fedora brand, fastfetch logo)
+        run: sudo env "PATH=$PATH" ENGINE=podman distro/tests/branding.sh "$LOCAL_TAG"
 
       - name: Push version tag
         id: push

@@ -1,0 +1,29 @@
+==> Running the Wi-Fi scenario
+==> Polkit rule for the kinolune group, unprivileged probe user
+==> Three virtual radios: wlan0 for NetworkManager, wlan1/wlan2 for the access points
+==> Access points: kinolune-wpa2 (WPA2) on wlan1, kinolune-open (open) on wlan2
+==> Scan: both networks with their security
+  ok found both networks
+  ok available
+  ok WPA2 marked protected
+  ok open marked open
+==> Open network, no password
+  ok joined kinolune-open
+  ok active kinolune-open
+  ok address 192.168.78.38
+==> WPA2: a wrong password, then the right one
+  ok wrong password refused
+  ok nothing saved
+  ok joined kinolune-wpa2
+  ok address 192.168.77.23
+==> Saved: joins again without a password; auto-connect
+  ok rejoined without a password
+  ok auto-connect off
+  ok password still in NetworkManager
+==> Forget
+  ok forgotten
+==> Access points gone: no network
+  ok no active network
+  ok connectivity over the cable: full
+==> All Wi-Fi checks passed
+exit=0

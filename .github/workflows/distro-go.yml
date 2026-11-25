@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
-# Go checks for the NAS OS installer (DIST-004+): gofmt, vet, unit tests on
-# recorded lsblk/udev fixtures. Nothing here touches real disks.
+# Go checks for the NAS OS Go modules: the installer (DIST-004+, unit tests on
+# recorded lsblk/udev fixtures), the update agent alpha-updated (DIST-009,
+# tests on a fake bootc) and the admin backend alpha-admin (DIST-013, tests on
+# fake D-Bus services on a private bus). Nothing here touches real disks,
+# bootc or the system bus.
 
 name: Distro Go
 
@@ -12,11 +15,15 @@ on:
     types: [opened, reopened, ready_for_review]
     paths:
       - "distro/installer/**"
+      - "distro/updated/**"
+      - "distro/admin/**"
       - ".github/workflows/distro-go.yml"
   push:
     branches: [main]
     paths:
       - "distro/installer/**"
+      - "distro/updated/**"
+      - "distro/admin/**"
 
 permissions:
   contents: read
@@ -40,3 +47,45 @@ jobs:
         run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - run: go vet ./...
       - run: go test ./...
+
+  updated:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: distro/updated
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: distro/updated/go.mod
+          cache-dependency-path: distro/updated/go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  admin:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: distro/admin
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: distro/admin/go.mod
+          cache-dependency-path: distro/admin/go.sum
+      - name: dbus-daemon and PAM headers
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq dbus-daemon libpam0g-dev
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./... && go vet -tags pam ./...
+      - run: go test -race ./...
+        env:
+          ALPHA_ADMIN_REQUIRE_DBUS: "1"

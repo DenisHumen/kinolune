@@ -4,6 +4,12 @@
 
 Kinolune has no accounts, no servers and no telemetry. Your library, progress, passwords and settings stay on your devices. The full text is the [privacy policy](../../legal/privacy-policy.md).
 
+## Your own Kinolune media server
+
+If you run the Kinolune media server (`alpha-media`), it is reachable on your home network only: devices with addresses from your router (192.168.x.x, 10.x.x.x and so on) connect, and the server drops connections from the internet, even if a port is forwarded on the router. The server never opens ports on the router itself (no UPnP). To allow this computer only, set `clients = "local"` in the config; to allow everybody, the internet included, `clients = "any"`. The latter is dangerous: only do it if you know why, for example behind your own VPN.
+
+Until an administrator is created on the server, it can be managed only from the computer it runs on or with the one-time code from the `setup-code.txt` file in its data folder.
+
 ## Where passwords are kept
 
 Network folder passwords, media server keys, and your Twitch and OpenSubtitles sign-ins are kept in the system's secure storage: Keychain (macOS), Android Keystore, Windows Credential Manager, Secret Service (Linux). If Linux has no such storage, Kinolune uses an encrypted file and tells you once. Settings → Privacy → Where passwords are stored shows which one is used.

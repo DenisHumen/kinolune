@@ -102,3 +102,21 @@ twitch-rule-page-*  # record rule page scaffold
 osd-panel  # container of the OSD panel (side, bottom sheet or TV top panel); its controls cited as PLAY-83 – PLAY-90
 video-current  # status text of the only video stream in the video tab
 health-list  # list of the health screen (UI-044)
+availability-dot-*  # UI-053: status dot of a source (decoration), cited as SRC-156
+availability-row-*  # UI-053: status line container; its button is availability-fix-*
+availability-sync-paused-*  # UI-053: line of the sync plate, cited as SRC-158
+connection-status-page  # UI-053: «Состояние подключений» scaffold, cited as SRC-160
+connection-status-list  # UI-053: page scroll view
+connection-status-targets  # UI-053: section container
+connection-status-sync  # UI-053: section container
+connection-status-history  # UI-053: section container
+connection-status-outbox  # UI-053: LAN outbox count text, cited as SRC-158
+connection-status-folder-outbox  # UI-053: folder outbox count text, cited as SRC-158
+connection-status-channel-*  # UI-053: sync channel status text
+connection-status-details-*  # UI-053: target details text (kind, RTT, last answer)
+settings-section-connections  # UI-053: settings section container
+network-panel  # container of the Wi-Fi and network panel (DIST-032); its controls cited as HOME-15 – HOME-24
+network-status  # status text of the network panel (Wi-Fi name, address)
+network-wired  # cable status text of the network panel
+network-message  # outcome text of the network panel
+network-icon-*  # the icon glyph inside the network button (HOME-15)

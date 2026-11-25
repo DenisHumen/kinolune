@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "disk": {
+    "path": "/dev/disk/by-id/nvme-Samsung_SSD_990_PRO_1TB_S6Z1NJ0W000000X",
+    "data_partition": true,
+    "root_size_gib": 64,
+    "data_pool": "media"
+  },
+  "hostname": "kinolune",
+  "user": {
+    "name": "admin",
+    "full_name": "Kinolune admin",
+    "password_hash": "$y$j9T$7nVyZ3WBHdkfQ8WaD9Xgd.$Dn3Cl9mI6/ybf8z7FNnUW2ePrCVc6kB8BDu7Rbq3wf4",
+    "ssh_authorized_keys": []
+  },
+  "network": {
+    "mode": "static",
+    "interface": "enp1s0",
+    "address": "192.168.1.20/24",
+    "gateway": "192.168.1.1",
+    "dns": ["192.168.1.1"]
+  },
+  "image": {
+    "channel": "stable"
+  },
+  "language": "uk"
+}

@@ -22,6 +22,7 @@ import '../files/library_upload.dart';
 import '../l10n/l10n.dart';
 import '../offline/offline_downloads.dart';
 import '../offline/offline_ui.dart';
+import '../platform/local_path.dart';
 import '../services/app_services.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/cards.dart';
@@ -606,7 +607,10 @@ class OfflineSettingsSection extends StatelessWidget {
           key: const ValueKey('settings-downloads-folder'),
           icon: Icons.folder_outlined,
           title: l.offlineSettingsFolder,
-          subtitle: [?s.folder, usage].join('\n'),
+          subtitle: [
+            if (s.folder case final f?) displayLocalPath(f),
+            usage,
+          ].join('\n'),
           subtitleLines: 3,
           onTap: desktop ? () => _pickFolder(context) : null,
         ),

@@ -17,6 +17,8 @@ on:
     paths:
       - "tools/mpv/**"
       - "tools/ffmpeg/**"
+      # PLAY-AND-004: the Media3 FFmpeg audio extension is built on the Android FFmpeg of this workflow.
+      - "tools/media3-ffmpeg/**"
       # Inputs of the subtitle golden frames (tools/mpv/tests/subtitles).
       - "tools/qa/media/pgs.py"
       - "tools/qa/media/texts.py"
@@ -291,6 +293,34 @@ jobs:
         run: tools/mpv/check-license.sh --artifact "tools/mpv/out/${TARGET}"
       - name: Android packaging check (unversioned SONAMEs, 16 KB pages)
         run: tools/mpv/bundle.sh check-android "tools/mpv/out/${TARGET}"
+      # PLAY-AND-004: Media3 FFmpeg audio extension (TrueHD, DTS…) linked to the FFmpeg above. Seconds to
+      # build, so never cached; build.sh runs its licence gate (tools/media3-ffmpeg/check-license.sh).
+      - name: NDK for the Media3 FFmpeg extension
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "$ANDROID_NDK_PACKAGE" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/${ANDROID_NDK_PACKAGE/;//}" >> "$GITHUB_ENV"
+      - name: Media3 FFmpeg audio extension
+        run: tools/media3-ffmpeg/build.sh "$TARGET" "tools/mpv/out/$TARGET"
+      - name: Extension licence gate rejects a GPL FFmpeg and missing decoders
+        if: matrix.target == 'android-x86_64'
+        run: |
+          ext="tools/media3-ffmpeg/out/$TARGET"
+          d="$RUNNER_TEMP/m3ff-canary"; mkdir -p "$d/gpl/lib" "$d/nodec/lib"
+          for l in avcodec avutil swresample; do
+            printf 'x\0lib%s license: GPL version 2 or later\0' "$l" > "$d/gpl/lib/lib$l.so"
+            printf 'x\0lib%s license: LGPL version 2.1 or later\0' "$l" > "$d/nodec/lib/lib$l.so"
+          done
+          if tools/media3-ffmpeg/check-license.sh "$ext" "$d/gpl"; then echo "::error::GPL FFmpeg passed"; exit 1; fi
+          out="$(tools/media3-ffmpeg/check-license.sh "$ext" "$d/nodec" 2>&1 || true)"
+          printf '%s\n' "$out" | grep -q 'has no truehd decoder' \
+            || { printf '%s\n' "$out"; echo "::error::missing TrueHD decoder passed"; exit 1; }
+          echo "rejected: GPL FFmpeg, FFmpeg without TrueHD/DTS decoders"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: media3-ffmpeg-${{ matrix.target }}
+          path: tools/media3-ffmpeg/out/${{ matrix.target }}
+          retention-days: 7
+          if-no-files-found: error
       - name: Where the build came from
         env:
           KEY: ${{ steps.key.outputs.key }}

@@ -17,6 +17,7 @@
 import 'dart:async';
 
 import '../integration/library.dart';
+import '../platform/local_path.dart';
 import 'source_manager.dart';
 
 /// A folder or media file in the file browser.
@@ -109,21 +110,13 @@ bool isBrowsableFile(String name) =>
 String? localRootOf(ManagedSource source) {
   if (source.type != SourceType.local) return null;
   final a = source.address;
-  if (!a.startsWith('file:')) return a;
-  try {
-    return Uri.parse(a).toFilePath();
-  } on UnsupportedError {
-    return null;
-  }
+  // BUG-022: native separators (`C:\Movies` on Windows).
+  final path = displayLocalPath(a);
+  return a.startsWith('file:') && path == a ? null : path;
 }
 
-/// [relPath] under the local folder [root].
-String joinLocal(String root, String relPath) {
-  if (relPath.isEmpty) return root;
-  final sep = root.contains(r'\') && !root.contains('/') ? r'\' : '/';
-  final base = root.endsWith(sep) ? root.substring(0, root.length - 1) : root;
-  return '$base$sep${relPath.replaceAll('/', sep)}';
-}
+/// [relPath] under the local folder [root], with native separators.
+String joinLocal(String root, String relPath) => joinLocalPath(root, relPath);
 
 /// [entries] sorted by [sort] (title = [labelOf], case-insensitive and
 /// natural: "2" before "10"), folders before files if [foldersFirst].

@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: MPL-2.0
+//
+// Kinolune OS (DIST-032): members of the "kinolune" group (the user of the
+// Kinolune session, DIST-029) manage Wi-Fi and network connections from the
+// app's network panel without root and without a password prompt. Only what
+// the panel needs: join, scan, turn Wi-Fi on/off, save and forget profiles.
+// Not sleep/wake, not NetworkManager's own settings or the host name.
+polkit.addRule(function (action, subject) {
+    var allowed = [
+        "org.freedesktop.NetworkManager.network-control",
+        "org.freedesktop.NetworkManager.enable-disable-wifi",
+        "org.freedesktop.NetworkManager.wifi.scan",
+        "org.freedesktop.NetworkManager.settings.modify.own",
+        "org.freedesktop.NetworkManager.settings.modify.system"
+    ];
+    if (allowed.indexOf(action.id) >= 0 && subject.isInGroup("kinolune")) {
+        return polkit.Result.YES;
+    }
+    return polkit.Result.NOT_HANDLED;
+});

@@ -11,7 +11,8 @@
 //!   the HTTP Range proxy and fingerprinting consume it.
 //! - [`VfsPath`] is a `/`-separated UTF-8 path relative to the source root
 //!   that cannot escape it.
-//! - [`LocalFs`] is the local backend.
+//! - [`LocalFs`] is the local backend; [`host`] turns stored local paths
+//!   (a `file://` root, a `VfsPath` under it) into native host paths.
 //! - [`contract`] is the test suite every backend must pass.
 //! - [`VfsWrite`] is the write side of a backend ([`Vfs::as_write`]), and
 //!   [`files`] the file management built on it (NET-023): folders,
@@ -42,6 +43,7 @@
 pub mod contract;
 mod error;
 pub mod files;
+pub mod host;
 mod local;
 mod path;
 mod source;
