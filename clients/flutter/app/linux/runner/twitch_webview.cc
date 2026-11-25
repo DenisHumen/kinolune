@@ -337,13 +337,32 @@ GtkWindow* main_window() {
 }
 
 gboolean enter_fullscreen_cb(GtkWidget* view, gpointer data) {
-  state.fullscreen = TRUE;
   GtkWindow* window = main_window();
-  if (state.popup != nullptr && window != nullptr) {
-    // WebKit fullscreens the popup, which a popup cannot be: the window
-    // goes fullscreen and Dart gives the player the whole of it.
-    gtk_window_fullscreen(window);
+  if (state.popup != nullptr) {
+    // Wayland: WebKit would fullscreen the popup, which a subsurface cannot
+    // be, and keep the page in its fullscreen state while Escape goes to
+    // Flutter. The page already fills the view, so the player's button
+    // only toggles the window's fullscreen; Dart hides the bar and the
+    // view grows with the rectangle.
+    GdkWindow* gdk_window =
+        window != nullptr ? gtk_widget_get_window(GTK_WIDGET(window))
+                          : nullptr;
+    const gboolean on =
+        gdk_window == nullptr ||
+        (gdk_window_get_state(gdk_window) & GDK_WINDOW_STATE_FULLSCREEN) == 0;
+    state.fullscreen = on;
+    if (window != nullptr) {
+      if (on) {
+        gtk_window_fullscreen(window);
+      } else {
+        gtk_window_unfullscreen(window);
+      }
+    }
+    g_autoptr(FlValue) v = fl_value_new_bool(on);
+    invoke("fullscreen", v);
+    return TRUE;  // the page does not enter fullscreen
   }
+  state.fullscreen = TRUE;
   g_autoptr(FlValue) v = fl_value_new_bool(TRUE);
   invoke("fullscreen", v);
   return FALSE;  // WebKit fullscreens the window itself.
@@ -351,10 +370,6 @@ gboolean enter_fullscreen_cb(GtkWidget* view, gpointer data) {
 
 gboolean leave_fullscreen_cb(GtkWidget* view, gpointer data) {
   state.fullscreen = FALSE;
-  GtkWindow* window = main_window();
-  if (state.popup != nullptr && window != nullptr) {
-    gtk_window_unfullscreen(window);
-  }
   g_autoptr(FlValue) v = fl_value_new_bool(FALSE);
   invoke("fullscreen", v);
   return FALSE;
