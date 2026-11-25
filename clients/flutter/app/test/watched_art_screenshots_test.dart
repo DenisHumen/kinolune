@@ -13,6 +13,7 @@ import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/fakes/fake_review_inbox.dart';
 import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/platform/form_factor.dart';
+import 'package:kinolune/screens/episode_row.dart';
 import 'package:kinolune/screens/show_detail_screen.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/widgets/watched_art.dart';
@@ -96,24 +97,14 @@ void main() {
       await settle(t);
       expect(find.byType(ShowDetailScreen), findsOneWidget);
       final card = find.byKey(showEpisodeKey('$_show-s2e4'));
-      final first = find.byKey(showEpisodeKey('$_show-s2e1'));
-      // The episode row in the lower part of the frame, the hero above.
-      await t.scrollUntilVisible(
-        first,
-        150,
-        scrollable: find
-            .descendant(
-              of: find.byType(ShowDetailScreen),
-              matching: find.byType(Scrollable),
-            )
-            .first,
+      // UI-055: the episode row in the lower part of the frame, the hero
+      // above; it opens on S2E4, the next episode.
+      await Scrollable.ensureVisible(
+        t.element(find.byKey(episodeRowKey, skipOffstage: false)),
+        alignment: .7,
       );
-      await settle(t, 2);
-      await Scrollable.ensureVisible(t.element(first), alignment: .7);
       await settle(t, 4);
-      // BUG-019: the episodes are a grid of the page; S2E4 in view.
-      await Scrollable.ensureVisible(t.element(card), alignment: .5);
-      await settle(t, 4);
+      expect(card, findsOneWidget);
       expect(
         find.descendant(of: card, matching: find.byKey(watchedBlurKey)),
         findsOneWidget,
