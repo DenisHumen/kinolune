@@ -345,8 +345,11 @@ python3 tools/roadmap/roadmap.py progress --platforms
 | CARD-42 | Меню сезона: долгое нажатие, правая кнопка или удержание OK на чипе сезона (`show-season-*`) → «Отметить сезон просмотренным» / «Отметить сезон непросмотренным» (`mark-menu-*`) → все серии сезона одним действием, сообщение с «Отменить» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | CARD-43 | «Ещё» (`show-more`) на странице сериала → сезон на вкладке и весь сериал «просмотренным» / «непросмотренным» (`mark-menu-*`) одним действием, сообщение с «Отменить»; без ядра кнопки нет | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | CARD-44 | «Отменить» (`snack-undo`) после массовой отметки → у каждой серии возвращаются прежние отметка и позиция (начатая снова «Продолжить» с того же места), изменение уходит в синхронизацию и на сервер; через 8 с сообщение исчезает, отметки остаются | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| CARD-45 | Шапка сериала (`show-meta`): «… · 30 серий · всего 21 ч 40 мин · осталось 12 ч 5 мин»; спецвыпуски в итог не входят; начатая серия — недосмотренным остатком; длительность из метаданных у непроанализированного файла — со знаком «≈»; от 100 ч — только часы; всё досмотрено → «просмотрено»; ничего не начато → только «всего …» | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| CARD-46 | Строка сезона под чипами (`show-runtime-season`): «10 серий · 7 ч 10 мин · осталось 2 ч 30 мин» выбранного сезона; после «Отметить сезон просмотренным» сразу «просмотрено», без перезахода | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| CARD-47 | Начатый фильм: на странице (`detail-meta`) и в «Продолжить просмотр» на главной — «всего 2 ч 28 мин · осталось 40 мин»; у фильма из частей — сумма частей | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 
-Автотесты: CARD-01…CARD-03, CARD-05, CARD-06, CARD-11, CARD-12, CARD-14 — `test/movie_detail_test.dart`; CARD-07 — `test/app_test.dart`; CARD-13 — `test/search_test.dart`; CARD-15…CARD-22, CARD-25…CARD-27 — `test/trailers_test.dart`; CARD-29…CARD-36 — `test/show_detail_test.dart`; CARD-39 — `test/server_transcode_test.dart` (десктоп); CARD-40…CARD-44 — `test/episode_marks_test.dart` (десктоп; CARD-40, CARD-41 — и ТВ).
+Автотесты: CARD-01…CARD-03, CARD-05, CARD-06, CARD-11, CARD-12, CARD-14 — `test/movie_detail_test.dart`; CARD-07 — `test/app_test.dart`; CARD-13 — `test/search_test.dart`; CARD-15…CARD-22, CARD-25…CARD-27 — `test/trailers_test.dart`; CARD-29…CARD-36 — `test/show_detail_test.dart`; CARD-39 — `test/server_transcode_test.dart` (десктоп); CARD-40…CARD-44 — `test/episode_marks_test.dart` (десктоп; CARD-40, CARD-41 — и ТВ); CARD-45…CARD-47 — `test/runtime_totals_test.dart` (десктоп и телефон, ru/en/uk).
 
 ## 7. Плеер
 
@@ -840,8 +843,15 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 | TWI-15 | «Загрузки» в шапке (`twitch-downloads`, только full) → список загрузок VOD | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
 | TWI-16 | «Записи и загрузки» в шапке (`twitch-archive`, только full, не у детского профиля) → библиотека записей | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
 | TWI-17 | Внизу раздела и страниц канала строка «Каналы, записи и эфиры — с Twitch. Kinolune не связан с Twitch.» (без логотипа) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-146 | Вошли: в шапке аватар и имя аккаунта с Twitch (`twitch-account-avatar`, `twitch-account-name`); без картинки или пока она грузится — первая буква имени на цвете | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-147 | Меню аккаунта в шапке → «Обновить имя и аватар» (`menu:twitchAccountRefresh`) → новое имя и аватар с Twitch; без нажатия приложение спрашивает Twitch не чаще раза в 24 ч (после входа — сразу) | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-148 | Настройки → Twitch: карточка аккаунта (`settings-twitch-account`) с аватаром, именем и «Вход выполнен: <логин>», «Обновить» (`settings-twitch-account-refresh`) и «Выйти» (`settings-twitch-sign-out`) → «Вход в Twitch не выполнен» и «Войти через Twitch» (`settings-twitch-sign-in`) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-149 | Вход в Twitch → у активного профиля со стандартным аватаром (цвет или картинка) аватар из Twitch (`profile-avatar-twitch`); детский профиль и своя картинка не меняются; «Выйти из Twitch» → прежний аватар; на другом устройстве после синхронизации профилей тот же аватар | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-150 | Редактор профиля: «Аватар из Twitch» (`profile-avatar-twitch-toggle`, есть при входе в Twitch, не у детского) вкл. → аватар из Twitch; выкл. или выбор цвета/картинки → свой | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| TWI-151 | Чат с правом отправки: свой аватар Twitch слева от поля ввода, подсказка — имя | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| TWI-152 | Twitch больше не принимает вход (401 после неудачного обновления токена) → приложение выходит само, в шапке кнопка входа, аватар профиля прежний | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 
-Автотесты: TWI-01, TWI-07 — `test/twitch_golden_test.dart` (phone, tablet, desktop, tv); TWI-02, TWI-03, TWI-04, TWI-09, TWI-10, TWI-12, TWI-13, TWI-17 — `test/twitch_test.dart` (desktop); TWI-06 — `test/twitch_test.dart`, `test/twitch_player_test.dart` (desktop); TWI-14, TWI-16 — `test/twitch_archive_test.dart`, `test/twitch_autorecord_profiles_test.dart`; TWI-15 — `test/twitch_downloads_test.dart`.
+Автотесты: TWI-01, TWI-07 — `test/twitch_golden_test.dart` (phone, tablet, desktop, tv); TWI-02, TWI-03, TWI-04, TWI-09, TWI-10, TWI-12, TWI-13, TWI-17 — `test/twitch_test.dart` (desktop); TWI-06 — `test/twitch_test.dart`, `test/twitch_player_test.dart` (desktop); TWI-14, TWI-16 — `test/twitch_archive_test.dart`, `test/twitch_autorecord_profiles_test.dart`; TWI-15 — `test/twitch_downloads_test.dart`; TWI-146, TWI-147 — `test/twitch_account_avatar_test.dart` (phone, desktop, tv); TWI-148, TWI-149, TWI-152 — `test/twitch_account_avatar_test.dart` (desktop).
 
 ### Каналы и поиск
 
@@ -1749,11 +1759,12 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
 |---|---|---|---|---|---|---|---|---|---|
 | SET-75 | «Сохранять логи и отчёты о сбоях» (`settings-diagnostics-keep`) вкл. → логи пишутся; выкл. → удаляются; без ядра раздела нет | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
-| SET-76 | «Экспортировать диагностический отчёт» (`settings-diagnostics-export`) → «Готовим отчёт…», диалог «Отчёт сохранён» (`diagnostics-saved`) с путём; «Закрыть» → закрыт | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | ❌ [BUG-024](../ROADMAP.md) | 🤖 |
+| SET-76 | «Экспортировать диагностический отчёт» (`settings-diagnostics-export`) → «Готовим отчёт…», диалог «Отчёт сохранён» (`diagnostics-saved`): «Папка» (`diagnostics-saved-folder`, с разделителями системы) и «Файл» (`diagnostics-saved-file`, время в имени — местное); «Закрыть» → закрыт. В zip: versions.txt с полной версией сборки, как в «О программе» (0.1.0-alpha.N+сборка), и верным именем системы (Windows 11 при сборке ≥ 22000), config.txt — все настройки (неизменённые — «(default)») без секретов | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | ⬜ | 🤖 |
+| SET-161 | В окне «Отчёт сохранён» «Открыть папку» (`diagnostics-open-folder`, компьютеры) → файловый менеджер с папкой отчёта (Windows и macOS — файл выделен); на Android та же кнопка — «Поделиться» (системное меню с zip из «Загрузок»); не открылось — «Не удалось открыть папку» / «…меню «Поделиться»» | ⬜ | ⬜ | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
 | SET-77 | «Открыть issue на GitHub» (`diagnostics-open-issue`) → браузер с заполненным issue; без браузера — «Не удалось открыть браузер» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | SET-78 | «Удалить логи и отчёты о сбоях» (`settings-diagnostics-clear`, есть при данных) → «Логи и отчёты о сбоях удалены» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 
-Автотесты: SET-75, SET-76, SET-77, SET-78 — `app/test/diagnostics_test.dart`.
+Автотесты: SET-75, SET-76, SET-77, SET-78, SET-161 (кнопка и вызов, без настоящего файлового менеджера) — `app/test/diagnostics_test.dart`; содержимое zip — core/crates/pa-log/tests/report.rs.
 
 ### Состояние (диагностика)
 

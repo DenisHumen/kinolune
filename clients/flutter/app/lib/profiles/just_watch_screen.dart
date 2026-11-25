@@ -155,7 +155,8 @@ class _JustWatchScreenState extends State<JustWatchScreen> {
                                 subtitle: e.kind == ContinueKind.episode
                                     ? '${episodeCode(l, item)} · '
                                           '${formatRemaining(l, e.progress)}'
-                                    : formatRemaining(l, e.progress),
+                                    // UI-056: «всего … · осталось …».
+                                    : formatMovieProgress(l, e.progress),
                                 progress: e.progress.fraction,
                                 onTap: () => playVideo(
                                   context,

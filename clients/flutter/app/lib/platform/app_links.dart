@@ -6,6 +6,8 @@
 // * `kinolune://play/<id>` — resume a library item (Watch Next cards);
 // * `kinolune://channel/<login>` — a Twitch channel's page;
 // * `kinolune://twitch/vod/<id>?t=<ms>` — a Twitch VOD at a position;
+// * `kinolune://twitch/live/<login>` — a channel's live stream (BUG-028:
+//   opens the player without a Twitch sign-in, as the VOD link does);
 // * `kinolune://search?q=<text>` — Search with the query;
 // * `kinolune://oauth?code=…&state=…` — a cloud sign-in coming back
 //   (NET-017), handed to the form waiting for it.
@@ -73,6 +75,11 @@ sealed class AppLink {
       case 'twitch' when seg.length == 2 && seg.first == 'vod':
         final t = int.tryParse(u.queryParameters['t'] ?? '');
         return TwitchVodLink(seg[1], startMs: t);
+      case 'twitch'
+          when seg.length == 2 &&
+              seg.first == 'live' &&
+              _twitchLogin.hasMatch(seg[1]):
+        return TwitchLiveLink(seg[1].toLowerCase());
       case 'search' when seg.isEmpty:
         final q = (u.queryParameters['q'] ?? '').trim();
         return q.isEmpty ? null : SearchLink(q);
@@ -164,6 +171,11 @@ class TwitchVodLink extends AppLink {
   final int? startMs;
 }
 
+class TwitchLiveLink extends AppLink {
+  const TwitchLiveLink(this.login);
+  final String login;
+}
+
 class SearchLink extends AppLink {
   const SearchLink(this.query);
   final String query;
@@ -252,6 +264,10 @@ Future<void> openAppLink(AppShellState shell, AppLink link) async {
           startAt: startMs == null ? null : Duration(milliseconds: startMs),
         ),
       );
+    case TwitchLiveLink(:final login):
+      final nav = homeNav();
+      if (nav == null) return;
+      await playTwitch(nav.context, TwitchPlayTarget.live(login));
     case FileLink():
       final nav = homeNav();
       final ctx = nav?.context;

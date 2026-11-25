@@ -223,7 +223,7 @@ jobs:
           pkg-config --modversion mpv
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build linux --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_BUILD_NUMBER="$BUILD_NUMBER" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
       - name: Package tar.gz and AppImage (with our libmpv and libsmb2)
         env:
           PA_LIBMPV_DIR: ${{ runner.temp }}/libmpv-linux-x86_64
@@ -322,6 +322,16 @@ jobs:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: false
+      # CI-013: Gradle user home (dependencies, plugins, wrapper) cached between runs,
+      # so most runs never ask Maven Central (HTTP 429 on shared runners).
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          add-job-summary: on-failure
+          # Signed releases never use a shared cache (maintainer decision
+          # 2026-11-25): dependencies come fresh, the retries below cover 429s.
+          cache-disabled: true
+      - name: Gradle network retries (CI-013)
+        run: "$GITHUB_WORKSPACE/tools/ci/gradle-network.sh"
       - name: Rust toolchain for the core (pa_core Native Assets, UI-024)
         working-directory: core/crates/pa-frb
         # Channel and targets (Linux, Android) from the crate's rust-toolchain.toml;
@@ -373,7 +383,7 @@ jobs:
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           common=(--release --target-platform "android-arm,android-arm64,android-x64"
                   --build-name "$VERSION" --build-number "$BUILD_NUMBER"
-                  --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID")
+                  --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_BUILD_NUMBER="$BUILD_NUMBER" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID")
           out="$GITHUB_WORKSPACE/dist"
           mkdir -p "$out"
           apks=build/app/outputs/flutter-apk
@@ -522,7 +532,7 @@ jobs:
           xcodebuild -version
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build macos --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_BUILD_NUMBER="$BUILD_NUMBER" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
           # What CocoaPods and SwiftPM wrote into the runner project; commit it
           # when it changes (uploaded with the smoke results).
           mkdir -p "$RUNNER_TEMP/smoke"
@@ -691,7 +701,7 @@ jobs:
         run: |
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build windows --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_BUILD_NUMBER="$BUILD_NUMBER" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
           ls -l build/windows/x64/runner/Release
       - name: Package zip (with libsmb2, VC++ runtime and licences)
         run: |
