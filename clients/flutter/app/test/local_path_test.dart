@@ -98,6 +98,9 @@ void main() {
 
   test('an empty relative path is the root', () {
     expect(joinLocalPath('C:/lib', '', context: p.windows), r'C:\lib');
-    expect(joinLocalPath('smb://nas/a/', '', context: p.windows), 'smb://nas/a/');
+    expect(
+      joinLocalPath('smb://nas/a/', '', context: p.windows),
+      'smb://nas/a/',
+    );
   });
 }
