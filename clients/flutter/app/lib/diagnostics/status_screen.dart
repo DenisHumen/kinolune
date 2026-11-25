@@ -11,7 +11,6 @@
 // (remote focus on every action, the log scrolls with the arrows).
 
 import 'dart:async';
-import 'dart:io' show Platform;
 
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -316,7 +315,7 @@ List<(String, String, String)> statusVersionRows(
     (
       'platform',
       l.statusVersionPlatform,
-      '${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
+      currentOsVersion(),
     ),
   ];
 }

@@ -4,6 +4,8 @@
 // report", the «Состояние» screen (UI-017) and deleting what is kept.
 // Hidden without the native core.
 
+import 'dart:io' show Platform;
+
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -154,7 +156,31 @@ Future<void> exportPlaybackReport(
   await showDiagnosticsSaved(context, report);
 }
 
-/// "Report saved": where it is and the prefilled GitHub issue.
+/// How the "Report saved" dialog shows the file (BUG-024).
+enum DiagnosticsReveal {
+  /// Desktops: the folder in the file manager.
+  openFolder,
+
+  /// Android: the share sheet.
+  share,
+
+  /// Nothing to open it with (older Android: the file stays in the app's
+  /// own folder).
+  none,
+}
+
+/// Desktops open the folder; Android shares the copy in Downloads.
+DiagnosticsReveal diagnosticsRevealFor(DiagnosticsExport report) {
+  if (report.shareUri != null) return DiagnosticsReveal.share;
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    return DiagnosticsReveal.openFolder;
+  }
+  return DiagnosticsReveal.none;
+}
+
+/// "Report saved": the folder and the file name, a button that opens the
+/// folder (desktops) or the share sheet (Android), and the prefilled
+/// GitHub issue.
 Future<void> showDiagnosticsSaved(
   BuildContext context,
   DiagnosticsExport report,
@@ -162,20 +188,77 @@ Future<void> showDiagnosticsSaved(
   context: context,
   builder: (c) {
     final l = c.l10n;
+    final theme = Theme.of(c);
+    final reveal = diagnosticsRevealFor(report);
+    Widget row(String label, String value, Key key) => Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: theme.textTheme.labelMedium),
+          SelectableText(
+            value,
+            key: key,
+            style: theme.textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
     return AlertDialog(
       key: const ValueKey('diagnostics-saved'),
       // The theme's text style carries the app font (the dialog theme's
       // title style alone falls back to the platform font).
       title: Text(
         l.settingsDiagnosticsSavedTitle,
-        style: Theme.of(c).textTheme.headlineSmall,
+        style: theme.textTheme.headlineSmall,
       ),
-      content: SelectableText(l.settingsDiagnosticsSavedBody(report.shownPath)),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              row(
+                l.settingsDiagnosticsSavedFolder,
+                report.folder,
+                const ValueKey('diagnostics-saved-folder'),
+              ),
+              row(
+                l.settingsDiagnosticsSavedFile,
+                report.name,
+                const ValueKey('diagnostics-saved-file'),
+              ),
+              const SizedBox(height: 4),
+              Text(l.settingsDiagnosticsSavedNote),
+            ],
+          ),
+        ),
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(c).pop(),
           child: Text(l.settingsDiagnosticsClose),
         ),
+        if (reveal != DiagnosticsReveal.none)
+          OutlinedButton(
+            key: const ValueKey('diagnostics-open-folder'),
+            onPressed: () async {
+              if (!await Diagnostics.revealReport(report) && c.mounted) {
+                _say(
+                  c,
+                  reveal == DiagnosticsReveal.share
+                      ? l.settingsDiagnosticsShareFailed
+                      : l.settingsDiagnosticsOpenFolderFailed,
+                );
+              }
+            },
+            child: Text(
+              reveal == DiagnosticsReveal.share
+                  ? l.settingsDiagnosticsShare
+                  : l.settingsDiagnosticsOpenFolder,
+            ),
+          ),
         FilledButton(
           key: const ValueKey('diagnostics-open-issue'),
           autofocus: true,

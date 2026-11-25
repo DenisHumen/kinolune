@@ -276,7 +276,7 @@ class _LicencesSection extends StatelessWidget {
             onPressed: () => showLicensePage(
               context: context,
               applicationName: kAppName,
-              applicationVersion: kAppVersion,
+              applicationVersion: Services.of(context).buildInfo.appVersion,
               applicationIcon: const Padding(
                 padding: EdgeInsets.all(12),
                 child: KinoluneLogo(size: 48, showName: false),

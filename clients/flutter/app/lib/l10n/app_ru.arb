@@ -1212,7 +1212,6 @@
   "settingsDiagnosticsClear": "Удалить логи и отчёты о сбоях",
   "settingsDiagnosticsCleared": "Логи и отчёты о сбоях удалены",
   "settingsDiagnosticsSavedTitle": "Отчёт сохранён",
-  "settingsDiagnosticsSavedBody": "Сохранён в {path}. Ничего не отправлено. Чтобы сообщить о проблеме, откройте issue на GitHub и приложите этот файл; перед этим его можно просмотреть.",
   "settingsDiagnosticsOpenIssue": "Открыть issue на GitHub",
   "settingsDiagnosticsClose": "Закрыть",
   "settingsDiagnosticsFailed": "Отчёт не сохранён: {error}",
@@ -2336,5 +2335,12 @@
   "commonScreenErrorTitle": "На этом экране что-то пошло не так",
   "commonScreenErrorMessage": "Ошибка записана в журнал приложения. Повторите или вернитесь назад.",
   "commonScreenErrorRetry": "Повторить",
-  "commonScreenErrorBack": "Назад"
+  "commonScreenErrorBack": "Назад",
+  "settingsDiagnosticsSavedFolder": "Папка",
+  "settingsDiagnosticsSavedFile": "Файл",
+  "settingsDiagnosticsSavedNote": "Ничего не отправлено. Чтобы сообщить о проблеме, откройте issue на GitHub и приложите этот файл; перед этим его можно просмотреть.",
+  "settingsDiagnosticsOpenFolder": "Открыть папку",
+  "settingsDiagnosticsShare": "Поделиться",
+  "settingsDiagnosticsOpenFolderFailed": "Не удалось открыть папку",
+  "settingsDiagnosticsShareFailed": "Не удалось открыть меню «Поделиться»"
 }

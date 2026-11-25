@@ -1212,7 +1212,6 @@
   "settingsDiagnosticsClear": "Видалити логи та звіти про збої",
   "settingsDiagnosticsCleared": "Логи та звіти про збої видалено",
   "settingsDiagnosticsSavedTitle": "Звіт збережено",
-  "settingsDiagnosticsSavedBody": "Збережено в {path}. Нічого не надіслано. Щоб повідомити про проблему, відкрийте issue на GitHub і додайте цей файл; перед цим його можна переглянути.",
   "settingsDiagnosticsOpenIssue": "Відкрити issue на GitHub",
   "settingsDiagnosticsClose": "Закрити",
   "settingsDiagnosticsFailed": "Звіт не збережено: {error}",
@@ -2336,5 +2335,12 @@
   "commonScreenErrorTitle": "На цьому екрані щось пішло не так",
   "commonScreenErrorMessage": "Помилку записано в журнал застосунку. Повторіть або поверніться назад.",
   "commonScreenErrorRetry": "Повторити",
-  "commonScreenErrorBack": "Назад"
+  "commonScreenErrorBack": "Назад",
+  "settingsDiagnosticsSavedFolder": "Папка",
+  "settingsDiagnosticsSavedFile": "Файл",
+  "settingsDiagnosticsSavedNote": "Нічого не надіслано. Щоб повідомити про проблему, відкрийте issue на GitHub і додайте цей файл; перед цим його можна переглянути.",
+  "settingsDiagnosticsOpenFolder": "Відкрити папку",
+  "settingsDiagnosticsShare": "Поділитися",
+  "settingsDiagnosticsOpenFolderFailed": "Не вдалося відкрити папку",
+  "settingsDiagnosticsShareFailed": "Не вдалося відкрити меню «Поділитися»"
 }
