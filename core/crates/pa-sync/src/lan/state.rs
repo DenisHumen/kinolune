@@ -18,9 +18,10 @@ use crate::OpId;
 use crate::hlc::Hlc;
 use crate::input::{InputAction, InputFrame};
 use crate::music::MusicFrame;
+use crate::nodelog::{Inserted, NodeLog, Range};
 use crate::proto::{
-    Ack, Change, Cursor, ErrorFrame, Hello, MAX_PULL_LIMIT, Message, OpFrame, PlaybackUpdate,
-    ProtoRange, Pull, Role, code, encode,
+    Ack, Change, Cursor, DigestFrame, ErrorFrame, Hello, MAX_PULL_LIMIT, Message, OpFrame,
+    PlaybackUpdate, ProtoRange, Pull, Role, VvFrame, code, encode, negotiate,
 };
 
 /// Frames to a link's writer; `None` closes the link.
@@ -53,6 +54,8 @@ struct Link {
     /// the hub has sent something other than an `error` (it always answers
     /// our `pull`); a downstream link is accepted by us.
     accepted: bool,
+    /// Protocol version agreed on the link; 2 and up run anti-entropy.
+    version: u16,
 }
 
 pub(crate) struct Shared {
@@ -79,6 +82,10 @@ pub(crate) struct State {
     events: mpsc::UnboundedSender<LanEvent>,
     /// Every op this node has seen; also what it serves as a hub.
     journal: crate::proto::Journal,
+    /// The node logs (SYNC-017). In memory like the journal, so this
+    /// node's own origin is the journal id of this run, not the device id:
+    /// a restarted node starts a new log instead of forking its old one.
+    nodes: NodeLog,
     links: HashMap<u64, Link>,
     next_link: u64,
     /// Our cursor in each hub's journal, by hub device id.
@@ -124,6 +131,7 @@ impl Shared {
     ) -> std::io::Result<Self> {
         let device_id = family.identity().device_id().to_owned();
         let log = uuid::Uuid::now_v7().to_string();
+        let nodes = NodeLog::new(log.clone()).map_err(super::tls::io_err)?;
         let journal = crate::proto::Journal::new(log).map_err(super::tls::io_err)?;
         let backoff = Backoff {
             first: config.dead_retry,
@@ -137,6 +145,7 @@ impl Shared {
             playback_ttl: config.playback_ttl,
             events,
             journal,
+            nodes,
             links: HashMap::new(),
             next_link: 1,
             cursors: HashMap::new(),
@@ -212,6 +221,7 @@ impl State {
             cursor,
             head: Some(self.journal.head()),
             nonce: Some(nonce),
+            vv: Some(self.nodes.vector()),
         }
     }
 
@@ -245,7 +255,16 @@ impl State {
             tx,
             log,
             accepted: side == Side::Down,
+            version: negotiate(ProtoRange::LOCAL, peer.proto).unwrap_or(1),
         };
+        // SYNC-017: the log entries the peer lacks, by its vector.
+        if link.version >= 2
+            && let Some(vv) = &peer.vv
+        {
+            for e in self.nodes.missing_for(vv) {
+                Self::send(&link.tx, &Message::Op(e.frame()));
+            }
+        }
         match &side {
             Side::Up { hub_id } => {
                 // Push what this hub journal lacks, then pull what we lack.
@@ -389,14 +408,38 @@ impl State {
     }
 
     /// Stores an op and routes it to every other link. Returns its `seq`
-    /// in our journal.
-    pub(crate) fn on_op(&mut self, frame: OpFrame, source: Source) -> u64 {
-        let frame = OpFrame { seq: None, ..frame };
-        let (seq, new) = self.journal.append(&frame);
-        if !new {
-            return seq;
+    /// in our journal, or `None` when the frame was refused (a damaged log
+    /// entry: not acked, asked for again).
+    pub(crate) fn on_op(&mut self, frame: OpFrame, source: Source) -> Option<u64> {
+        let mut frame = OpFrame { seq: None, ..frame };
+        // SYNC-017: the place of the op in its origin's log.
+        let mut entry_new = false;
+        match self.nodes.insert_frame(&frame) {
+            None | Some(Inserted::Duplicate) => {}
+            Some(Inserted::New { .. }) => entry_new = true,
+            Some(Inserted::Gap { missing }) => {
+                entry_new = true;
+                self.want(&missing);
+            }
+            Some(Inserted::Corrupt { want }) => {
+                self.want(&want);
+                return None;
+            }
+            // The op itself is fine; only its claimed place is not.
+            Some(Inserted::Conflict { .. } | Inserted::Dropped) => frame.log = None,
         }
-        if source != Source::App
+        if frame.log.is_none() && !self.journal.contains(&frame.op_id) {
+            // An op of the app or of a protocol-1 peer: this node vouches
+            // for it in its own log.
+            frame.log = self.nodes.append_frame(&frame).frame().log;
+            entry_new = true;
+        }
+        let (seq, new) = self.journal.append(&frame);
+        if !new && !entry_new {
+            return Some(seq);
+        }
+        if new
+            && source != Source::App
             && let Ok(op) = frame.open()
         {
             self.emit(LanEvent::Op(op));
@@ -414,7 +457,65 @@ impl State {
             };
             Self::send(&link.tx, &Message::Op(out));
         }
-        seq
+        Some(seq)
+    }
+
+    /// Asks every link of protocol 2 for a range of a log (a hole or a
+    /// damaged entry): any member may have it.
+    fn want(&self, range: &Range) {
+        for link in self.links.values().filter(|l| l.version >= 2) {
+            Self::send(&link.tx, &Message::Want(range.clone()));
+        }
+    }
+
+    /// Periodic anti-entropy on link `id` (SYNC-017): our vector (the peer
+    /// sends what we lack), the holes still open and our state digest.
+    pub(crate) fn anti_entropy(&self, id: u64) {
+        let Some(link) = self.links.get(&id).filter(|l| l.version >= 2) else {
+            return;
+        };
+        Self::send(
+            &link.tx,
+            &Message::Vv(VvFrame {
+                vv: self.nodes.vector(),
+            }),
+        );
+        for gap in self.nodes.gaps() {
+            Self::send(&link.tx, &Message::Want(gap));
+        }
+        Self::send(
+            &link.tx,
+            &Message::Digest(DigestFrame {
+                digest: self.nodes.digest(),
+                reply: false,
+            }),
+        );
+    }
+
+    /// A peer's digest: the ops of differing partitions go to the peer and
+    /// to the app again (an op applied wrongly is applied once more), and
+    /// a first digest gets ours back.
+    fn on_digest(&mut self, tx: &LinkTx, frame: &DigestFrame) {
+        let mine = self.nodes.digest();
+        let diff = mine.diff(&frame.digest);
+        if diff.is_empty() {
+            return;
+        }
+        for e in self.nodes.entries_in(&diff) {
+            if let Some(op) = e.open() {
+                self.emit(LanEvent::Op(op));
+            }
+            Self::send(tx, &Message::Op(e.frame()));
+        }
+        if !frame.reply {
+            Self::send(
+                tx,
+                &Message::Digest(DigestFrame {
+                    digest: mine,
+                    reply: true,
+                }),
+            );
+        }
     }
 
     /// Routes `pb.update` / `pb.takeover` (as the original `raw` frame) to
@@ -548,7 +649,9 @@ impl State {
                     }
                 }
                 let op_id = f.op_id;
-                let seq = self.on_op(f, Source::Link(id));
+                let Some(seq) = self.on_op(f, Source::Link(id)) else {
+                    return;
+                };
                 if side == Side::Down {
                     Self::send(
                         &tx,
@@ -612,6 +715,17 @@ impl State {
                 self.on_playback(raw, msg, Source::Link(id));
             }
             Message::Family(f) => self.on_family(id, &f.body),
+            Message::Vv(v) => {
+                for e in self.nodes.missing_for(&v.vv) {
+                    Self::send(&tx, &Message::Op(e.frame()));
+                }
+            }
+            Message::Want(r) => {
+                for e in self.nodes.range(&r) {
+                    Self::send(&tx, &Message::Op(e.frame()));
+                }
+            }
+            Message::Digest(d) => self.on_digest(&tx, &d),
             Message::Input(f) => self.on_input(raw, f, Source::Link(id)),
             Message::Music(f) => self.on_music(raw, f, Source::Link(id)),
             Message::Error(e) if e.code == code::UNAUTHORIZED => {
@@ -674,6 +788,7 @@ mod tests {
             cursor: None,
             head: None,
             nonce: None,
+            vv: None,
         }
     }
 
@@ -768,5 +883,94 @@ mod tests {
         }
         assert_eq!(got, [watched]);
         assert_eq!(sent(&mut tv).len(), 1);
+    }
+
+    /// SYNC-017: a link of protocol 2 gets what its `hello.vv` lacks, as
+    /// log entries; a link of protocol 1 keeps the cursor path; a damaged
+    /// entry is not acked and is asked for again; an intact one reaches a
+    /// protocol-1 device as a plain op.
+    #[test]
+    fn protocol_2_links_run_anti_entropy_and_protocol_1_links_keep_working() {
+        use crate::nodelog::{NodeLog, VersionVector};
+        use crate::proto::Payload;
+
+        let identity = DeviceIdentity::generate("pc").unwrap();
+        let family = Family::found(identity, "pc", DeviceKind::Desktop, 1).unwrap();
+        let (events, _app) = mpsc::unbounded_channel();
+        let shared = Shared::new(LanConfig::new(DeviceClass::Desktop), family, events).unwrap();
+        let mut state = shared.lock();
+        let watched = |n: u128, key: &str| {
+            op(
+                n,
+                OpBody::Watched {
+                    profile: "default".into(),
+                    key: key.parse().unwrap(),
+                },
+            )
+        };
+        for n in 1..=2 {
+            let o = watched(n, "tmdb:movie:603");
+            state.on_op(OpFrame::plain(&o).unwrap(), Source::App);
+        }
+        assert_eq!(state.nodes.len(), 2, "the node vouches for its app's ops");
+
+        let (phone_tx, mut phone) = mpsc::unbounded_channel();
+        let mut v2 = hello("phone");
+        v2.vv = Some(VersionVector::default());
+        let from_phone = state.register(Side::Down, &v2, phone_tx);
+        let logged = sent(&mut phone)
+            .into_iter()
+            .filter(|m| matches!(m, Message::Op(f) if f.log.is_some()))
+            .count();
+        assert_eq!(logged, 2);
+
+        let (tv_tx, mut tv) = mpsc::unbounded_channel();
+        let mut v1 = hello("tv");
+        v1.proto = ProtoRange { min: 1, max: 1 };
+        state.register(Side::Down, &v1, tv_tx);
+        let to_tv = sent(&mut tv);
+        assert!(
+            to_tv.iter().any(|m| matches!(m, Message::Change(_))),
+            "{to_tv:?}"
+        );
+        assert!(!to_tv.iter().any(|m| matches!(m, Message::Op(_))));
+
+        // The phone's own log; entry 1 arrives damaged.
+        let mut phone_log = NodeLog::new("phone-run").unwrap();
+        let o = watched(3, "tmdb:movie:604");
+        let entry = phone_log.append_local(o.op_id, Payload::plain(&o).unwrap());
+        let mut bad = entry.frame();
+        bad.payload.body = bad.payload.body.replace("604", "605");
+        let raw = encode(&Message::Op(bad)).unwrap();
+        state.on_message(from_phone, &raw, decode(&raw).unwrap());
+        let to_phone = sent(&mut phone);
+        assert!(!to_phone.iter().any(|m| matches!(m, Message::Ack(_))));
+        assert!(
+            to_phone
+                .iter()
+                .any(|m| matches!(m, Message::Want(r) if r.origin == "phone-run" && r.from == 1)),
+            "{to_phone:?}"
+        );
+        assert!(sent(&mut tv).is_empty(), "nothing stored, nothing relayed");
+
+        let raw = encode(&Message::Op(entry.frame())).unwrap();
+        state.on_message(from_phone, &raw, decode(&raw).unwrap());
+        assert!(
+            sent(&mut phone)
+                .iter()
+                .any(|m| matches!(m, Message::Ack(a) if a.op_id == o.op_id))
+        );
+        let to_tv = sent(&mut tv);
+        assert!(
+            matches!(to_tv.as_slice(), [Message::Op(f)] if f.open().unwrap() == o),
+            "{to_tv:?}"
+        );
+        assert_eq!(state.nodes.vector().get("phone-run"), 1);
+
+        // Periodic anti-entropy on the protocol-2 link only.
+        state.anti_entropy(from_phone);
+        let msgs = sent(&mut phone);
+        assert!(msgs.iter().any(|m| matches!(m, Message::Vv(_))));
+        assert!(msgs.iter().any(|m| matches!(m, Message::Digest(_))));
     }
 }

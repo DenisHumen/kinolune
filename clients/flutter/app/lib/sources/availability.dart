@@ -3,7 +3,9 @@
 // NET-024 (ADR-0157 §8): availability of servers and sources. The core
 // runs one monitor for every source, however it was added, plus the
 // devices of the family and the sync folder; this is its view for the
-// UI. The full indicator, banners and the status screen are UI-053.
+// UI. The indicator, banners and the status screen (UI-053) are in
+// availability_view.dart, notices/availability_notices.dart and
+// screens/connection_status_screen.dart.
 
 import 'dart:async';
 
@@ -107,6 +109,48 @@ class TargetAvailability {
 
   /// The source id of a `source:<id>` target.
   String? get sourceId => id.startsWith('source:') ? id.substring(7) : null;
+
+  /// A device of the family (`peer:<device id>`).
+  bool get isPeer => id.startsWith('peer:');
+
+  /// Sync through it is paused: it is a sync channel and cannot be used.
+  bool get syncPaused =>
+      syncChannel && status != Availability.unknown && !status.isUp;
+}
+
+/// A status change of a target (the history of the status screen).
+@immutable
+class AvailabilityTransition {
+  const AvailabilityTransition({
+    required this.targetId,
+    required this.name,
+    required this.from,
+    required this.to,
+    required this.at,
+    this.reason,
+    this.passive = false,
+  });
+
+  factory AvailabilityTransition.fromCore(CoreAvailabilityTransition t) =>
+      AvailabilityTransition(
+        targetId: t.targetId,
+        name: t.name,
+        from: Availability.parse(t.from),
+        to: Availability.parse(t.to),
+        at: DateTime.fromMillisecondsSinceEpoch(t.atMs),
+        reason: t.reason,
+        passive: t.passive,
+      );
+
+  final String targetId;
+  final String name;
+  final Availability from;
+  final Availability to;
+  final DateTime at;
+  final String? reason;
+
+  /// Seen in a real operation (scan, playback, sync), not by a probe.
+  final bool passive;
 }
 
 /// Availability of every server and source, for the UI.
@@ -119,6 +163,9 @@ abstract class AvailabilityService implements Listenable {
 
   /// Probe [targetId] (or everything) now: the "retry" action.
   void retry([String? targetId]);
+
+  /// Recent status changes, oldest first.
+  List<AvailabilityTransition> history();
 }
 
 /// No monitor (v0 fallback, tests, demo): nothing is watched.
@@ -133,6 +180,9 @@ class NoAvailability extends ChangeNotifier implements AvailabilityService {
 
   @override
   void retry([String? targetId]) {}
+
+  @override
+  List<AvailabilityTransition> history() => const [];
 }
 
 /// A fixed list, for widget tests and the demo.
@@ -142,6 +192,9 @@ class FakeAvailability extends ChangeNotifier implements AvailabilityService {
 
   List<TargetAvailability> _targets;
   final retried = <String?>[];
+
+  /// What [history] returns.
+  List<AvailabilityTransition> transitions = [];
 
   @override
   List<TargetAvailability> get targets => _targets;
@@ -157,6 +210,9 @@ class FakeAvailability extends ChangeNotifier implements AvailabilityService {
 
   @override
   void retry([String? targetId]) => retried.add(targetId);
+
+  @override
+  List<AvailabilityTransition> history() => transitions;
 }
 
 /// The core's monitor (NET-024): tells it the app state and network
@@ -221,8 +277,10 @@ class CoreAvailabilityService extends ChangeNotifier
     }
   }
 
-  /// Recent status changes, oldest first.
-  List<CoreAvailabilityTransition> history() => _core.history();
+  @override
+  List<AvailabilityTransition> history() => [
+    for (final t in _core.history()) AvailabilityTransition.fromCore(t),
+  ];
 
   void _refresh() {
     _targets = [

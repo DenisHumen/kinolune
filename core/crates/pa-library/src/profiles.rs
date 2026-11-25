@@ -369,8 +369,9 @@ pub fn hash_pin(pin: &str) -> Result<String, Error> {
 }
 
 /// Hashes any secret (a PIN, or the password of a personal library,
-/// UI-025) the way [`hash_pin`] does, without the PIN format check.
-pub(crate) fn hash_secret(pin: &str) -> Result<String, Error> {
+/// UI-025, a server password, SRV-003) the way [`hash_pin`] does, without
+/// the PIN format check. [`pin_matches`] checks it.
+pub fn hash_secret(pin: &str) -> Result<String, Error> {
     let mut salt = [0u8; SALT_LEN];
     getrandom::fill(&mut salt).map_err(|_| Error::Invalid("system random source"))?;
     let hash = argon2_raw(pin, &salt, ARGON2_M_KIB, ARGON2_T, ARGON2_P)?;

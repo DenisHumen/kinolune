@@ -2,10 +2,12 @@
 //! Message codec, version compatibility and op exchange (SYNC-002).
 
 use pa_model::{MediaKey, MediaKind, SCHEMA_VERSION};
+use pa_sync::nodelog::{self, Digest, NodeLog, Range, VersionVector};
 use pa_sync::proto::{
     self, Ack, Auth, Change, Cursor, ErrorFrame, Family, Hello, Journal, Message, OpFrame, Payload,
     PlayState, PlaybackUpdate, ProtoRange, Pull, PullEnd, Role, Takeover,
 };
+use pa_sync::proto::{DigestFrame, VvFrame};
 use pa_sync::{Error, Hlc, Op, OpBody, OpId, Replica, outbox};
 use uuid::Uuid;
 
@@ -70,6 +72,7 @@ fn golden() -> Vec<(Message, String)> {
                 cursor: Some(cursor(41)),
                 head: None,
                 nonce: None,
+                vv: None,
             }),
             r#"{"t":"hello","proto":{"min":1,"max":1},"device_id":"phone","role":"device","cursor":{"log":"j1","seq":41}}"#.into(),
         ),
@@ -81,6 +84,7 @@ fn golden() -> Vec<(Message, String)> {
                 cursor: None,
                 head: None,
                 nonce: Some("0a1b".into()),
+                vv: None,
             }),
             r#"{"t":"hello","proto":{"min":1,"max":1},"device_id":"tv","role":"device","nonce":"0a1b"}"#.into(),
         ),
@@ -151,9 +155,97 @@ fn golden() -> Vec<(Message, String)> {
 
 #[test]
 fn every_message_matches_its_golden_frame() {
-    for (msg, frame) in golden() {
+    for (msg, frame) in golden().into_iter().chain(golden_v2()) {
         assert_eq!(proto::encode(&msg).unwrap(), frame);
         assert_eq!(proto::decode(&frame).unwrap(), msg);
+    }
+}
+
+/// Frames added by protocol 2 (SYNC-017). Changing any of them breaks
+/// peers of protocol 2.
+fn golden_v2() -> Vec<(Message, String)> {
+    let mut vv = VersionVector::default();
+    vv.raise("phone", 7);
+    vv.raise("srv", 3);
+    let id = "00000000-0000-0000-0000-000000000007";
+    let payload = serde_json::to_string(&outbox::encode(&op(7)).unwrap()).unwrap();
+    let mut log = NodeLog::new("phone").unwrap();
+    let entry = log.append_local(op(7).op_id, Payload::plain(&op(7)).unwrap());
+    let hash = entry.hash();
+    let genesis = nodelog::GENESIS;
+    let digest = Digest {
+        v: 1,
+        root: "a".repeat(64),
+        parts: [("watched/default/3".to_owned(), "b".repeat(64))].into(),
+    };
+    vec![
+        (
+            Message::Hello(Hello {
+                proto: ProtoRange { min: 1, max: 2 },
+                device_id: "phone".into(),
+                role: Role::Device,
+                cursor: None,
+                head: None,
+                nonce: None,
+                vv: Some(vv.clone()),
+            }),
+            r#"{"t":"hello","proto":{"min":1,"max":2},"device_id":"phone","role":"device","vv":{"phone":7,"srv":3}}"#.into(),
+        ),
+        (
+            Message::Op(entry.frame()),
+            format!(
+                r#"{{"t":"op","op_id":"{id}","log":{{"origin":"phone","oseq":1,"prev":"{genesis}","hash":"{hash}"}},"payload":{{"enc":"plain","body":{payload}}}}}"#
+            ),
+        ),
+        (
+            Message::Vv(VvFrame { vv }),
+            r#"{"t":"vv","vv":{"phone":7,"srv":3}}"#.into(),
+        ),
+        (
+            Message::Want(Range {
+                origin: "srv".into(),
+                from: 2,
+                to: 3,
+            }),
+            r#"{"t":"want","origin":"srv","from":2,"to":3}"#.into(),
+        ),
+        (
+            Message::Digest(DigestFrame {
+                digest,
+                reply: true,
+            }),
+            format!(
+                r#"{{"t":"digest","digest":{{"v":1,"root":"{}","parts":{{"watched/default/3":"{}"}}}},"reply":true}}"#,
+                "a".repeat(64),
+                "b".repeat(64)
+            ),
+        ),
+    ]
+}
+
+/// A peer of protocol 1 reads frames of protocol 2: the new fields are
+/// ignored, the new messages are unknown to it.
+#[test]
+fn protocol_1_reads_protocol_2_frames() {
+    #[derive(serde::Deserialize)]
+    struct OpV1 {
+        #[allow(dead_code)]
+        op_id: OpId,
+        payload: Payload,
+    }
+    for (msg, frame) in golden_v2() {
+        let value: serde_json::Value = serde_json::from_str(&frame).unwrap();
+        match msg {
+            Message::Op(f) => {
+                let v1: OpV1 = serde_json::from_value(value).unwrap();
+                assert_eq!(v1.payload, f.payload);
+            }
+            Message::Hello(_) => {
+                let h: Hello = serde_json::from_value(value).unwrap();
+                assert_eq!(h.device_id, "phone");
+            }
+            _ => assert!(["vv", "want", "digest"].contains(&value["t"].as_str().unwrap())),
+        }
     }
 }
 
@@ -186,16 +278,16 @@ fn versions_one_apart_are_compatible() {
 
 #[test]
 fn frames_of_the_next_version_still_decode() {
-    // v2 adds a message type, fields and enum values; v1 ignores them.
+    // v3 adds a message type, fields and enum values; v2 ignores them.
     let unknown = r#"{"t":"pb.queue","items":["tmdb:movie:603"]}"#;
     assert_eq!(proto::decode(unknown).unwrap(), Message::Unknown);
 
-    let hello = r#"{"t":"hello","proto":{"min":1,"max":2},"device_id":"tv","role":"relay","caps":["zstd"]}"#;
+    let hello = r#"{"t":"hello","proto":{"min":2,"max":3},"device_id":"tv","role":"relay","caps":["zstd"]}"#;
     let Message::Hello(h) = proto::decode(hello).unwrap() else {
         panic!("not a hello");
     };
     assert_eq!(h.role, Role::Other);
-    assert_eq!(proto::negotiate(ProtoRange::LOCAL, h.proto).unwrap(), 1);
+    assert_eq!(proto::negotiate(ProtoRange::LOCAL, h.proto).unwrap(), 2);
 
     let pb = r#"{"t":"pb.update","profile":"default","key":"tmdb:movie:603","position_ms":5,"state":"buffering","audio":"eng","hlc":{"wall_ms":1,"counter":0,"device":"tv"}}"#;
     let Message::PbUpdate(u) = proto::decode(pb).unwrap() else {
@@ -431,12 +523,13 @@ fn phone_hands_playback_over_to_tv_through_a_hub() {
         cursor: None,
         head: Some(hub.head()),
         nonce: None,
+        vv: None,
     })) else {
         panic!("not a hello");
     };
     assert_eq!(
         proto::negotiate(ProtoRange::LOCAL, from_hub.proto).unwrap(),
-        1
+        proto::PROTOCOL_VERSION
     );
 
     // Outbox first: every due op goes out, the hub acks, the outbox drains.

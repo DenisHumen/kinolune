@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# BUG-001: player memory soak on Linux under Xvfb — the release app opens,
+# plays, seeks and closes local test films 40 times (tools/qa/e2e/
+# player_soak.sh --here); fails when the memory keeps growing (RSS or live
+# malloc allocations above 50 MB per 50 cycles, soak_memory.py). Runs only
+# when the player's native stack or the soak itself changes. No network
+# for the app, no secrets.
+#
+# Safe for PRs from forks: `pull_request` only, read-only token, no secrets,
+# every third-party action pinned to a full commit SHA.
+
+name: Soak
+
+on:
+  pull_request:
+    # Like flutter.yml: once when the PR is opened or marked ready.
+    types: [opened, reopened, ready_for_review]
+    paths:
+      - "clients/flutter/packages/media_kit_video/**"
+      - "clients/flutter/packages/pa_player/lib/src/engine/**"
+      - "clients/flutter/app/linux/**"
+      - "clients/flutter/app/tool/soak/**"
+      - "clients/flutter/app/pubspec.lock"
+      - "tools/qa/e2e/player_soak.sh"
+      - "tools/qa/e2e/soak_memory.py"
+      - ".github/workflows/soak.yml"
+  workflow_dispatch:
+    inputs:
+      cycles:
+        description: "Soak cycles"
+        default: "40"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep in sync with flutter.yml.
+  FLUTTER_VERSION: "3.50.0"
+
+jobs:
+  player-soak:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    name: Player memory soak (Linux, Xvfb)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          # ffmpeg only makes the test films; nothing of it ships.
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            libmpv-dev libsecret-1-dev xvfb xauth libgl1-mesa-dri ffmpeg pulseaudio
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Fetch design fonts (pinned SHA-256)
+        run: node design/scripts/fonts-fetch.mjs
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: Soak
+        env:
+          PA_E2E_HOME: ${{ runner.temp }}/soak
+          CYCLES: ${{ github.event.inputs.cycles || '40' }}
+        run: tools/qa/e2e/player_soak.sh --here --cycles "$CYCLES"
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: player-soak
+          path: ${{ runner.temp }}/soak/soak/
+          if-no-files-found: ignore
+          retention-days: 14
