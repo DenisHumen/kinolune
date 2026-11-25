@@ -1647,10 +1647,10 @@ project_alpha/
   - Что: экран 1 (hostname, пользователь, пароль дважды, сеть DHCP или статика, выбор интерфейса); экран 2 (диск, «остаток под данные», опция LUKS); подтверждение вводом имени диска; прогресс; перезагрузка; ru и en.
   - deps: DIST-005 · size: M · parallel: yes · веха: M8 · ref: 05 §2.1, §2.3
   - done when: golden-тесты TUI (teatest); ручная установка на реальное железо.
-- [ ] **DIST-007** Live-ISO
+- [x] **DIST-007** Live-ISO
   - Что: `distro/installer/Containerfile` и `image-builder … generic-iso` с `--bootc-installer-payload-ref`; меньше 1.9 GiB (minimal-база, только нужные подпакеты linux-firmware, без документации и локалей, zstd); TUI стартует на tty1.
   - deps: DIST-005, DIST-002 · size: M · parallel: yes · веха: M8 · ref: 05 §6.2–6.3
-  - done when: ISO собирается в CI, размер меньше 1.9 GiB, загружается в QEMU с OVMF.
+  - done when: ISO собирается в CI, размер меньше 1.9 GiB, загружается в QEMU с OVMF. Сделано: `distro/scripts/build-iso.sh` — образ ОС (payload) + live-образ `distro/installer/Containerfile` (та же закреплённая база: squashfs хранит одинаковые файлы один раз; без документации, man, чужих локалей и прошивок GPU/NPU/аудио/WWAN; initramfs `dmsquash-live`, zstd) → `image-builder build generic-iso --bootc-installer-payload-ref ghcr.io/denishumen/alpha-os:stable` в привилегированном контейнере Fedora 45, проверка размера; ISO 1292 MiB (squashfs zstd). Меню GRUB «Install Kinolune OS» (+ basic graphics, copy to RAM), метка `Kinolune-OS-Installer`, live-система `Kinolune OS … Installer`; на tty1 и `ttyS0` — текстовое меню `alpha-live-installer` (en/uk/ru: диски, файл ответов с флешки или из примера, `--dry-run`, установка) до TUI DIST-006. Payload читается из squashfs, live-система с `selinux=0`, kmscon на tty1 замаскирован (ADR-NNNN). CI `.github/workflows/distro-iso.yml` (вручную, `main`, готовые PR в `distro/**`): сборка, размер, `distro/tests/iso-boot.sh` в QEMU/OVMF по последовательной консоли. На сервере сборки: ISO загружается до меню, а `INSTALL=1` ставит ОС с ISO офлайн и установленный диск загружается до входа. Журналы и снимки — docs/screenshots/progress/dist-007. Secure Boot + swtpm и установка в CI — DIST-008.
 - [ ] **DIST-008** QEMU-тесты установки в CI
   - Что: OVMF с Secure Boot и swtpm; установка по файлу ответов на виртуальный NVMe и 3 HDD → проверки по SSH (`bootc status`, health-эндпоинты, `smbclient`).
   - deps: DIST-007 · size: M · parallel: yes · веха: M8 · ref: 05 §6.2 (test)
