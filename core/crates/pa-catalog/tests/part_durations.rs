@@ -49,7 +49,7 @@ fn setup() -> (tempfile::TempDir, Catalog) {
     write(&root, &format!("{DVD}/VTS_01_1.VOB"), 160_000, 9);
     write(&root, &format!("{DVD}/VTS_01_2.VOB"), 90_000, 10);
     write(&root, ONE, 150_000, 11);
-    write(&root, TRAILER, 20_000, 12);
+    write(&root, TRAILER, 150_000, 12);
     write(&root, HD, 140_000, 13);
     write(&root, UHD, 170_000, 14);
     let cat = Catalog::open(dir.path().join("library.db")).unwrap();
