@@ -14,6 +14,8 @@
 #
 # Everything runs in one privileged Fedora helper container with podman and image-builder,
 # so the host needs only docker or rootful podman (no image-builder, no sudo on the host).
+# Its storage, caches and /var/tmp are host directories: overlayfs (podman, buildah) cannot
+# use the helper's own overlay root as an upper layer.
 # Output: kinolune-os-<VERSION>-x86_64.iso, .sha256 and iso-info.txt (sizes, squashfs).
 #
 # Env: VERSION          version written into the images (default 0.0.0-dev.<timestamp>);
@@ -42,7 +44,7 @@ INSTALLER_TAG="localhost/kinolune-installer:${VERSION}"
 ISO_NAME="kinolune-os-${VERSION}-x86_64"
 
 [[ "${VERSION}" =~ ^[0-9A-Za-z][0-9A-Za-z._-]{0,100}$ ]] || die "bad VERSION '${VERSION}'"
-mkdir -p "${OUT_DIR}" "${ISO_STORAGE}" "${WORK_DIR}/iso-cache"
+mkdir -p "${OUT_DIR}" "${ISO_STORAGE}" "${WORK_DIR}/iso-cache" "${WORK_DIR}/iso-tmp"
 OUT_DIR="$(cd "${OUT_DIR}" && pwd)"
 
 helper() { "${ENGINE}" exec -i "${ISO_HELPER_NAME}" "$@"; }
@@ -64,6 +66,7 @@ if [[ "$("${ENGINE}" inspect -f '{{.State.Running}}' "${ISO_HELPER_NAME}" 2>/dev
         -v /dev:/dev \
         -v "${ISO_STORAGE}:/var/lib/containers/storage" \
         -v "${WORK_DIR}/iso-cache:/var/cache/image-builder" \
+        -v "${WORK_DIR}/iso-tmp:/var/tmp" \
         -v "${DISTRO_DIR}:/src/distro:ro" \
         -v "${OUT_DIR}:/out" \
         "${ISO_HELPER_IMAGE}" sleep infinity >/dev/null
