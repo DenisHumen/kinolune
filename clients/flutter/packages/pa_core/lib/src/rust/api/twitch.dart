@@ -7,9 +7,9 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'twitch_live.dart';
 
-// These functions are ignored because they are not marked as `pub`: `alert_gate`, `alerts_allowed`, `broadcaster_type`, `call`, `category_of`, `chat_access`, `db_path`, `db`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `runtime`, `signed_api`, `signed`, `start_login_with`, `stream_of`, `twitch_code`, `video_of`
+// These functions are ignored because they are not marked as `pub`: `alert_gate`, `alerts_allowed`, `broadcaster_type`, `call`, `category_of`, `chat_access`, `db_path`, `db`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `remember_categories`, `runtime`, `signed_api`, `signed`, `start_login_with`, `stream_of`, `twitch_code`, `video_of`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Api`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `with_helix`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreTwitch>>
@@ -32,6 +32,16 @@ abstract class CoreTwitch implements RustOpaqueInterface {
 
   /// Whether Helix is configured (a client id): sign-in is possible.
   bool canSignIn();
+
+  /// Live streams of a category (`GET /streams?game_id=`, TWI-034), most
+  /// viewers first, one page. `language` is an ISO 639-1 code of the
+  /// broadcast language (`None` or empty: every language).
+  Future<CoreTwitchStreamPage> categoryStreams({
+    required String gameId,
+    String? language,
+    required int limit,
+    String? after,
+  });
 
   /// Cached VODs of every channel with a chapter in `game_id` (TWI-008).
   Future<List<CoreTwitchVideo>> categoryVideos({
@@ -162,6 +172,13 @@ abstract class CoreTwitch implements RustOpaqueInterface {
   /// Starts a Device Code Flow sign-in.
   Future<CoreTwitchDeviceLogin> startLogin();
 
+  /// The most watched categories now (`GET /games/top`, TWI-034), one
+  /// page; pass the previous page's `cursor` as `after` for the next.
+  Future<CoreTwitchCategoryPage> topCategories({
+    required int limit,
+    String? after,
+  });
+
   /// Profiles by ids and logins (resolves favourites added by name).
   Future<List<CoreTwitchUser>> users({
     required List<String> ids,
@@ -213,6 +230,26 @@ class CoreTwitchCategory {
           gameId == other.gameId &&
           name == other.name &&
           boxArtUrl == other.boxArtUrl;
+}
+
+/// A page of `games/top` (TWI-034): the next cursor is `None` on the last
+/// page.
+class CoreTwitchCategoryPage {
+  final List<CoreTwitchCategory> items;
+  final String? cursor;
+
+  const CoreTwitchCategoryPage({required this.items, this.cursor});
+
+  @override
+  int get hashCode => items.hashCode ^ cursor.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreTwitchCategoryPage &&
+          runtimeType == other.runtimeType &&
+          items == other.items &&
+          cursor == other.cursor;
 }
 
 /// A chapter: the category on air between two offsets of a VOD.
@@ -510,6 +547,9 @@ class CoreTwitchStream {
   /// Preview frame template with `{width}`/`{height}`.
   final String? thumbnailUrl;
 
+  /// Broadcast language, ISO 639-1 (`other` when Twitch does not know).
+  final String? language;
+
   const CoreTwitchStream({
     required this.streamId,
     required this.userId,
@@ -521,6 +561,7 @@ class CoreTwitchStream {
     required this.viewerCount,
     this.startedAtMs,
     this.thumbnailUrl,
+    this.language,
   });
 
   @override
@@ -534,7 +575,8 @@ class CoreTwitchStream {
       title.hashCode ^
       viewerCount.hashCode ^
       startedAtMs.hashCode ^
-      thumbnailUrl.hashCode;
+      thumbnailUrl.hashCode ^
+      language.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -550,7 +592,27 @@ class CoreTwitchStream {
           title == other.title &&
           viewerCount == other.viewerCount &&
           startedAtMs == other.startedAtMs &&
-          thumbnailUrl == other.thumbnailUrl;
+          thumbnailUrl == other.thumbnailUrl &&
+          language == other.language;
+}
+
+/// A page of live streams of a category (TWI-034), most viewers first.
+class CoreTwitchStreamPage {
+  final List<CoreTwitchStream> items;
+  final String? cursor;
+
+  const CoreTwitchStreamPage({required this.items, this.cursor});
+
+  @override
+  int get hashCode => items.hashCode ^ cursor.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreTwitchStreamPage &&
+          runtimeType == other.runtimeType &&
+          items == other.items &&
+          cursor == other.cursor;
 }
 
 /// A channel: profile from Helix or the library cache.

@@ -34,7 +34,7 @@
 | VOD/хайлайты/аплоады | `GET /helix/videos` | любой | Ровно один из `id` / `user_id` / `game_id`; `type=archive\|highlight\|upload`; `sort`, `period`; `first` ≤ 100; поля `duration` (строка `1h2m3s`), `stream_id`, `muted_segments` (только с user token), `thumbnail_url`, `view_count`, `published_at`. **Категорий и глав нет** ([docs](https://dev.twitch.tv/docs/api/reference/videos)) |
 | Клипы | `GET /helix/clips` | любой | `video_id`, `vod_offset` (может быть `null` несколько минут), `game_id`, `duration`, `is_featured` |
 | Скачивание клипов (официально) | `GET /helix/clips/downloads` | `editor:manage:clips` / `channel:manage:clips` | Работает **только если пользователь редактор канала**. Временные URL, 100 req/min ([docs](https://dev.twitch.tv/docs/api/reference/clips)). Для зрителя не подходит |
-| Категории | `GET /helix/games`, `GET /helix/games/top`, `GET /helix/search/categories` | любой | `box_art_url` (шаблон), `igdb_id` (можно связать с IGDB для обложек и жанров) |
+| Категории | `GET /helix/games`, `GET /helix/games/top`, `GET /helix/search/categories` | любой | `box_art_url` (шаблон), `igdb_id` (можно связать с IGDB для обложек и жанров). **Числа зрителей у категорий нет** (TWI-034: в «Обзоре» показываем место в топе, зрители — у эфиров через `GET /helix/streams?game_id`) |
 | Поиск каналов | `GET /helix/search/channels?live_only=` | любой | `is_live`, `game_name`, `started_at`, `thumbnail_url` (аватар) |
 | Расписание | `GET /helix/schedule` | любой | Ряд «Скоро в эфире» на странице стримера |
 | Эмоуты и бейджи | `GET /helix/chat/emotes[/global\|/set]`, `GET /helix/chat/badges[/global]` | любой | CDN `static-cdn.jtvnw.net/emoticons/v2/{id}/{format}/{theme}/{scale}` |

@@ -82,6 +82,21 @@ abstract interface class TwitchBackend {
   Future<List<TwitchChannel>> searchChannels(String query);
   Future<List<TwitchCategory>> searchCategories(String query);
 
+  /// The most watched categories now, one page (`games/top`, TWI-034).
+  Future<TwitchPage<TwitchCategory>> topCategories({
+    String? cursor,
+    int limit = 40,
+  });
+
+  /// Live streams of category [gameId], most viewers first, one page
+  /// (`streams?game_id`, TWI-034); [language] is ISO 639-1, null = all.
+  Future<TwitchPage<TwitchStream>> categoryStreams(
+    String gameId, {
+    String? language,
+    String? cursor,
+    int limit = 30,
+  });
+
   // Local (library cache, no network).
 
   /// Cached channels matching [query] (name or login).
@@ -162,6 +177,20 @@ class LocalTwitchBackend implements TwitchBackend {
 
   @override
   Future<List<TwitchCategory>> searchCategories(String query) async => _off();
+
+  @override
+  Future<TwitchPage<TwitchCategory>> topCategories({
+    String? cursor,
+    int limit = 40,
+  }) async => _off();
+
+  @override
+  Future<TwitchPage<TwitchStream>> categoryStreams(
+    String gameId, {
+    String? language,
+    String? cursor,
+    int limit = 30,
+  }) async => _off();
 
   @override
   Future<List<TwitchChannel>> searchCached(String query) async => const [];

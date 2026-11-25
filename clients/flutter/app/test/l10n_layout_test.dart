@@ -199,9 +199,29 @@ final _flows = <String, (Section, _Step?)>{
       await settle(t, 10);
     },
   ),
+  // TWI-034: Browse and a category page.
+  'twitch-browse': (
+    Section.twitch,
+    (t, _) async {
+      await t.tap(find.byKey(const ValueKey('twitch-tab-browse')));
+      await settle(t, 6);
+    },
+  ),
+  'twitch-category': (
+    Section.twitch,
+    (t, _) async {
+      await t.tap(find.byKey(const ValueKey('twitch-tab-browse')));
+      await settle(t, 6);
+      await t.tap(find.byKey(const ValueKey('twitch-top-category-501')));
+      await settle(t, 10);
+    },
+  ),
   'twitch-search': (
     Section.twitch,
     (t, _) async {
+      // The tab pills scroll sideways: longer labels push it off a phone.
+      await t.ensureVisible(find.byKey(const ValueKey('twitch-tab-search')));
+      await settle(t, 2);
       await t.tap(find.byKey(const ValueKey('twitch-tab-search')));
       await settle(t, 6);
       await t.enterText(

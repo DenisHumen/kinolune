@@ -25,7 +25,11 @@ class FakeTwitchBackend implements TwitchBackend {
     List<TwitchCategory>? categories,
     List<String>? follows,
     List<TwitchProgressEntry>? progress,
-  }) : channels = channels ?? const [],
+    List<TwitchCategory>? top,
+    Map<String, List<TwitchStream>>? categoryLive,
+  }) : top = top ?? categories ?? const [],
+       categoryLive = categoryLive ?? const {},
+       channels = channels ?? const [],
        live = live ?? const [],
        allVideos = videos ?? const [],
        allClips = clips ?? const [],
@@ -114,8 +118,9 @@ class FakeTwitchBackend implements TwitchBackend {
       String title,
       TwitchCategory g,
       int viewers,
-      int hours,
-    ) => TwitchStream(
+      int hours, {
+      String language = 'en',
+    }) => TwitchStream(
       userId: c.userId!,
       login: c.login,
       displayName: c.displayName,
@@ -125,13 +130,62 @@ class FakeTwitchBackend implements TwitchBackend {
       gameName: g.name,
       startedAt: ago(hours),
       thumbnailUrl: kDemoArtScheme,
+      language: language,
     );
     final live = [
       stream(channels[0], 'Grand campaign, day 12', games[0], 18400, 3),
-      stream(channels[1], 'Any% attempts until it works', games[3], 5200, 1),
+      stream(
+        channels[1],
+        'Any% attempts until it works',
+        games[3],
+        5200,
+        1,
+        language: 'uk',
+      ),
       stream(channels[3], 'Endurance race, 6 hours', games[3], 9100, 2),
-      stream(channels[4], 'Spring garden build', games[1], 870, 4),
+      stream(
+        channels[4],
+        'Spring garden build',
+        games[1],
+        870,
+        4,
+        language: 'uk',
+      ),
     ];
+    // TWI-034: the browse grid. The five demo games first, then made-up
+    // categories enough for more than one page.
+    final top = [
+      for (final g in games)
+        TwitchCategory(id: g.id, name: g.name, boxArtUrl: kDemoArtScheme),
+      for (var i = 6; i <= 52; i++)
+        TwitchCategory(
+          id: '${500 + i}',
+          name: 'Made-up category $i',
+          boxArtUrl: kDemoArtScheme,
+        ),
+    ];
+    const languages = ['uk', 'en', 'ru', 'de', 'uk', 'en', 'es', 'pl'];
+    final byCategory = <String, List<TwitchStream>>{};
+    for (final (i, g) in top.indexed) {
+      final extra = i < 5 ? 14 : 3;
+      byCategory[g.id] = [
+        for (final s in live)
+          if (s.gameId == g.id) s,
+        for (var k = 0; k < extra; k++)
+          TwitchStream(
+            userId: '8${i.toString().padLeft(2, '0')}$k',
+            login: 'madeup_${i}_$k',
+            displayName: 'MadeUp_${i}_$k',
+            title: 'Made-up stream $k of ${g.name}',
+            viewers: 4000 ~/ (k + 1) + 7 * (extra - k),
+            gameId: g.id,
+            gameName: g.name,
+            startedAt: ago(1 + k % 5),
+            thumbnailUrl: kDemoArtScheme,
+            language: languages[(i + k) % languages.length],
+          ),
+      ];
+    }
     TwitchChapter chap(
       TwitchCategory g,
       int startMin,
@@ -299,6 +353,8 @@ class FakeTwitchBackend implements TwitchBackend {
       clips: clips,
       schedules: schedules,
       categories: games,
+      top: top,
+      categoryLive: byCategory,
       follows: const ['7001', '7002', '7003', '7004', '7005', '7006'],
       progress: progress,
     );
@@ -316,6 +372,22 @@ class FakeTwitchBackend implements TwitchBackend {
   final List<TwitchCategory> categories;
   final List<String> follows;
   final List<TwitchProgressEntry> progress;
+
+  /// `games/top` in order (TWI-034).
+  final List<TwitchCategory> top;
+
+  /// Live streams by category id; without an entry, [live] of that game.
+  final Map<String, List<TwitchStream>> categoryLive;
+
+  /// Like real Helix lists, a page starts with the last item of the page
+  /// before ("floating" lists, research 06 §1.4).
+  bool floatingPages = false;
+
+  /// Thrown by the browse calls (`games/top`, `streams?game_id`) while set.
+  TwitchUnavailable? discoveryError;
+
+  /// Streams asked for, as `<game>:<language or *>:<cursor or ->`.
+  final List<String> streamQueries = [];
 
   /// Channels served while signed in, like the library cache.
   final Set<String> cached = {};
@@ -476,6 +548,52 @@ class FakeTwitchBackend implements TwitchBackend {
       for (final c in categories)
         if (c.name.toLowerCase().contains(q)) c,
     ];
+  }
+
+  /// Offset cursors; with [floatingPages] a page repeats the last item of
+  /// the page before.
+  TwitchPage<T> _page<T>(List<T> all, String? cursor, int limit) {
+    final offset = int.tryParse(cursor ?? '') ?? 0;
+    final from = (floatingPages && offset > 0 ? offset - 1 : offset).clamp(
+      0,
+      all.length,
+    );
+    final end = (offset + limit).clamp(0, all.length);
+    return TwitchPage(all.sublist(from, end), end < all.length ? '$end' : null);
+  }
+
+  @override
+  Future<TwitchPage<TwitchCategory>> topCategories({
+    String? cursor,
+    int limit = 40,
+  }) async {
+    _helix('games_top');
+    final error = discoveryError;
+    if (error != null) throw error;
+    return _page(top, cursor, limit);
+  }
+
+  @override
+  Future<TwitchPage<TwitchStream>> categoryStreams(
+    String gameId, {
+    String? language,
+    String? cursor,
+    int limit = 30,
+  }) async {
+    _helix('category_streams');
+    streamQueries.add('$gameId:${language ?? '*'}:${cursor ?? '-'}');
+    final error = discoveryError;
+    if (error != null) throw error;
+    final all = [
+      for (final s
+          in categoryLive[gameId] ??
+              [
+                for (final s in live)
+                  if (s.gameId == gameId) s,
+              ])
+        if (language == null || s.language == language) s,
+    ]..sort((a, b) => b.viewers.compareTo(a.viewers));
+    return _page(all, cursor, limit);
   }
 
   @override
