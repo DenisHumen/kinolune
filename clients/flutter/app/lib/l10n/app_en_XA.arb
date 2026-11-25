@@ -2350,5 +2350,11 @@
   "settingsDiagnosticsOpenFolder": "[Óþéñ ƒóļðéŕ·····]",
   "settingsDiagnosticsShare": "[Šĥáŕé··]",
   "settingsDiagnosticsOpenFolderFailed": "[Çóúļðñ'ţ óþéñ ţĥé ƒóļðéŕ··········]",
-  "settingsDiagnosticsShareFailed": "[Çóúļðñ'ţ óþéñ šĥáŕíñĝ·········]"
+  "settingsDiagnosticsShareFailed": "[Çóúļðñ'ţ óþéñ šĥáŕíñĝ·········]",
+  "twitchAccountRefresh": "[Ûþðáţé ñáɱé áñð áṽáţáŕ·········]",
+  "settingsTwitchAccountSignedOut": "[Ñóţ šíĝñéð íñ ţó Ţŵíţçĥ··········]",
+  "settingsTwitchAccountSignedOutHint": "[Šíĝñ íñ ţó šéé ļíṽé šţáţúš, ƒóļļóŵš áñð ýóúŕ áṽáţáŕ·····················]",
+  "settingsTwitchAccountSignOut": "[Šíĝñ óúţ····]",
+  "profilesAvatarFromTwitch": "[Åṽáţáŕ ƒŕóɱ Ţŵíţçĥ········]",
+  "profilesAvatarFromTwitchSubtitle": "[Ýóúŕ çóļóúŕ óŕ þíçţúŕé çóɱéš ƀáçķ ŵĥéñ ţĥíš íš óƒƒ óŕ ýóú šíĝñ óúţ óƒ Ţŵíţçĥ·······························]"
 }
