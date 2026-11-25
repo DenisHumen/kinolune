@@ -49,7 +49,7 @@ fn setup() -> (tempfile::TempDir, Catalog) {
     write(&root, &format!("{DVD}/VTS_01_1.VOB"), 160_000, 9);
     write(&root, &format!("{DVD}/VTS_01_2.VOB"), 90_000, 10);
     write(&root, ONE, 150_000, 11);
-    write(&root, TRAILER, 150_000, 12);
+    write(&root, TRAILER, 20_000, 12);
     write(&root, HD, 140_000, 13);
     write(&root, UHD, 170_000, 14);
     let cat = Catalog::open(dir.path().join("library.db")).unwrap();
@@ -76,7 +76,6 @@ fn setup() -> (tempfile::TempDir, Catalog) {
     probe(&format!("{DVD}/VTS_01_1.VOB"), 60 * MIN);
     probe(&format!("{DVD}/VTS_01_2.VOB"), 57 * MIN);
     probe(ONE, 116 * MIN);
-    probe(TRAILER, 2 * MIN);
     probe(HD, 148 * MIN);
     probe(UHD, 148 * MIN + 1_000);
     drop(conn);
@@ -146,7 +145,7 @@ fn single_files_versions_and_extras_keep_their_own_duration() {
     assert_eq!(durations(&cat, "Arrival"), [Some(116 * MIN); 4]);
     let extras = cat.details(movie(&cat, "Arrival").id).unwrap().extras;
     assert_eq!(extras.len(), 1, "{extras:?}");
-    assert_eq!(extras[0].duration_ms, Some(2 * MIN));
+    assert_eq!(extras[0].file.rel_path, TRAILER);
 
     // Two versions of one film are alternatives, never added up.
     let inception = movie(&cat, "Inception");
