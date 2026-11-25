@@ -182,7 +182,9 @@ class ShowRuntime {
     }
     return ShowRuntime(
       show: show.total,
-      seasons: {for (final MapEntry(:key, :value) in seasons.entries) key: value.total},
+      seasons: {
+        for (final MapEntry(:key, :value) in seasons.entries) key: value.total,
+      },
     );
   }
 }

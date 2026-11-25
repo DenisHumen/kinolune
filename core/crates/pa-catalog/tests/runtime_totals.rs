@@ -176,12 +176,14 @@ fn dark(fx: &mut Fixture) -> ItemRef {
         .unwrap();
 
     let cat = &fx.cat;
-    cat.save_progress(ep(101), 0, 50 * MIN, 1_000, true).unwrap();
+    cat.save_progress(ep(101), 0, 50 * MIN, 1_000, true)
+        .unwrap();
     cat.save_progress(ep(102), 10 * MIN, 50 * MIN, 1_000, false)
         .unwrap();
     cat.save_progress(ep(103), 30_000, 50 * MIN, 1_000, false)
         .unwrap();
-    cat.save_progress(ep(105), 0, 60 * MIN, 1_000, true).unwrap();
+    cat.save_progress(ep(105), 0, 60 * MIN, 1_000, true)
+        .unwrap();
     ItemRef::Show(1)
 }
 
@@ -278,9 +280,7 @@ fn a_season_marked_watched_leaves_nothing() {
     assert!(!r.season(0).unwrap().all_watched());
 
     // Unmarked: everything left again.
-    fx.cat
-        .set_watched_many(&season1, false, 4_000)
-        .unwrap();
+    fx.cat.set_watched_many(&season1, false, 4_000).unwrap();
     let r = fx.cat.show_runtime(show, EpisodeOrder::Tmdb).unwrap();
     assert_eq!(r.season(1).unwrap().remaining_ms, 195 * MIN);
 }
@@ -296,7 +296,10 @@ fn a_show_without_tmdb_reads_progress_by_file() {
     fx.cat
         .save_progress(ep(201), 15 * MIN, 30 * MIN, 1_000, false)
         .unwrap();
-    let r = fx.cat.show_runtime(ItemRef::Show(2), EpisodeOrder::Tmdb).unwrap();
+    let r = fx
+        .cat
+        .show_runtime(ItemRef::Show(2), EpisodeOrder::Tmdb)
+        .unwrap();
     assert_eq!(r.show.total_ms, 60 * MIN);
     assert_eq!(r.show.remaining_ms, 45 * MIN);
     assert!(!r.show.estimated);
@@ -348,7 +351,10 @@ fn a_thousand_episodes_in_one_query() {
     assert_eq!(r.show.total_ms, 1000 * 24 * MIN);
     assert_eq!(r.show.watched, 167);
     // 167 watched, 167 at half.
-    assert_eq!(r.show.remaining_ms, (1000 - 167) * 24 * MIN - 167 * 12 * MIN);
+    assert_eq!(
+        r.show.remaining_ms,
+        (1000 - 167) * 24 * MIN - 167 * 12 * MIN
+    );
 
     // The bound of the task is for release builds; debug builds get slack.
     let bound = if cfg!(debug_assertions) {

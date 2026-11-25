@@ -2336,5 +2336,9 @@
   "commonScreenErrorTitle": "[Šóɱéţĥíñĝ ŵéñţ ŵŕóñĝ óñ ţĥíš šçŕééñ··············]",
   "commonScreenErrorMessage": "[Ţĥé éŕŕóŕ íš šáṽéð íñ ţĥé áþþ ļóĝ. Ţŕý áĝáíñ óŕ ĝó ƀáçķ.·······················]",
   "commonScreenErrorRetry": "[Ţŕý áĝáíñ····]",
-  "commonScreenErrorBack": "[Ɓáçķ··]"
+  "commonScreenErrorBack": "[Ɓáçķ··]",
+  "formatTotal": "[{time} ţóţáļ··]",
+  "formatLeft": "[{time} ļéƒţ··]",
+  "formatAllWatched": "[ŵáţçĥéð···]",
+  "formatHours": "{hours, plural, one{{hours} ĥ·} other{{hours} ĥ·}}"
 }

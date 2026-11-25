@@ -166,7 +166,10 @@ void main() {
         totalMs: (21 * 60 + 40) * _min,
         remainingMs: (12 * 60 + 5) * _min,
       );
-      expect(formatShowRuntime(ru, t), 'всего 21 ч 40 мин · осталось 12 ч 5 мин');
+      expect(
+        formatShowRuntime(ru, t),
+        'всего 21 ч 40 мин · осталось 12 ч 5 мин',
+      );
       const done = RuntimeTotal(
         episodes: 2,
         watched: 2,
@@ -255,9 +258,7 @@ void main() {
         await t.pumpWidget(const SizedBox());
         await settle(t, 2);
 
-        await t.pumpWidget(
-          testApp(s, formFactor: ff, section: Section.movies),
-        );
+        await t.pumpWidget(testApp(s, formFactor: ff, section: Section.movies));
         await settle(t, 10);
         await t.tap(find.text('Charge').first);
         await settle(t, 10);

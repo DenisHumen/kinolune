@@ -221,12 +221,7 @@ pub(crate) fn show_runtime(
             remaining_ms: if watched || duration_ms == 0 {
                 0
             } else {
-                left_of(
-                    duration_ms,
-                    position.unwrap_or(0),
-                    seen.unwrap_or(0),
-                    &th,
-                )
+                left_of(duration_ms, position.unwrap_or(0), seen.unwrap_or(0), &th)
             },
         };
         match seasons.iter_mut().find(|s| s.season == season) {
