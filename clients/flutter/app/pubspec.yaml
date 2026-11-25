@@ -68,6 +68,10 @@ dependencies:
 dependency_overrides:
   media_kit_libs_android_video:
     path: ../packages/media_kit_libs_android_video
+  # BUG-001: media_kit_video 2.0.1 with the Linux video texture freed when the
+  # player closes (memory grew with every closed player).
+  media_kit_video:
+    path: ../packages/media_kit_video
 
 dev_dependencies:
   flutter_test:

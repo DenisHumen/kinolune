@@ -69,9 +69,12 @@ jobs:
         run: |
           # pa_design is included because the app depends on it; its heavier
           # token/icon checks stay in design.yml.
+          # media_kit_video is upstream code kept as is (a local override with
+          # one Linux fix, BUG-001): not ours to reformat or lint.
           roots=(); for d in clients/flutter design/flutter; do [ -d "$d" ] && roots+=("$d"); done
           projects=$(find "${roots[@]}" -name pubspec.yaml \
               -not -path '*/.*' -not -path '*/build/*' -not -path '*/example/*' \
+              -not -path '*/packages/media_kit_video/*' \
               -printf '%h\n' | sort | jq -R . | jq -cs .)
           {
             echo "projects=$projects"
