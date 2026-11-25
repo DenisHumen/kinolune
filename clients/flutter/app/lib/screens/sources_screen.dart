@@ -13,6 +13,7 @@ import '../errors/error_view.dart';
 import '../errors/friendly_errors.dart';
 import '../l10n/l10n.dart';
 import '../personal/source_content.dart' show SourceContentMark;
+import '../platform/local_path.dart';
 import '../services/app_services.dart';
 import '../sources/availability.dart';
 import '../sources/source_address.dart';
@@ -498,15 +499,8 @@ class _SourceCard extends StatelessWidget {
     );
   }
 
-  /// `file:///a/b` (how the core stores folders) as a path.
-  static String _displayPath(String address) {
-    if (!address.startsWith('file://')) return address;
-    try {
-      return Uri.parse(address).toFilePath();
-    } on UnsupportedError {
-      return address;
-    }
-  }
+  /// `file:///a/b` (how the core stores folders) as a native path.
+  static String _displayPath(String address) => displayLocalPath(address);
 
   /// Opens the server's folders (with the stored password), starting where
   /// the core finds the source's current address, and saves the pick.

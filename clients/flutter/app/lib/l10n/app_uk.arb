@@ -2262,5 +2262,9 @@
   "availabilitySettingsTileSubtitle": "Усі джерела та канали синхронізації, історія, черга змін",
   "availabilityBannerTitle": "Немає зв'язку з {name}",
   "availabilityBannerSync": "Синхронізацію через нього призупинено, зміни підуть самі пізніше.",
-  "availabilityBannerDetails": "Докладніше"
+  "availabilityBannerDetails": "Докладніше",
+  "commonScreenErrorTitle": "На цьому екрані щось пішло не так",
+  "commonScreenErrorMessage": "Помилку записано в журнал застосунку. Повторіть або поверніться назад.",
+  "commonScreenErrorRetry": "Повторити",
+  "commonScreenErrorBack": "Назад"
 }

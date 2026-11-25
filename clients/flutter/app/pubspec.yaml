@@ -48,6 +48,8 @@ dependencies:
     path: ../packages/media_kit_libs_windows_video
   # PKG-018: the running version (versionName, version.json) for updates (BSD-3-Clause).
   package_info_plus: ^10.2.2
+  # BUG-022: native local paths on Windows (BSD-3-Clause).
+  path: ^1.9.1
   path_provider: ^2.1.6
   permission_handler: ^13.0.2
   qr: ^4.0.1
@@ -68,6 +70,10 @@ dependencies:
 dependency_overrides:
   media_kit_libs_android_video:
     path: ../packages/media_kit_libs_android_video
+  # BUG-001: media_kit_video 2.0.1 with the Linux video texture freed when the
+  # player closes (memory grew with every closed player).
+  media_kit_video:
+    path: ../packages/media_kit_video
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +84,9 @@ dev_dependencies:
   # QA-006: profile-mode perf scenarios (integration_test/perf_test.dart).
   integration_test:
     sdk: flutter
+  # BUG-026: a fake web view platform for the embed's setup calls
+  # (BSD-3-Clause, already in the tree through webview_flutter).
+  webview_flutter_platform_interface: ^2.15.1
 
 flutter:
   uses-material-design: true

@@ -2262,5 +2262,9 @@
   "availabilitySettingsTileSubtitle": "Все источники и каналы синхронизации, история, очередь изменений",
   "availabilityBannerTitle": "Нет связи с {name}",
   "availabilityBannerSync": "Синхронизация через него на паузе, изменения уйдут сами позже.",
-  "availabilityBannerDetails": "Подробнее"
+  "availabilityBannerDetails": "Подробнее",
+  "commonScreenErrorTitle": "На этом экране что-то пошло не так",
+  "commonScreenErrorMessage": "Ошибка записана в журнал приложения. Повторите или вернитесь назад.",
+  "commonScreenErrorRetry": "Повторить",
+  "commonScreenErrorBack": "Назад"
 }

@@ -33,7 +33,8 @@ pub struct LocalFs {
 impl LocalFs {
     /// Opens a local source rooted at `root`, which must be an existing directory.
     pub fn new(root: impl Into<PathBuf>) -> Result<Self> {
-        let root = root.into();
+        // BUG-022: a root from a `file://` URI has `/` on Windows.
+        let root = crate::host::native(root.into());
         let meta = fs::metadata(&root).map_err(|e| VfsError::from_io(e, "source root"))?;
         if !meta.is_dir() {
             return Err(VfsError::new(

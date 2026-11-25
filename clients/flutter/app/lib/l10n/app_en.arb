@@ -7796,5 +7796,21 @@
   "availabilityBannerDetails": "Details",
   "@availabilityBannerDetails": {
     "description": "UI-053: banner button opening the connection status screen."
+  },
+  "commonScreenErrorTitle": "Something went wrong on this screen",
+  "@commonScreenErrorTitle": {
+    "description": "BUG-026: a screen failed to build; shown instead of a blank window."
+  },
+  "commonScreenErrorMessage": "The error is saved in the app log. Try again or go back.",
+  "@commonScreenErrorMessage": {
+    "description": "BUG-026: under commonScreenErrorTitle."
+  },
+  "commonScreenErrorRetry": "Try again",
+  "@commonScreenErrorRetry": {
+    "description": "BUG-026: rebuilds the failed screen."
+  },
+  "commonScreenErrorBack": "Back",
+  "@commonScreenErrorBack": {
+    "description": "BUG-026: leaves the failed screen."
   }
 }
