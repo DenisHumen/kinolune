@@ -23,7 +23,7 @@ use utoipa::{OpenApi, ToSchema};
 pub const API_MAJOR: u32 = 1;
 
 /// Minor version: grows with additive changes within [`API_MAJOR`].
-pub const API_MINOR: u32 = 0;
+pub const API_MINOR: u32 = 1;
 
 /// `info.version` of the spec: `"<major>.<minor>"`.
 pub fn api_version() -> String {
@@ -44,9 +44,30 @@ pub fn api_version() -> String {
         (name = "server", description = "Liveness and versions"),
         (name = "pairing", description = "Device family: pairing and revocation (SYNC-005)"),
         (name = "sync", description = "Sync protocol over WebSocket (docs/api/sync-protocol.md)"),
-    )
+        (name = "auth", description = "Accounts, sign-in and tokens (SRV-003)"),
+    ),
+    modifiers(&BearerScheme)
 )]
 pub(crate) struct ApiDoc;
+
+/// The `bearer` security scheme: PASETO v4.public access tokens (SRV-003).
+struct BearerScheme;
+
+impl utoipa::Modify for BearerScheme {
+    fn modify(&self, spec: &mut Spec) {
+        use utoipa::openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme};
+        let scheme = HttpBuilder::new()
+            .scheme(HttpAuthScheme::Bearer)
+            .bearer_format("PASETO v4.public")
+            .description(Some(
+                "Access token from /api/v1/auth/login, /pin, /device or /refresh; valid 15 min.",
+            ))
+            .build();
+        spec.components
+            .get_or_insert_with(Default::default)
+            .add_security_scheme("bearer", SecurityScheme::Http(scheme));
+    }
+}
 
 /// The OpenAPI document of this server.
 pub fn openapi() -> Spec {

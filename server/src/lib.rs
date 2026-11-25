@@ -14,6 +14,10 @@
 //! itself on mDNS as `_projectalpha._tcp` with that fingerprint in TXT `fp`
 //! ([`announce`]). Plain HTTP only with `[tls] enabled = false`.
 //!
+//! Accounts and sign-in (SRV-003, [`auth`]): local users, PASETO access
+//! tokens with rotating refresh tokens, PIN profiles on paired devices,
+//! lockout after failed attempts; administration needs an administrator.
+//!
 //! [`Server::bind`] opens the databases, loads or creates the certificate and
 //! binds the socket; [`Server::run`] announces the server, serves until the
 //! shutdown future resolves, lets in-flight requests finish, withdraws the
@@ -21,9 +25,11 @@
 
 pub mod announce;
 pub mod api;
+pub mod auth;
 pub mod config;
 mod http;
 pub mod logging;
+pub mod net;
 pub mod pairing;
 pub mod sync;
 pub mod tls;
@@ -83,6 +89,9 @@ pub enum Error {
         /// Cause.
         source: pa_pairing::Error,
     },
+    /// The account database or the token key could not be opened.
+    #[error("auth: {0}")]
+    Auth(String),
     /// Socket or other I/O error.
     #[error("{context}: {source}")]
     Io {
@@ -156,8 +165,10 @@ pub struct Server {
     listener: TcpListener,
     library: Library,
     hub: sync::Hub,
+    auth: auth::Auth,
     tls: Option<tls::TlsIdentity>,
     discovery: config::DiscoveryConfig,
+    clients: net::Clients,
     mdns: MdnsConfig,
 }
 
@@ -180,15 +191,17 @@ impl Server {
             .ok()
             .filter(|a| !a.ip().is_unspecified())
             .map(|a| a.to_string());
-        let (library, hub, tls) = {
+        let (library, hub, auth, tls) = {
             let path = path.clone();
             let sync_config = config.sync.clone();
+            let auth_config = config.auth.clone();
             let tls_config = config.tls.clone();
             let data_dir = data_dir.to_owned();
             tokio::task::spawn_blocking(move || {
                 let library = Library::open(&path)?;
                 let hub =
                     sync::Hub::open(&journal, library.clone(), &sync_config, &data_dir, addr)?;
+                let auth = auth::Auth::open(&data_dir, hub.pairing().clone(), &auth_config)?;
                 // The server id is the hub id: one stable UUID per server.
                 let tls = tls_config
                     .enabled
@@ -206,7 +219,7 @@ impl Server {
                     hub.pairing()
                         .set_fingerprint(identity.fingerprint().to_string());
                 }
-                Ok::<_, Error>((library, hub, tls))
+                Ok::<_, Error>((library, hub, auth, tls))
             })
             .await
             .unwrap_or_else(|e| std::panic::resume_unwind(e.into_panic()))?
@@ -229,8 +242,10 @@ impl Server {
             listener,
             library,
             hub,
+            auth,
             tls,
             discovery: config.discovery.clone(),
+            clients: config.clients,
             mdns: MdnsConfig::default(),
         })
     }
@@ -271,12 +286,21 @@ impl Server {
         &self.hub
     }
 
+    /// Accounts and tokens.
+    pub fn auth(&self) -> &auth::Auth {
+        &self.auth
+    }
+
     /// Starts the mDNS announcement unless it is off or pointless (loopback
     /// address). Failures are logged, not fatal: the server is still
     /// reachable by address.
     async fn announce(&self, addr: SocketAddr) -> Option<announce::Announcer> {
         if !self.discovery.enabled {
             tracing::info!("mDNS announcement is off");
+            return None;
+        }
+        if self.clients == net::Clients::Local {
+            tracing::info!("not announcing on mDNS: clients = \"local\"");
             return None;
         }
         if addr.ip().is_loopback() && self.mdns.interfaces != Interfaces::LoopbackOnly {
@@ -314,8 +338,30 @@ impl Server {
         let addr = self.local_addr()?;
         let announcer = self.announce(addr).await;
         let scheme = if self.tls.is_some() { "https" } else { "http" };
-        tracing::info!(%addr, scheme, version = VERSION, "listening");
-        let app = http::router(self.library.clone(), self.hub.clone());
+        tracing::info!(%addr, scheme, clients = ?self.clients, version = VERSION, "listening");
+        if self.clients == net::Clients::Any {
+            tracing::warn!("clients = \"any\": connections from the internet are accepted too");
+        }
+        let app = http::router(self.library.clone(), self.hub.clone(), self.auth.clone());
+        // A device revoked by another family member loses its sessions too.
+        let revocations = {
+            let auth = self.auth.clone();
+            let mut events = self.hub.pairing().events();
+            tokio::spawn(async move {
+                loop {
+                    match events.recv().await {
+                        Ok(pairing::FamilyEvent::Revoked(devices)) => {
+                            for device in devices {
+                                auth.revoke_device(device).await;
+                            }
+                        }
+                        Ok(pairing::FamilyEvent::Changed)
+                        | Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
+                        Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                    }
+                }
+            })
+        };
         let hub = self.hub.clone();
         let shutdown = async move {
             shutdown.await;
@@ -326,11 +372,13 @@ impl Server {
         let served = match &self.tls {
             Some(identity) => {
                 let config = identity.server_config()?;
-                let (listener, accept_task) = tls::TlsListener::start(self.listener, config)
-                    .map_err(|source| Error::Io {
-                        context: "TLS listener".to_owned(),
-                        source,
-                    })?;
+                let (listener, accept_task) =
+                    tls::TlsListener::start(self.listener, config, self.clients).map_err(
+                        |source| Error::Io {
+                            context: "TLS listener".to_owned(),
+                            source,
+                        },
+                    )?;
                 let served = axum::serve(
                     listener,
                     app.into_make_service_with_connect_info::<http::PeerAddr>(),
@@ -344,7 +392,7 @@ impl Server {
             }
             None => {
                 axum::serve(
-                    self.listener,
+                    net::FilteredListener::new(self.listener, self.clients),
                     app.into_make_service_with_connect_info::<http::PeerAddr>(),
                 )
                 .with_graceful_shutdown(shutdown)
@@ -361,7 +409,9 @@ impl Server {
             source,
         })?;
         tracing::info!("stopped accepting connections");
+        revocations.abort();
         self.hub.drain(Duration::from_secs(5)).await;
+        self.auth.checkpoint().await;
         if let Err(e) = self.library.checkpoint().await {
             tracing::warn!(error = %e, "library checkpoint failed");
         }

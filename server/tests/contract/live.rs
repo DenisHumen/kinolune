@@ -17,6 +17,8 @@ pub struct Call {
     pub target: &'static str,
     /// Sends a WebSocket upgrade and reads only the response head.
     pub upgrade: bool,
+    /// JSON request body.
+    pub body: Option<&'static str>,
     /// The status this request must get.
     pub expect: u16,
 }
@@ -26,6 +28,17 @@ const fn call(method: &'static str, target: &'static str, expect: u16) -> Call {
         method,
         target,
         upgrade: false,
+        body: None,
+        expect,
+    }
+}
+
+const fn json(method: &'static str, target: &'static str, body: &'static str, expect: u16) -> Call {
+    Call {
+        method,
+        target,
+        upgrade: false,
+        body: Some(body),
         expect,
     }
 }
@@ -35,6 +48,7 @@ const fn upgrade(target: &'static str) -> Call {
         method: "GET",
         target,
         upgrade: true,
+        body: None,
         expect: 101,
     }
 }
@@ -42,6 +56,9 @@ const fn upgrade(target: &'static str) -> Call {
 /// Requests for every operation of the API, by `METHOD /path/template`.
 /// Each operation of every checked spec must have an entry: an endpoint
 /// without a contract test fails the suite.
+///
+/// The server is fresh: no administrator exists, so loopback administers
+/// (SRV-003). No scenario may create one: the scenarios run once per spec.
 pub fn scenarios() -> Vec<(&'static str, Vec<Call>)> {
     vec![
         ("GET /health", vec![call("GET", "/health", 200)]),
@@ -71,6 +88,100 @@ pub fn scenarios() -> Vec<(&'static str, Vec<Call>)> {
             "DELETE /api/v1/devices/{id}",
             vec![call("DELETE", "/api/v1/devices/nobody", 404)],
         ),
+        (
+            "POST /api/v1/auth/setup",
+            vec![
+                json("POST", "/api/v1/auth/setup", "{}", 400),
+                json(
+                    "POST",
+                    "/api/v1/auth/setup",
+                    r#"{"name":"Admin","password":"short"}"#,
+                    400,
+                ),
+            ],
+        ),
+        (
+            "POST /api/v1/auth/login",
+            vec![
+                json(
+                    "POST",
+                    "/api/v1/auth/login",
+                    r#"{"name":"nobody","password":"wrong password"}"#,
+                    401,
+                ),
+                json("POST", "/api/v1/auth/login", "[]", 400),
+            ],
+        ),
+        (
+            "POST /api/v1/auth/pin",
+            vec![json(
+                "POST",
+                "/api/v1/auth/pin",
+                r#"{"user_id":"nobody","pin":"1234"}"#,
+                401,
+            )],
+        ),
+        (
+            "POST /api/v1/auth/challenge",
+            vec![call("POST", "/api/v1/auth/challenge", 200)],
+        ),
+        (
+            "POST /api/v1/auth/device",
+            vec![
+                json(
+                    "POST",
+                    "/api/v1/auth/device",
+                    r#"{"device_id":"nobody","nonce":"00","challenge":"00","sig":"00"}"#,
+                    401,
+                ),
+                json("POST", "/api/v1/auth/device", "{}", 400),
+            ],
+        ),
+        (
+            "POST /api/v1/auth/refresh",
+            vec![
+                json(
+                    "POST",
+                    "/api/v1/auth/refresh",
+                    r#"{"refresh_token":"bogus"}"#,
+                    401,
+                ),
+                json("POST", "/api/v1/auth/refresh", "{}", 400),
+            ],
+        ),
+        (
+            "POST /api/v1/auth/logout",
+            vec![json(
+                "POST",
+                "/api/v1/auth/logout",
+                r#"{"refresh_token":"bogus"}"#,
+                204,
+            )],
+        ),
+        (
+            "GET /api/v1/auth/me",
+            vec![call("GET", "/api/v1/auth/me", 401)],
+        ),
+        (
+            "GET /api/v1/auth/profiles",
+            vec![call("GET", "/api/v1/auth/profiles", 401)],
+        ),
+        ("GET /api/v1/users", vec![call("GET", "/api/v1/users", 200)]),
+        (
+            "POST /api/v1/users",
+            vec![
+                json("POST", "/api/v1/users", r#"{"name":"Kid"}"#, 400),
+                json("POST", "/api/v1/users", "{}", 400),
+            ],
+        ),
+        (
+            "PATCH /api/v1/users/{id}",
+            vec![json("PATCH", "/api/v1/users/nobody", "{}", 404)],
+        ),
+        (
+            "DELETE /api/v1/users/{id}",
+            vec![call("DELETE", "/api/v1/users/nobody", 404)],
+        ),
     ]
 }
 
@@ -84,10 +195,16 @@ pub struct Reply {
 /// Minimal HTTP/1.1 client: no HTTP client crate needed.
 pub async fn send(addr: SocketAddr, call: &Call) -> Reply {
     let mut stream = TcpStream::connect(addr).await.unwrap();
+    let body = call.body.unwrap_or_default();
     let mut request = format!(
-        "{} {} HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n",
-        call.method, call.target
+        "{} {} HTTP/1.1\r\nHost: localhost\r\nContent-Length: {}\r\n",
+        call.method,
+        call.target,
+        body.len()
     );
+    if call.body.is_some() {
+        request.push_str("Content-Type: application/json\r\n");
+    }
     if call.upgrade {
         request.push_str(
             "Connection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\n\
@@ -95,6 +212,7 @@ pub async fn send(addr: SocketAddr, call: &Call) -> Reply {
         );
     } else {
         request.push_str("Connection: close\r\n\r\n");
+        request.push_str(body);
     }
     stream.write_all(request.as_bytes()).await.unwrap();
     let mut reader = BufReader::new(stream);
