@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!--
+  Static page that renders openapi.json with Redoc CE (MIT). The script is
+  pinned to an exact version and checked by Subresource Integrity; to update
+  it, change the version and recompute the hash:
+    curl -sL https://cdn.jsdelivr.net/npm/redoc@<version>/bundles/redoc.standalone.js \
+      | openssl dgst -sha384 -binary | openssl base64 -A
+-->
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="HTTP API медиасервера Kinolune (OpenAPI)" />
+    <title>API сервера Kinolune</title>
+    <style>
+      html, body { margin: 0; padding: 0; background: #fff; }
+    </style>
+  </head>
+  <body>
+    <redoc spec-url="openapi.json"></redoc>
+    <noscript>Для просмотра нужен JavaScript. Спецификация: <a href="openapi.json">openapi.json</a>.</noscript>
+    <script
+      src="https://cdn.jsdelivr.net/npm/redoc@2.5.4/bundles/redoc.standalone.js"
+      integrity="sha384-w447zOpYfw/1Tv/5AK9NfHTlQIqE3RVR6KY62jCyy9zNDgO64cMwGGP1Fj0zJVf5"
+      crossorigin="anonymous"></script>
+  </body>
+</html>
