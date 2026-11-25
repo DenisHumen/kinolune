@@ -47,8 +47,10 @@ func run() error {
 		state       = flag.String("state-dir", stateDir, "settings and state directory")
 		bootcPath   = flag.String("bootc", "/usr/bin/bootc", "bootc binary")
 		versionFile = flag.String("version-file", "/usr/share/alpha/version", "image version file")
-		mediaURL    = flag.String("media-activity-url", envOr("ALPHA_MEDIA_ACTIVITY_URL", "http://127.0.0.1:8487/api/v1/system/activity"),
-			"media server activity endpoint that can veto a reboot; empty disables the veto")
+		mediaURL    = flag.String("media-activity-url", envOr("ALPHA_MEDIA_ACTIVITY_URL", "https://127.0.0.1:8487/api/v1/system/activity"),
+			"media server activity endpoint that can veto a reboot; empty disables the veto; http:// only for a server without TLS")
+		mediaCert = flag.String("media-cert", envOr("ALPHA_MEDIA_TLS_CERT", "/var/lib/alpha-media/tls/server.crt"),
+			"media server certificate whose SHA-256 is pinned for the activity request")
 		rebootCmd = flag.String("reboot-command", "systemctl reboot", "command that reboots the machine")
 		interval  = flag.Duration("check-interval", 6*time.Hour, "time between automatic checks")
 		tick      = flag.Duration("tick", time.Minute, "scheduler step")
@@ -66,7 +68,7 @@ func run() error {
 	ver := readVersion(*versionFile)
 	var veto agent.Vetoer = agent.NoVeto{}
 	if *mediaURL != "" {
-		veto = agent.HTTPVeto{URL: *mediaURL}
+		veto = agent.HTTPVeto{URL: *mediaURL, CertFile: *mediaCert, Logger: log}
 	}
 	rebootArgs := strings.Fields(*rebootCmd)
 	if len(rebootArgs) == 0 {

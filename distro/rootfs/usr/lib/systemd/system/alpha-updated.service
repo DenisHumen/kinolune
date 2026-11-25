@@ -17,7 +17,10 @@ ExecStart=/usr/libexec/alpha/alpha-updated
 # no ProtectSystem/PrivateTmp here; the agent itself only writes its state dir.
 StateDirectory=alpha/updated
 StateDirectoryMode=0700
-Environment=ALPHA_MEDIA_ACTIVITY_URL=http://127.0.0.1:8487/api/v1/system/activity
+# Media server veto (SRV-019): HTTPS on loopback, certificate pinned by the
+# SHA-256 of the server's own cert file (SRV-004, StateDirectory=alpha-media).
+Environment=ALPHA_MEDIA_ACTIVITY_URL=https://127.0.0.1:8487/api/v1/system/activity
+Environment=ALPHA_MEDIA_TLS_CERT=/var/lib/alpha-media/tls/server.crt
 # Operations are not cut short by a stop: bootc finishes or rolls back its
 # own transaction, but give a running download time to notice the signal.
 TimeoutStopSec=90

@@ -107,7 +107,7 @@ Workflow `.github/workflows/distro.yml`:
 
 ## Ограничения прототипа
 
-- Нет брендинга (DIST-003), `alpha-admin` и медиасервер — заглушки (DIST-013), нет health-check-ов greenboot (DIST-011). Вето перезагрузки ждёт адреса `/api/v1/system/activity` в медиасервере.
+- Нет брендинга (DIST-003), `alpha-admin` и медиасервер — заглушки (DIST-013), нет health-check-ов greenboot (DIST-011). Вето перезагрузки — адрес медиасервера `/api/v1/system/activity` (SRV-019) по HTTPS с пиннингом сертификата.
 - Пакеты не залочены по версиям (lockfile — отдельной задачей).
 - Офлайн-обновления с USB (`oci-archive`) политикой пока отклоняются: проверку подписи для них решим вместе с офлайн-обновлением.
 - Проверено только в QEMU/KVM; железо (Intel N100, AMD APU, `vainfo`, QSV/VAAPI) — отдельно.
