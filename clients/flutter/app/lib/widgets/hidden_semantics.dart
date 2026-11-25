@@ -13,7 +13,6 @@
 // bridge keeps semantics on, so it hit every live run, and screen reader
 // users lost the semantics update of that frame.
 
-import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
@@ -47,7 +46,7 @@ class _HiddenSemanticsState extends State<HiddenSemantics> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _tickers = TickerMode.of(context);
+    _tickers = TickerMode.valuesOf(context).enabled;
     _check();
   }
 
@@ -70,6 +69,10 @@ class _HiddenSemanticsState extends State<HiddenSemantics> {
       final RenderObject? page = context.findRenderObject();
       if (page == null || !page.attached) return;
       page.clearSemantics();
+      // The parent re-adopts the cleared page in its next semantics update,
+      // still hidden; when the page is shown again Flutter updates it from
+      // there as usual.
+      page.parent?.markNeedsSemanticsUpdate();
     });
     SchedulerBinding.instance.ensureVisualUpdate();
   }

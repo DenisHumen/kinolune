@@ -12,7 +12,7 @@
 // empty, invisible boundary ("inner"). Without [HiddenSemantics] the
 // IndexedStack cases throw on Flutter 3.50.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/widgets/hidden_semantics.dart';
 
@@ -29,7 +29,8 @@ class _Page {
     inner.dispose();
   }
 
-  Widget build() => Align(
+  /// Built once, so showing or hiding the page does not rebuild it.
+  late final Widget widget = Align(
     alignment: Alignment.topLeft,
     child: SizedBox(
       width: 200,
@@ -104,7 +105,7 @@ void main() {
                 builder: (context, i, _) => IndexedStack(
                   index: i,
                   children: [
-                    HiddenSemantics(hidden: i != 0, child: page.build()),
+                    HiddenSemantics(hidden: i != 0, child: page.widget),
                     HiddenSemantics(hidden: i != 1, child: const Text('other')),
                   ],
                 ),
@@ -151,7 +152,7 @@ void main() {
       MaterialApp(
         navigatorKey: root,
         home: Scaffold(
-          body: HiddenSemantics(hidden: false, child: page.build()),
+          body: HiddenSemantics(hidden: false, child: page.widget),
         ),
       ),
     );
@@ -178,7 +179,7 @@ void main() {
     await t.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: HiddenSemantics(hidden: false, child: page.build()),
+          body: HiddenSemantics(hidden: false, child: page.widget),
         ),
       ),
     );
