@@ -863,6 +863,38 @@
         }
       }
     },
+    "/api/v1/system/activity": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Reports whether the server is busy (for OS updates).",
+        "description": "Playback (devices playing through the sync hub, streams served by the\nserver), recordings and scans make the server busy; the OS update agent\npostpones updates and reboots until it is not. Allowed from the server\nmachine itself only (loopback, not through a proxy); needs no token.",
+        "operationId": "systemActivity",
+        "responses": {
+          "200": {
+            "description": "What the server is doing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityReport"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not from the server machine itself",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/users": {
       "get": {
         "tags": [
@@ -1212,6 +1244,31 @@
   },
   "components": {
     "schemas": {
+      "ActivityReport": {
+        "type": "object",
+        "description": "What the server is doing that a reboot must not interrupt (SRV-019).\n\nThe OS update agent postpones an update and a reboot while `busy` is\ntrue or `sessions` is above zero.",
+        "required": [
+          "busy",
+          "sessions",
+          "reason"
+        ],
+        "properties": {
+          "busy": {
+            "type": "boolean",
+            "description": "Something is running that a reboot would interrupt."
+          },
+          "reason": {
+            "type": "string",
+            "description": "The main reason when busy: `playback`, `recording` or `scan`\n(in this order of precedence); empty when idle. New reasons may be\nadded."
+          },
+          "sessions": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Playback sessions: devices watching (last `pb.update` `playing` or\n`paused`, within its TTL) or streams served by the server, whichever\nis more.",
+            "minimum": 0
+          }
+        }
+      },
       "ApiError": {
         "type": "object",
         "description": "Error body of the API endpoints (status codes 4xx and 5xx).",
@@ -1799,6 +1856,10 @@
     {
       "name": "sync",
       "description": "Sync protocol over WebSocket (docs/api/sync-protocol.md)"
+    },
+    {
+      "name": "system",
+      "description": "The machine the server runs on: activity for OS updates (SRV-019)"
     },
     {
       "name": "auth",

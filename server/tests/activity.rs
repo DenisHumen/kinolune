@@ -124,6 +124,7 @@ async fn playing_heartbeat_is_busy_until_its_ttl() {
             cursor: None,
             head: None,
             nonce: None,
+            vv: None,
         });
         let send = |msg: &Message| WsMessage::Text(proto::encode(msg).unwrap().into());
         ws.send(send(&hello)).await.unwrap();
