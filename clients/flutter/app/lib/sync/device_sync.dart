@@ -492,6 +492,11 @@ abstract class DeviceSync {
   /// once right away.
   Future<FolderSyncState> setFolderSyncAuto();
 
+  /// Own changes no other device has acknowledged yet (the LAN outbox):
+  /// «N изменений ждут на этом устройстве» while a sync channel is down
+  /// (UI-053). Folder sync counts its own in [FolderSyncState.pending].
+  Future<int> outboxPending();
+
   /// One round of folder sync now (rounds also run on their own: every
   /// second while a title plays, after a look every 1.5 s in front when
   /// another device wrote, every 30 s otherwise; SYNC-014).
@@ -646,6 +651,8 @@ class NoDeviceSync implements DeviceSync {
   Future<FolderSyncState> setFolderSyncAuto() async => throw _off;
   @override
   Future<FolderSyncState> folderSyncNow() async => FolderSyncState.none;
+  @override
+  Future<int> outboxPending() async => 0;
   @override
   void setAppState({required bool foreground, required bool metered}) {}
   @override
@@ -888,6 +895,10 @@ class CoreDeviceSync implements DeviceSync {
   @override
   Future<FolderSyncState> folderSyncNow() =>
       _call(() async => _folder(await _core.folderSyncNow()));
+
+  @override
+  Future<int> outboxPending() =>
+      _call(() async => (await _core.outboxPending()).toInt());
 
   @override
   void setAppState({required bool foreground, required bool metered}) {

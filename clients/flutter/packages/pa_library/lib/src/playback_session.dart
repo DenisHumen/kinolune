@@ -4,6 +4,7 @@
 // plays next. The rules mirror the core: `start_position` of `pa-playback`
 // and `next_episode` of `pa-library` (LIB-011).
 
+import 'episode_order.dart';
 import 'library.dart' show continueWatchingMax, continueWatchingMin;
 import 'models.dart';
 
@@ -54,4 +55,50 @@ LibraryItem? nextEpisodeIn(
           .toList()
         ..sort(_compare);
   return candidates.isEmpty ? null : candidates.first;
+}
+
+/// What «Продолжить» of a show plays: the episode and whether it resumes
+/// from its saved position.
+typedef ShowContinueTarget = ({ShowEpisode episode, bool resume});
+
+/// «Продолжить» of a show (PLAY-005): the latest played episode decides.
+/// Finished (watched or past 95 %): the next episode ([nextEpisodeIn]),
+/// from its own position if it has one. Started: that episode from its
+/// position. Nothing played: the first regular episode.
+///
+/// BUG-020: a watched episode is finished even if a later report saved a
+/// small position over it (a replay started by accident at the end), as in
+/// the core's "Continue watching", where watched rows are never in
+/// progress; it resumes only when it is the last episode.
+ShowContinueTarget? showContinueTarget(List<ShowEpisode> episodes) {
+  if (episodes.isEmpty) return null;
+  ShowEpisode? latest;
+  for (final e in episodes) {
+    final p = e.progress;
+    if (p == null) continue;
+    if (latest == null || p.updatedAt.isAfter(latest.progress!.updatedAt)) {
+      latest = e;
+    }
+  }
+  if (latest != null) {
+    final finished =
+        latest.watched || latest.progress!.fraction > continueWatchingMax;
+    if (finished) {
+      final next = nextEpisodeIn([
+        for (final e in episodes) e.item,
+      ], latest.item);
+      if (next != null) {
+        final e = episodes.firstWhere((e) => e.item.id == next.id);
+        return (episode: e, resume: resumePositionMs(e.progress) > 0);
+      }
+    }
+    if (resumePositionMs(latest.progress) > 0) {
+      return (episode: latest, resume: true);
+    }
+  }
+  final first = episodes.firstWhere(
+    (e) => (e.item.season ?? 1) >= 1,
+    orElse: () => episodes.first,
+  );
+  return (episode: first, resume: false);
 }

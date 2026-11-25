@@ -14,6 +14,7 @@ export 'package:pa_library/pa_library.dart'
         Progress,
         nextEpisodeIn,
         resumePositionMs,
+        showContinueTarget,
         OpenedLibrary,
         coreDbFileName,
         openAppLibrary,
