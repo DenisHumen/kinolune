@@ -467,6 +467,18 @@ void main() {
           find.byKey(const ValueKey('twitch-category-page-503')),
           findsOneWidget,
         );
+        // TWI-034: below the category's live streams.
+        await t.scrollUntilVisible(
+          find.byKey(const ValueKey('twitch-category-vod-9101')),
+          400,
+          scrollable: find
+              .descendant(
+                of: find.byKey(const ValueKey('twitch-category-page-503')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await settle(t, 2);
         expect(
           find.byKey(const ValueKey('twitch-category-vod-9101')),
           findsOneWidget,

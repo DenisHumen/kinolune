@@ -103,6 +103,7 @@ class TwitchStream {
     this.gameName,
     this.startedAt,
     this.thumbnailUrl,
+    this.language,
   });
 
   final String userId;
@@ -116,6 +117,55 @@ class TwitchStream {
 
   /// Template with `{width}`/`{height}`.
   final String? thumbnailUrl;
+
+  /// Broadcast language, ISO 639-1 (TWI-034); `other` or null when unknown.
+  final String? language;
+}
+
+/// Broadcast languages offered besides the UI language (ISO 639-1,
+/// TWI-034).
+const twitchBrowseLanguages = [
+  'uk',
+  'en',
+  'ru',
+  'de',
+  'es',
+  'fr',
+  'pl',
+  'pt',
+  'it',
+  'tr',
+  'ja',
+  'ko',
+];
+
+/// A language by its own name, the way language pickers show them: the
+/// same in every UI language.
+String twitchLanguageName(String code) => switch (code) {
+  'uk' => 'Українська',
+  'en' => 'English',
+  'ru' => 'Русский',
+  'de' => 'Deutsch',
+  'es' => 'Español',
+  'fr' => 'Français',
+  'pl' => 'Polski',
+  'pt' => 'Português',
+  'it' => 'Italiano',
+  'tr' => 'Türkçe',
+  'ja' => '日本語',
+  'ko' => '한국어',
+  _ => code.toUpperCase(),
+};
+
+/// One page of a Helix list (TWI-034): [cursor] fetches the next one; null
+/// on the last page.
+class TwitchPage<T> {
+  const TwitchPage(this.items, [this.cursor]);
+
+  final List<T> items;
+  final String? cursor;
+
+  bool get hasMore => cursor != null && cursor!.isNotEmpty;
 }
 
 /// A chapter of a VOD: the category on air from [start] to [end].

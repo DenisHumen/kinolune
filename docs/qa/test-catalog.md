@@ -872,6 +872,25 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 
 Автотесты: TWI-18, TWI-25 — `test/twitch_golden_test.dart`; TWI-19, TWI-20, TWI-21, TWI-22, TWI-23, TWI-26, TWI-28 — `test/twitch_test.dart` (desktop).
 
+### Обзор: категории и эфиры в них (TWI-034)
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| TWI-153 | Вкладка «Обзор» (`twitch-tab-*`) → «Популярные категории» (`twitch-browse`): сетка обложек (`twitch-top-category-*`) с «№N на Twitch»; телефон — 3 колонки, компьютер — сетка с наведением, ТВ — ряды под пульт; пока грузится — `twitch-browse-loading` | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-154 | Прокрутка вниз (или «Показать ещё», `twitch-list-more`) → следующая страница категорий, без повторов; в конце кнопки нет | ⬜ | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-155 | Не вошли: карточка (`twitch-browse-sign-in`) «Войдите через Twitch, чтобы видеть популярные категории…» и «Войти через Twitch» (`twitch-browse-sign-in-button`); после входа категории появляются сами; без client id — «…в этой версии его пока нет», без кнопки | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-156 | Нет сети или лимит Twitch: «Нет связи с Twitch…» (`twitch-list-error`) и «Повторить» (`twitch-list-retry`) → список; Twitch вернул пустой список → «Сейчас категорий нет» (`twitch-browse-empty`) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-157 | Категория (`twitch-top-category-*`) → страница категории: «Сейчас в эфире» (`twitch-category-streams`) — эфиры по убыванию зрителей; карточка (`twitch-category-stream-*`) → эфир; строка канала под карточкой → страница канала; пока грузится — `twitch-category-streams-loading`; прокрутка → следующие эфиры | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-158 | Язык эфира: по умолчанию язык интерфейса (`twitch-language-*`); «Все языки» (`twitch-language-all`) одним нажатием, тогда на карточках язык эфира; «Другой язык» (`twitch-language-other`) → меню (`twitch-language-pick-*`); выбор сохраняется | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-159 | Эфиров на выбранном языке нет → «Эфиров на языке «…» сейчас нет» (`twitch-category-streams-empty`) и «Все языки» (`twitch-category-streams-all`); нет эфиров вообще → «Сейчас в этой категории никто не ведёт эфир» | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-160 | Меню эфира (правая кнопка, долгое нажатие, клавиша меню, удержание OK): «Смотреть эфир» (`twitch-stream-menu-watch`), «Открыть канал» (`twitch-stream-menu-channel`), «В избранное» / «Убрать из избранного» (`twitch-stream-menu-favorite`) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-161 | Страница категории: ниже эфиров «Записи избранного с этой игрой» (`twitch-category-vod-*`), только если такие записи есть | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-162 | Поиск: каналы в эфире первыми, по убыванию зрителей, с кольцом ЭФИР, категорией и числом зрителей; у эфира кнопка «Смотреть эфир» (`twitch-search-watch-*`); категории — ряд обложек (`twitch-result-categories`, `twitch-result-category-*`) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-163 | «Недавние запросы» (`twitch-search-recent`) при пустом поле: Enter или открытый результат запоминают запрос (до 8, только на этом устройстве); чип (`twitch-search-recent-*`) → поиск снова; «Очистить» (`twitch-search-recent-clear`) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-164 | ТВ: пульт ходит по сетке категорий вниз до следующей страницы без ловушек; OK → категория; «Назад» → фокус на той же обложке; ввод поиска — с телефона (UI-027) | — | 🤖 | — | — | — | — | — | — |
+
+Автотесты: TWI-153…TWI-163 — `test/twitch_browse_test.dart` (desktop; TWI-153, TWI-157 — также phone), `test/twitch_golden_test.dart` («Обзор» и страница категории на phone, tablet, desktop, tv); TWI-164 — `test/twitch_browse_test.dart` (tv); ядро — `core/crates/pa-twitch/tests/helix.rs` (страницы `games/top` по курсору без повторов, 429 с `Retry-After`) и тесты `pa-frb` `api::twitch` (`top_categories`, `category_streams`, лимит Twitch).
+
 ### Страница канала
 
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |

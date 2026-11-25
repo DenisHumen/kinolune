@@ -8258,5 +8258,87 @@
   "profilesAvatarFromTwitchSubtitle": "Your colour or picture comes back when this is off or you sign out of Twitch",
   "@profilesAvatarFromTwitchSubtitle": {
     "description": "TWI-032: under the switch."
+  },
+  "twitchTabBrowse": "Browse",
+  "@twitchTabBrowse": {
+    "description": "TWI-034: the tab of the Streams section with top categories."
+  },
+  "twitchBrowseTopCategories": "Top categories",
+  "@twitchBrowseTopCategories": {
+    "description": "TWI-034: title of the grid of the most watched categories."
+  },
+  "twitchBrowseSignIn": "Sign in with Twitch to see the top categories and who is streaming in them. Twitch shows these lists only to signed-in viewers.",
+  "@twitchBrowseSignIn": {
+    "description": "TWI-034: Browse while signed out."
+  },
+  "twitchBrowseUnavailable": "Browsing categories needs a Twitch sign-in, which this version does not offer yet. Favorites and adding a channel by name work without it.",
+  "@twitchBrowseUnavailable": {
+    "description": "TWI-034: Browse in a build without a Twitch client id."
+  },
+  "twitchBrowseLoadMore": "Show more",
+  "@twitchBrowseLoadMore": {
+    "description": "TWI-034: loads the next page of a list."
+  },
+  "twitchBrowseError": "Couldn't load the list from Twitch.",
+  "@twitchBrowseError": {
+    "description": "TWI-034: a Helix list failed."
+  },
+  "twitchBrowseOffline": "No connection to Twitch. Check the internet connection and try again.",
+  "@twitchBrowseOffline": {
+    "description": "TWI-034: network error or Twitch rate limit."
+  },
+  "twitchBrowseEmpty": "No categories right now",
+  "@twitchBrowseEmpty": {
+    "description": "TWI-034: the top list came back empty."
+  },
+  "twitchBrowseEmptyMessage": "Twitch returned an empty list. Try again a bit later.",
+  "@twitchBrowseEmptyMessage": {
+    "description": "TWI-034: under the empty title."
+  },
+  "twitchCategoryRank": "#{rank} on Twitch",
+  "@twitchCategoryRank": {
+    "description": "TWI-034: place of a category in the top list.",
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      }
+    }
+  },
+  "twitchCategoryKind": "Category",
+  "@twitchCategoryKind": {
+    "description": "TWI-034: caption of a category found by search."
+  },
+  "twitchCategoryNoLive": "Nobody is streaming in this category right now.",
+  "@twitchCategoryNoLive": {
+    "description": "TWI-034: category page without live streams."
+  },
+  "twitchCategoryNoLiveInLanguage": "No live streams in {language} right now. Other languages may have some.",
+  "@twitchCategoryNoLiveInLanguage": {
+    "description": "TWI-034: no streams in the chosen broadcast language; {language} is its own name, e.g. Українська.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "twitchLanguageAll": "All languages",
+  "@twitchLanguageAll": {
+    "description": "TWI-034: the broadcast language filter off."
+  },
+  "twitchLanguageOther": "Other language",
+  "@twitchLanguageOther": {
+    "description": "TWI-034: menu of more broadcast languages."
+  },
+  "twitchCategoryVodsTitle": "Favorites' videos with this game",
+  "@twitchCategoryVodsTitle": {
+    "description": "TWI-034: the VOD block of a category page (TWI-008)."
+  },
+  "twitchStreamOpenChannel": "Open channel",
+  "@twitchStreamOpenChannel": {
+    "description": "TWI-034: stream menu item."
+  },
+  "twitchSearchRecent": "Recent searches",
+  "@twitchSearchRecent": {
+    "description": "TWI-034: recent searches of the Streams section (this device only)."
   }
 }

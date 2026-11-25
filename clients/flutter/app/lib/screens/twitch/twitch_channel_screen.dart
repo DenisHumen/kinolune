@@ -3,8 +3,9 @@
 // Channel page of the "Streams" section (TWI-013, research 06 §6.3): banner,
 // avatar with the LIVE ring, status, "Watch live", favourite, "Open on
 // Twitch"; tabs VODs (with the chapter bar), highlights, clips, schedule
-// and about. Also the category page: VODs of the favourites where the
-// category was on air (TWI-008 chapters, not the channel's current one).
+// and about. Also the category page: live streams of the category (TWI-034)
+// and VODs of the favourites where the category was on air (TWI-008
+// chapters, not the channel's current one).
 
 import 'package:material_ui/material_ui.dart';
 
@@ -20,6 +21,7 @@ import '../../widgets/focusable.dart';
 import '../library_grid_screen.dart' show FilterPill;
 import '../twitch_screen.dart' show formatScheduleTime;
 import 'twitch_archive_screens.dart';
+import 'twitch_browse.dart';
 import 'twitch_play.dart';
 import 'twitch_widgets.dart';
 
@@ -427,7 +429,9 @@ Widget _grid(
   );
 }
 
-/// VODs of the favourites with a chapter in [category] (TWI-008).
+/// The category page: live streams now, most viewers first, in the chosen
+/// broadcast language (TWI-034), then the VODs of the favourites where the
+/// category was on air (TWI-008 chapters).
 class TwitchCategoryScreen extends StatefulWidget {
   const TwitchCategoryScreen({super.key, required this.category});
 
@@ -439,11 +443,18 @@ class TwitchCategoryScreen extends StatefulWidget {
 
 class _TwitchCategoryScreenState extends State<TwitchCategoryScreen> {
   Future<List<TwitchVideo>>? _vods;
+  final _scrollEnd = TwitchScrollEnd();
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _vods ??= Services.of(context).twitch.categoryVideos(widget.category);
+  }
+
+  @override
+  void dispose() {
+    _scrollEnd.dispose();
+    super.dispose();
   }
 
   @override
@@ -455,73 +466,81 @@ class _TwitchCategoryScreenState extends State<TwitchCategoryScreen> {
     return Scaffold(
       key: ValueKey('twitch-category-page-${widget.category.id}'),
       backgroundColor: KColors.bgBase,
-      body: FutureBuilder<List<TwitchVideo>>(
-        future: _vods,
-        builder: (context, snap) {
-          final vods = snap.data ?? const <TwitchVideo>[];
-          return ListView(
-            padding: EdgeInsets.only(bottom: d.pageInsets.bottom + 24),
-            children: [
-              PageTitle(
-                widget.category.name,
-                trailing: KButton(
-                  icon: Icons.open_in_new,
-                  label: l.twitchOpenOnTwitch,
-                  onPressed: () =>
-                      showOpenOnTwitch(context, widget.category.url),
-                ),
-              ),
-              if (Navigator.of(context).canPop() && !d.isTv)
-                Padding(
-                  padding: EdgeInsets.only(left: d.pageInsets.left - 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back),
-                      label: Text(l.commonBack),
-                    ),
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _scrollEnd.onScroll,
+        child: FutureBuilder<List<TwitchVideo>>(
+          future: _vods,
+          builder: (context, snap) {
+            final vods = snap.data ?? const <TwitchVideo>[];
+            return ListView(
+              padding: EdgeInsets.only(bottom: d.pageInsets.bottom + 24),
+              children: [
+                PageTitle(
+                  widget.category.name,
+                  trailing: KButton(
+                    icon: Icons.open_in_new,
+                    label: l.twitchOpenOnTwitch,
+                    onPressed: () =>
+                        showOpenOnTwitch(context, widget.category.url),
                   ),
                 ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  d.pageInsets.left,
-                  4,
-                  d.pageInsets.right,
-                  12,
-                ),
-                child: Text(
-                  l.twitchCategoryVodsHint,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-              if (!snap.hasData)
-                const Center(child: CircularProgressIndicator())
-              else if (vods.isEmpty)
-                Center(child: Text(l.twitchNoVods))
-              else
-                _grid(
-                  context,
-                  vods.length,
-                  extra: 8,
-                  (i) => TwitchVodCard(
-                    key: ValueKey('twitch-category-vod-${vods[i].id}'),
-                    video: vods[i],
-                    width: double.infinity,
-                    now: now,
-                    // TWI-027: the part of the playthrough of this game.
-                    onTap: () => playTwitchVideo(
-                      context,
-                      vods[i],
-                      gameId: widget.category.id,
+                if (Navigator.of(context).canPop() && !d.isTv)
+                  Padding(
+                    padding: EdgeInsets.only(left: d.pageInsets.left - 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        icon: const Icon(Icons.arrow_back),
+                        label: Text(l.commonBack),
+                      ),
                     ),
                   ),
+                TwitchCategoryStreams(
+                  category: widget.category,
+                  scrollEnd: _scrollEnd,
                 ),
-              const SizedBox(height: 16),
-              const TwitchAttribution(),
-            ],
-          );
-        },
+                // The favourites' VODs with this game (TWI-008), after the
+                // live streams and only when there are some.
+                if (vods.isNotEmpty) ...[
+                  SizedBox(height: d.rowGap),
+                  TwitchRowTitle(l.twitchCategoryVodsTitle),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      d.pageInsets.left,
+                      0,
+                      d.pageInsets.right,
+                      12,
+                    ),
+                    child: Text(
+                      l.twitchCategoryVodsHint,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  _grid(
+                    context,
+                    vods.length,
+                    extra: 8,
+                    (i) => TwitchVodCard(
+                      key: ValueKey('twitch-category-vod-${vods[i].id}'),
+                      video: vods[i],
+                      width: double.infinity,
+                      now: now,
+                      // TWI-027: the part of the playthrough of this game.
+                      onTap: () => playTwitchVideo(
+                        context,
+                        vods[i],
+                        gameId: widget.category.id,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                const TwitchAttribution(),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // The Streams section (TWI-013): golden images of its Home, the channel
-// list, a channel page and search on the four densities, over the fake
+// list, a channel page, search, Browse and a category page (TWI-034) on the
+// four densities, over the fake
 // Helix with made-up channels (lib/fakes/fake_twitch.dart). Like
 // test/home_golden_test.dart they use the default test font. Refresh
 // deliberately:
@@ -41,6 +42,12 @@ final _flows = <String, Future<void> Function(WidgetTester)>{
       'nova',
     );
     await settle(t, 10);
+  },
+  // TWI-034: top categories and a category's live streams.
+  'browse': (t) => _tap(t, find.byKey(const ValueKey('twitch-tab-browse'))),
+  'category': (t) async {
+    await _tap(t, find.byKey(const ValueKey('twitch-tab-browse')));
+    await _tap(t, find.byKey(const ValueKey('twitch-top-category-501')));
   },
 };
 
