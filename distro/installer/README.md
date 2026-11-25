@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 # distro/installer — `alpha-installer` (Go)
 
-Установщик NAS-ОС ([исследование 05 §2.3–2.4](../../docs/research/05-nas-linux-distro.md), [ADR-0010](../../docs/adr/0010-nas-os-phase0.md)). В нём **обнаружение дисков** (DIST-004) и **установка по файлу ответов** (DIST-005, решения — [ADR-0166](../../docs/adr/0166-installer-disk-layout.md)). TUI — в DIST-006, live-ISO — в DIST-007.
+Установщик NAS-ОС ([исследование 05 §2.3–2.4](../../docs/research/05-nas-linux-distro.md), [ADR-0010](../../docs/adr/0010-nas-os-phase0.md)). В нём **обнаружение дисков** (DIST-004), **установка по файлу ответов** (DIST-005, решения — [ADR-0166](../../docs/adr/0166-installer-disk-layout.md)) и **live-ISO** (DIST-007, ниже). TUI — в DIST-006.
 
 ## Обнаружение дисков (`internal/disks`)
 
@@ -80,6 +80,35 @@ JSON, неизвестные поля — ошибка, все ошибки по
 ### `/var/lib/alpha/install.json`
 
 Читают админка и `alpha-updated` при первом запуске; секретов нет. Поля: `schema` (1), `install_id`, `installed_at`, `installer_version`, `hostname`, `language`, `admin_user`, `update_channel`, `image` (`source`, `target`, `signature_policy_enforced`), `disk` (`model`, `size`, `path`), `filesystems` (метка → UUID), `data_pool` (`name`, `mountpoint`, `uuid` или `null`), `network`, `first_boot`.
+
+## Live-ISO (DIST-007)
+
+ISO установщика собирает `distro/scripts/build-iso.sh` (решения — [ADR-NNNN](../../docs/adr/NNNN-live-iso.md)):
+
+```bash
+distro/scripts/build-iso.sh                       # → distro/.work/iso/kinolune-os-<версия>-x86_64.iso (+ .sha256, iso-info.txt)
+distro/tests/iso-boot.sh distro/.work/iso/kinolune-os-*.iso   # загрузка в QEMU/OVMF до меню установщика
+```
+
+1. Собирается образ ОС (`distro/Containerfile`) — он же **payload**: `image-builder` кладёт его в `containers-storage` ISO под именем `ghcr.io/denishumen/alpha-os:stable` (`PAYLOAD_TARGET`). Файл ответов по умолчанию ставит именно его (`image.source = containers-storage:<image.target>`), без сети, а установленная система потом обновляется из реестра.
+2. Собирается live-образ `installer/Containerfile` — от **той же** закреплённой базы fedora-bootc: одинаковые файлы squashfs хранит один раз, поэтому базовые слои payload почти не увеличивают ISO. В live-образе: `alpha-installer`, инструменты разметки, podman, `smartctl`, `nano`; нет документации, man-страниц, чужих локалей и прошивок GPU/NPU/аудио/WWAN; initramfs с `dmsquash-live`, сжатие zstd.
+3. `image-builder build generic-iso --bootc-ref <live-образ> --bootc-installer-payload-ref <payload>` по [`live/usr/lib/image-builder/bootc/iso.yaml`](live/usr/lib/image-builder/bootc/iso.yaml): метка тома `Kinolune-OS-Installer`, меню GRUB «Install Kinolune OS», «… (basic graphics)» (`nomodeset`), «… (copy to RAM …)» (`rd.live.ram=1`).
+4. Размер проверяется: ISO должен быть меньше 1.9 GiB (`MAX_ISO_BYTES`), иначе скрипт падает.
+
+Всё выполняется в привилегированном контейнере-помощнике Fedora 45 (podman + image-builder): хосту нужен только docker или rootful podman. Переменные — в шапке скрипта.
+
+**Что видит пользователь.** После загрузки на tty1 (и на последовательной консоли `ttyS0`, если она указана ядру) вместо приглашения входа запускается `alpha-live-installer`: выбор языка (English, Українська, Русский), затем меню:
+
+1. показать диски (`alpha-installer disks --all`);
+2. найти файл ответов на флешке — `kinolune-answers.json` или `answers.json` в корне любого раздела, кроме самого ISO; файл копируется в `/root/answers.json`;
+3. написать файл ответов из примера в редакторе `nano`;
+4. проверить файл: план установки, ничего не записывается (`--dry-run`);
+5. установить: `alpha-installer` покажет план и попросит ввести имя диска; после успеха — перезагрузка;
+6. командная строка (`exit` — назад в меню); 7 — перезагрузка; 8 — выключение.
+
+Это временный вход до полноэкранного установщика (TUI, DIST-006), который займёт тот же юнит `alpha-live-installer@.service`. На других консолях (Alt+F2…) — обычный вход root без пароля, `sshd` в live-системе выключен.
+
+**CI:** `.github/workflows/distro-iso.yml` — вручную, на `main` и на готовых PR с изменениями `distro/**`: сборка, размер, загрузка в QEMU/OVMF (`iso-boot.sh`). ISO как артефакт — для `main` и ручных запусков.
 
 ## Команда дисков
 

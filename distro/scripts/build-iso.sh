@@ -76,6 +76,11 @@ if [[ "$("${ENGINE}" inspect -f '{{.State.Running}}' "${ISO_HELPER_NAME}" 2>/dev
         mkdir -p /etc/containers/containers.conf.d
         printf "[containers]\ncgroups = \"disabled\"\npids_limit = 0\n[engine]\ncgroup_manager = \"cgroupfs\"\nevents_logger = \"file\"\n" \
             > /etc/containers/containers.conf.d/50-helper.conf
+        # Ubuntu hosts (24.04+, also GitHub runners) confine /usr/bin/bwrap by path with the
+        # AppArmor profile bwrap-userns-restrict, which drops every capability of its
+        # children: osbuild stages then cannot mount. A copy under another path is not
+        # matched; osbuild finds it first in PATH. The helper itself stays privileged.
+        install -m 0755 /usr/bin/bwrap /usr/local/bin/bwrap
         image-builder version | head -n 3'
 fi
 
