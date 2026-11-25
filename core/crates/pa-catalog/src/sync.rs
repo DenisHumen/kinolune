@@ -275,6 +275,14 @@ impl Catalog {
             .collect())
     }
 
+    /// Own changes no other device has acknowledged yet: the LAN outbox,
+    /// what waits on this device while the family is out of reach (UI-053).
+    pub fn outbox_len(&self) -> Result<u64, Error> {
+        let conn = self.lock();
+        let n: i64 = conn.query_row("SELECT count(*) FROM sync_outbox", [], |r| r.get(0))?;
+        Ok(n.unsigned_abs())
+    }
+
     /// Removes an op another device holds now. `false` if it was not queued.
     pub fn ack_op(&self, op_id: OpId) -> Result<bool, Error> {
         let conn = self.lock();
