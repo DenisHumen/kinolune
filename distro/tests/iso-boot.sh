@@ -6,7 +6,7 @@
 #   distro/tests/iso-boot.sh ISO [LOG]        # LOG: serial transcript (default next to ISO)
 #
 # Checks: the GRUB menu shows "Install Kinolune OS"; the live system boots to the
-# installer prompt; the menu lists the disks (the empty NVMe is offered, the ISO drive is
+# installer prompt (and owns tty1, not kmscon); the menu lists the disks (the empty NVMe is offered, the ISO drive is
 # excluded); in its shell the live system is Kinolune OS and the offline OS image
 # (payload) is in containers-storage; the installer passes a dry run on the NVMe.
 #
@@ -130,6 +130,7 @@ time.sleep(2)
 send("echo O\"\"SR=$(. /etc/os-release; echo \"$NAME|$VARIANT\"); "
      "echo PAY\"\"LOAD=$(podman images --format '{{.Repository}}:{{.Tag}}' | tr '\\n' ' '); "
      "echo DI\"\"SKS=$(alpha-installer disks --all | tr -s ' ' | tr '\\n' ' '); "
+     "echo TT\"\"Y1=$(systemctl is-active alpha-live-installer@tty1.service)/$(systemctl is-active kmsconvt@tty1.service); "
      "printf 'SMOKE-%s\\n' done\r")
 m = wait(r"OSR=(.*)\r?\n", 60, "os-release read in the live shell")
 osr = m.group(1)
@@ -137,8 +138,15 @@ m = wait(r"PAYLOAD=(.*)\r?\n", 120, "podman images listed")
 images = m.group(1)
 m = wait(r"DISKS=(.*)\r?\n", 120, "disks listed")
 disks = m.group(1)
+m = wait(r"TTY1=(\S*)", 30, "tty1 owner read")
+tty1 = m.group(1)
 wait(r"SMOKE-done", 30, "shell commands finished")
-errors = []
+# The monitor console: our installer owns tty1, kmscon (Fedora's VT login) must not.
+if tty1 != "active/inactive":
+    errors_tty1 = [f"tty1: installer/kmscon state is {tty1!r}, expected 'active/inactive'"]
+else:
+    errors_tty1 = []
+errors = errors_tty1
 if not osr.startswith("Kinolune OS|Installer"):
     errors.append(f"live system is not Kinolune OS Installer: {osr!r}")
 if payload not in images.split():

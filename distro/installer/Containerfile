@@ -72,7 +72,9 @@ RUN set -eux; \
     # Our installer owns tty1 (and the serial console when it is the kernel console);
     # no login prompts there. Other VTs keep getty: Alt+F2 gives a root shell for experts.
     systemctl enable alpha-live-installer@tty1.service alpha-live-installer@ttyS0.service; \
-    systemctl mask getty@tty1.service serial-getty@ttyS0.service; \
+    # Fedora 45 draws the VTs with kmscon (kmsconvt@ttyN), which takes over the screen of
+    # tty1 with its own login; the installer needs the plain kernel VT there.
+    systemctl mask getty@tty1.service serial-getty@ttyS0.service kmsconvt@tty1.service; \
     # Services of an installed bootc system that make no sense on a live ISO.
     systemctl mask bootloader-update.service bootc-generic-growpart.service \
         bootc-publish-rhsm-facts.service rpm-ostree-fix-shadow-mode.service \
