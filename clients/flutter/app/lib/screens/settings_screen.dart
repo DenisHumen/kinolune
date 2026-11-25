@@ -17,6 +17,7 @@ import 'package:pa_player/pa_player.dart'
 
 import '../review/review_inbox_screen.dart';
 import '../branding.dart';
+import '../build_info.dart';
 import '../diagnostics/diagnostics.dart';
 import '../diagnostics/diagnostics_section.dart';
 import '../diagnostics/health_screen.dart' show openHealthScreen;
@@ -55,6 +56,9 @@ import 'sources_screen.dart';
 import 'subtitle_settings_screen.dart';
 import 'track_settings_screen.dart';
 import 'twitch/twitch_archive_screens.dart';
+import 'twitch/twitch_play.dart' show showTwitchSignIn;
+import 'twitch/twitch_widgets.dart' show TwitchAccountAvatar;
+import '../twitch/twitch_service.dart' show TwitchService;
 
 /// One section of the page: what it is called and contains for the search,
 /// and whether it waits for «Показать расширенные настройки».
@@ -1415,6 +1419,8 @@ class _TwitchSection extends StatelessWidget {
       title: l.settingsTwitchTitle,
       subtitle: l.settingsTwitchSubtitle,
       children: [
+        // TWI-032: the account with its Twitch name and avatar.
+        const _TwitchAccountCard(),
         ValueListenableBuilder<bool>(
           valueListenable: services.showTwitch,
           builder: (context, show, _) => SettingsSwitchTile(
@@ -1477,6 +1483,88 @@ class _TwitchSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Settings → Twitch → account (TWI-032): avatar, name and login with
+/// "Update" and "Sign out", or "Sign in" when signed out.
+class _TwitchAccountCard extends StatelessWidget {
+  const _TwitchAccountCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final twitch = Services.of(context).twitch;
+    return ListenableBuilder(
+      listenable: twitch,
+      builder: (context, _) => _card(context, twitch),
+    );
+  }
+
+  Widget _card(BuildContext context, TwitchService twitch) {
+    final l = context.l10n;
+    final account = twitch.account;
+    if (account == null && !twitch.canSignIn) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final name = twitch.accountName;
+    return Padding(
+      key: const ValueKey('settings-twitch-account'),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          if (account != null)
+            TwitchAccountAvatar(
+              login: account.login,
+              name: name ?? account.login,
+              url: twitch.accountProfile?.avatarUrl,
+              size: 40,
+            )
+          else
+            const Icon(Icons.account_circle_outlined, size: 40),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  account == null
+                      ? l.settingsTwitchAccountSignedOut
+                      : name ?? account.login,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall,
+                ),
+                Text(
+                  account == null
+                      ? l.settingsTwitchAccountSignedOutHint
+                      : l.twitchSignedInAs(account.login),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          if (account != null) ...[
+            IconButton(
+              key: const ValueKey('settings-twitch-account-refresh'),
+              tooltip: l.twitchAccountRefresh,
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () => twitch.refreshAccount(force: true),
+            ),
+            TextButton(
+              key: const ValueKey('settings-twitch-sign-out'),
+              onPressed: twitch.signOut,
+              child: Text(l.settingsTwitchAccountSignOut),
+            ),
+          ] else
+            TextButton(
+              key: const ValueKey('settings-twitch-sign-in'),
+              onPressed: () => showTwitchSignIn(context),
+              child: Text(l.twitchSignIn),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -1635,7 +1723,7 @@ class _AboutSection extends StatelessWidget {
         SettingsTile(
           icon: Icons.info_outline,
           title: l.settingsAboutApp(kAppName),
-          subtitle: l.settingsAboutSubtitle(kAppVersion),
+          subtitle: l.settingsAboutSubtitle(kBuildVersion),
           onTap: () => _push(context, const AboutScreen()),
         ),
         // UI-004: the first-run setup, again.

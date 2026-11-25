@@ -50,6 +50,7 @@ import '../profiles/profile_avatar.dart';
 import '../profiles/profile_locks.dart';
 import '../theme/kinolune_theme.dart';
 import '../widgets/focusable.dart';
+import '../widgets/hidden_semantics.dart';
 import '../widgets/logo.dart';
 import '../widgets/scan_status.dart';
 import 'breakpoints.dart';
@@ -479,7 +480,14 @@ class AppShellState extends State<AppShell> {
       index: _section.index,
       children: [
         for (final s in Section.values)
-          SectionActive(active: s == _section, child: _sectionNavigator(s)),
+          SectionActive(
+            active: s == _section,
+            // BUG-015: an inactive section is out of the semantics tree.
+            child: HiddenSemantics(
+              hidden: s != _section,
+              child: _sectionNavigator(s),
+            ),
+          ),
       ],
     );
     // UI-021: the pages get their own semantics container. A route's modal
@@ -522,7 +530,12 @@ class AppShellState extends State<AppShell> {
           },
           // LIB-027: files and folders dragged onto the window go to the
           // library (desktop only; elsewhere it is just the body).
-          child: LibraryDropZone(onOpenDownloads: openDownloads, child: body),
+          child: LibraryDropZone(
+            onOpenDownloads: openDownloads,
+            // BUG-015: under the fullscreen player the shell is out of the
+            // semantics tree (its route is offstage, tickers off).
+            child: HiddenSemantics(hidden: false, child: body),
+          ),
         ),
       ),
     );

@@ -878,8 +878,25 @@ class RustLibrary
                 },
               ),
           ],
+          // UI-056: summed by the core in one query.
+          runtime: ShowRuntime(
+            show: _runtimeTotal(s.runtime.show_),
+            seasons: {
+              for (final r in s.runtime.seasons)
+                r.season: _runtimeTotal(r.total),
+            },
+          ),
         );
       });
+
+  static RuntimeTotal _runtimeTotal(CoreRuntimeTotal t) => RuntimeTotal(
+    episodes: t.episodes,
+    watched: t.watched,
+    totalMs: t.totalMs,
+    remainingMs: t.remainingMs,
+    estimated: t.estimated,
+    remainingEstimated: t.remainingEstimated,
+  );
 
   @override
   Future<void> setEpisodeOrder(String showId, EpisodeOrder order) async {

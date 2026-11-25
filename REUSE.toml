@@ -48,6 +48,8 @@ path = [
   ".config/xcode-version",
   ".config/mise.toml",
   "**/.metadata",
+  # release-please (REPO-010) writes the component version here.
+  "**/version.txt",
 ]
 precedence = "closest"
 SPDX-FileCopyrightText = "project_alpha contributors"

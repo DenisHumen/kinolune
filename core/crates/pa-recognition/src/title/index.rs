@@ -104,6 +104,19 @@ pub struct Candidate {
     pub title: usize,
     /// How that title matched.
     pub tier: MatchTier,
+    /// Similarity of the titles alone in `[0, 1]`: the tier score with the
+    /// season and part qualifiers, before the year, media and anime
+    /// adjustments that make up the rest of `score` (META-036).
+    #[serde(default)]
+    pub similarity: f32,
+    /// What the year added to `score`: +0.04 the same year, +0.02 one year
+    /// apart, −0.08 further apart, 0 without both years (META-036).
+    #[serde(default)]
+    pub year_adjust: f32,
+    /// What the media and anime hints added to `score` (movie against
+    /// series, ±0.02; anime +0.01; META-036).
+    #[serde(default)]
+    pub kind_adjust: f32,
 }
 
 /// What to look for.
@@ -395,8 +408,8 @@ impl TitleIndex {
         let max_token_df = (n / 50).max(2_000);
         let max_trigram_df = (n / 20).max(5_000);
 
-        // Best (score, title, tier) per record.
-        let mut best: HashMap<u32, (f32, u16, MatchTier)> = HashMap::new();
+        // Best (score, title, tier, similarity) per record.
+        let mut best: HashMap<u32, (f32, u16, MatchTier, f32)> = HashMap::new();
         for (text, weight) in &query.titles {
             let key = TitleKey::new(text);
             if key.plain.is_empty() {
@@ -458,16 +471,16 @@ impl TitleIndex {
 
             for eid in pool {
                 let entry = &self.entries[eid as usize];
-                let (score, tier) = self.title_score(&q, entry, query.season);
-                let score = score * (0.9 + 0.1 * q.weight);
+                let (similarity, tier) = self.title_score(&q, entry, query.season);
+                let score = similarity * (0.9 + 0.1 * q.weight);
                 if score <= 0.0 {
                     continue;
                 }
                 let slot = best
                     .entry(entry.record)
-                    .or_insert((f32::MIN, entry.title, tier));
+                    .or_insert((f32::MIN, entry.title, tier, 0.0));
                 if score > slot.0 || (score == slot.0 && entry.title < slot.1) {
-                    *slot = (score, entry.title, tier);
+                    *slot = (score, entry.title, tier, similarity.clamp(0.0, 1.0));
                 }
             }
         }
@@ -480,9 +493,10 @@ impl TitleIndex {
         });
         let mut out: Vec<Candidate> = best
             .into_iter()
-            .map(|(rid, (score, title, tier))| {
+            .map(|(rid, (score, title, tier, similarity))| {
                 let record = &self.records[rid as usize];
-                let mut score = (score + record_boost(query, query_year, record)).clamp(0.0, 1.0);
+                let (year_adjust, kind_adjust) = record_boost(query, query_year, record);
+                let mut score = (score + year_adjust + kind_adjust).clamp(0.0, 1.0);
                 // The head alone says less than the whole title: only the
                 // same year makes it the work (BUG-011).
                 if tier == MatchTier::Head && (query_year.is_none() || query_year != record.year) {
@@ -493,6 +507,9 @@ impl TitleIndex {
                     score,
                     title: usize::from(title),
                     tier,
+                    similarity,
+                    year_adjust,
+                    kind_adjust,
                 }
             })
             .collect();
@@ -576,9 +593,9 @@ pub const HEAD: f32 = 0.90;
 /// shown as a suggestion, never decided alone (BUG-011).
 pub const HEAD_CAP: f32 = 0.85;
 
-/// Year, media and anime adjustments of a record's score.
-fn record_boost(query: &TitleQuery, year: Option<u16>, record: &TitleRecord) -> f32 {
-    let mut boost = match (year, record.year) {
+/// Year, and media and anime adjustments of a record's score.
+fn record_boost(query: &TitleQuery, year: Option<u16>, record: &TitleRecord) -> (f32, f32) {
+    let year = match (year, record.year) {
         (Some(a), Some(b)) => match a.abs_diff(b) {
             0 => 0.04,
             1 => 0.02,
@@ -586,15 +603,15 @@ fn record_boost(query: &TitleQuery, year: Option<u16>, record: &TitleRecord) -> 
         },
         _ => 0.0,
     };
-    boost += match (query.media, record.kind) {
+    let mut kind = match (query.media, record.kind) {
         (MediaHint::Movie, WorkKind::Movie) | (MediaHint::Episode, WorkKind::Series) => 0.02,
         (MediaHint::Movie, WorkKind::Series) | (MediaHint::Episode, WorkKind::Movie) => -0.02,
         _ => 0.0,
     };
     if query.anime_hint && record.anime {
-        boost += 0.01;
+        kind += 0.01;
     }
-    boost
+    (year, kind)
 }
 
 #[cfg(test)]

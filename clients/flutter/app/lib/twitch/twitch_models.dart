@@ -299,6 +299,52 @@ class TwitchAccount {
   final String login;
 }
 
+/// The signed-in user's own Twitch profile (TWI-032): name and avatar from
+/// `GET /helix/users`, kept on this device and fetched again at most once a
+/// day (the TWI-007 cache rule), after sign-in and when asked to.
+class TwitchAccountProfile {
+  const TwitchAccountProfile({
+    required this.userId,
+    required this.login,
+    required this.displayName,
+    required this.fetchedAt,
+    this.avatarUrl,
+  });
+
+  final String userId;
+  final String login;
+  final String displayName;
+
+  /// `profile_image_url`; the picture itself sits in the image cache.
+  final String? avatarUrl;
+  final DateTime fetchedAt;
+
+  Map<String, Object?> toJson() => {
+    'user_id': userId,
+    'login': login,
+    'display_name': displayName,
+    'avatar_url': ?avatarUrl,
+    'fetched_at': fetchedAt.millisecondsSinceEpoch,
+  };
+
+  static TwitchAccountProfile? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final id = json['user_id'], login = json['login'];
+    final name = json['display_name'], at = json['fetched_at'];
+    if (id is! String || login is! String || name is! String || at is! int) {
+      return null;
+    }
+    final url = json['avatar_url'];
+    return TwitchAccountProfile(
+      userId: id,
+      login: login,
+      displayName: name,
+      avatarUrl: url is String && url.isNotEmpty ? url : null,
+      fetchedAt: DateTime.fromMillisecondsSinceEpoch(at),
+    );
+  }
+}
+
 /// A pending Device Code Flow sign-in.
 class TwitchDeviceLogin {
   const TwitchDeviceLogin({
