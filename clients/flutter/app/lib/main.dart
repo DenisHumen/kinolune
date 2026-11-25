@@ -58,6 +58,7 @@ import 'sync/device_info.dart';
 import 'sync/device_sync.dart';
 import 'sync/sync_pace.dart';
 import 'trakt/trakt_link.dart';
+import 'twitch/core_chat_replay.dart';
 import 'twitch/core_live_source.dart';
 import 'twitch/core_twitch_backend.dart';
 import 'twitch/core_twitch_native.dart';
@@ -107,6 +108,8 @@ Future<void> main(List<String> args) async {
   OfflineController? offline;
   var secretStorage = const SecretStorageInfo.unknown();
   TwitchNativeSource? twitchNativeSource;
+  // TWI-016: the VOD chat replay of the native player (full builds).
+  TwitchReplayFactory? twitchReplay;
   if (AppConfig.demo) {
     library = FakeLibrary.demo();
     sourceManager = FakeSourceManager(library);
@@ -250,11 +253,12 @@ Future<void> main(List<String> args) async {
       // the signed remote config allows it (the player: TWI-014).
       if (AppFlavor.twitchNative &&
           twitchLabOrigin(AppConfig.twitchLab) == null) {
-        final (source, killed) = _twitchNativeSource(
+        final (source, killed, config) = _twitchNativeSource(
           dir.path,
           (await runningVersion()).text,
         );
         twitchNativeSource = source;
+        if (config != null) twitchReplay = coreTwitchReplay(config);
         twitchNative = source != null;
         twitchNativeKilled = killed;
       }
@@ -410,7 +414,11 @@ Future<void> main(List<String> args) async {
   // TWI-014: the native player; `decideTwitchRoute` still picks it only in
   // a full build whose config allows it.
   if (twitchNativeSource != null) {
-    registerTwitchNativePlayer(services.twitch, twitchNativeSource);
+    registerTwitchNativePlayer(
+      services.twitch,
+      twitchNativeSource,
+      replay: twitchReplay,
+    );
     // TWI-022: the multiview's native tiles use the same source.
     registerTwitchMultiview(services.twitch, twitchNativeSource);
   }
@@ -547,7 +555,7 @@ Future<CoreTwitchDownloadsSource?> _twitchDownloads(
 /// built-in copy; no network. TWI-030: also whether a kill-switch (by
 /// [appVersion] — the real build version, not [kAppVersion] — and
 /// platform) sends this app back to the embed.
-(TwitchNativeSource?, bool) _twitchNativeSource(
+(TwitchNativeSource?, bool, core.CoreRemoteConfig?) _twitchNativeSource(
   String dataDir,
   String appVersion,
 ) {
@@ -560,9 +568,9 @@ Future<CoreTwitchDownloadsSource?> _twitchDownloads(
     final killed =
         config.isKilled(feature: 'twitch.gql_playback') ||
         config.isKilled(feature: 'twitch.native_player');
-    return (CoreTwitchNativeSource.open(config), killed);
+    return (CoreTwitchNativeSource.open(config), killed, config);
   } catch (e) {
     debugPrint('Remote config unavailable: $e');
-    return (null, false);
+    return (null, false, null);
   }
 }

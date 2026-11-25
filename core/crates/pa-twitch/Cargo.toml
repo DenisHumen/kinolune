@@ -2,7 +2,7 @@
 [package]
 name = "pa-twitch"
 version = "0.1.0"
-description = "Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008)"
+description = "Twitch Helix API client (TWI-001), Device Code Flow sign-in (TWI-002) and playback decision with native GQL/usher HLS in full builds (TWI-004) plus low-latency live with ads as is (TWI-006); VOD chapters and categories (TWI-008); VOD chat replay in full builds (TWI-016)"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -26,6 +26,8 @@ library = ["dep:pa-library", "dep:pa-model"]
 # `cargo test -p pa-twitch --features pa-flavor/full`.
 
 [dependencies]
+# TWI-016: `.chat.json.gz` files of downloaded VODs (full builds).
+flate2.workspace = true
 pa-flavor = { path = "../pa-flavor" }
 pa-library = { path = "../pa-library", optional = true }
 pa-model = { path = "../pa-model", optional = true }

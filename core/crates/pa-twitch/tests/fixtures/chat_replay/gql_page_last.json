@@ -1,0 +1,115 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "data": {
+      "video": {
+        "id": "1000000001",
+        "creator": {
+          "id": "7001",
+          "channel": {
+            "id": "7001"
+          }
+        },
+        "comments": {
+          "edges": [
+            {
+              "cursor": "Y3Vyc29yLTA5",
+              "node": {
+                "id": "c-0009",
+                "commenter": {
+                  "id": "9003",
+                  "login": "fake_mod",
+                  "displayName": "Fake_Mod"
+                },
+                "contentOffsetSeconds": 6,
+                "createdAt": "2026-11-20T18:00:06.100Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": null,
+                      "text": "be nice"
+                    }
+                  ],
+                  "userBadges": [
+                    {
+                      "id": "bW9kZXJhdG9yOzE=",
+                      "setID": "moderator",
+                      "version": "1"
+                    }
+                  ],
+                  "userColor": "#00FF7F"
+                }
+              }
+            },
+            {
+              "cursor": "Y3Vyc29yLTEw",
+              "node": {
+                "id": "c-0010",
+                "commenter": {
+                  "id": "9001",
+                  "login": "fake_viewer_one",
+                  "displayName": "Fake_Viewer_One"
+                },
+                "contentOffsetSeconds": 8,
+                "createdAt": "2026-11-20T18:00:08.400Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": {
+                        "id": "emotesv2_0000000000000000000000000000beef;0;6",
+                        "emoteID": "emotesv2_0000000000000000000000000000beef",
+                        "from": 0
+                      },
+                      "text": "fakeHi"
+                    },
+                    {
+                      "emote": null,
+                      "text": " catJAM"
+                    }
+                  ],
+                  "userBadges": [
+                    {
+                      "id": "c3Vic2NyaWJlcjsxMg==",
+                      "setID": "subscriber",
+                      "version": "12"
+                    },
+                    {
+                      "id": "Yml0czsxMDA=",
+                      "setID": "bits",
+                      "version": "100"
+                    }
+                  ],
+                  "userColor": "#1E90FF"
+                }
+              }
+            },
+            {
+              "cursor": null,
+              "node": {
+                "id": "c-0011",
+                "commenter": null,
+                "contentOffsetSeconds": 10,
+                "createdAt": "2026-11-20T18:00:10.000Z",
+                "message": {
+                  "fragments": [
+                    {
+                      "emote": null,
+                      "text": "a deleted account wrote this"
+                    }
+                  ],
+                  "userBadges": [],
+                  "userColor": null
+                }
+              }
+            }
+          ],
+          "pageInfo": {
+            "hasNextPage": false,
+            "hasPreviousPage": true
+          }
+        }
+      }
+    }
+  }
+}

@@ -359,3 +359,45 @@ async fn real_vod_chapters() {
         offline.requests().len()
     );
 }
+
+/// TWI-016: the chat of a public VOD by offset around 1:00 and the page
+/// after it. Needs `PA_TWITCH_HASH_COMMENTS` (`VideoCommentsByOffsetOrCursor`).
+/// Prints counts only, never message texts or user names.
+#[tokio::test]
+#[ignore = "real Twitch; PA_TWITCH_LIVE_TEST=1 and env values"]
+async fn real_twitch_chat_replay() {
+    use pa_twitch::chat_replay::{COMMENTS_OPERATION, ChatReplayGql, OnlineReplay};
+    if !enabled() {
+        return;
+    }
+    let mut queries = serde_json::Map::new();
+    queries.insert(
+        COMMENTS_OPERATION.into(),
+        env("PA_TWITCH_HASH_COMMENTS").into(),
+    );
+    let json = serde_json::json!({
+        "schema": 1,
+        "serial": 1,
+        "flags": { "twitch.gql_playback": true, "twitch.chat_replay": true },
+        "kill_switches": [],
+        "twitch": {
+            "gql_client_id": env("PA_TWITCH_GQL_CLIENT_ID"),
+            "persisted_queries": queries,
+            "player": "native",
+        },
+    });
+    let config = RemoteConfig::parse(json.to_string().as_bytes()).unwrap();
+    let gql = ChatReplayGql::resolve_for(&config, &ctx(), Flavor::Full);
+    let replay = OnlineReplay::new(&gql, &env("PA_TWITCH_VOD_ID"), transport()).unwrap();
+    let first = replay.ensure(60_000).await.unwrap();
+    let ahead = replay
+        .ensure(first.to_ms.unwrap_or(60_000) + 1)
+        .await
+        .unwrap();
+    let stats = replay.stats();
+    eprintln!(
+        "chat replay: {first:?} then {ahead:?}; {} pages, {} comments, {} deleted",
+        stats.pages, stats.comments, stats.deleted
+    );
+    assert!(stats.pages >= 1);
+}

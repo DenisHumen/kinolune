@@ -98,23 +98,7 @@ class CoreChatFeed implements ChatFeed {
   List<String> setFilters(ChatSettings settings) {
     final own = ownLogin;
     _chat.setThirdPartyEmotes(enabled: settings.thirdPartyEmotes);
-    return _chat.setFilters(
-      filters: CoreChatFilters(
-        blocked: settings.blocked,
-        words: [
-          for (final w in settings.words)
-            CoreChatWordRule(
-              pattern: w.pattern,
-              regex: w.regex,
-              hideMessage: w.hide,
-            ),
-        ],
-        ownLogin: settings.highlightOwnName ? own : null,
-        highlightKeywords: settings.highlightKeywords,
-        hideBots: settings.hideBots,
-        extraBots: settings.extraBots,
-      ),
-    );
+    return _chat.setFilters(filters: coreChatFilters(settings, own));
   }
 
   @override
@@ -128,11 +112,29 @@ class CoreChatFeed implements ChatFeed {
   }
 }
 
+/// The viewer settings as the core's filters (also the VOD replay).
+CoreChatFilters coreChatFilters(ChatSettings settings, String? ownLogin) =>
+    CoreChatFilters(
+      blocked: settings.blocked,
+      words: [
+        for (final w in settings.words)
+          CoreChatWordRule(
+            pattern: w.pattern,
+            regex: w.regex,
+            hideMessage: w.hide,
+          ),
+      ],
+      ownLogin: settings.highlightOwnName ? ownLogin : null,
+      highlightKeywords: settings.highlightKeywords,
+      hideBots: settings.hideBots,
+      extraBots: settings.extraBots,
+    );
+
 ChatUpdate? _convert(CoreChatEvent e) {
   switch (e.kind) {
     case CoreChatEventKind.message:
       final m = e.message;
-      return m == null ? null : LineAdded(_line(m));
+      return m == null ? null : LineAdded(coreChatLine(m));
     case CoreChatEventKind.deleted:
       final id = e.targetId;
       return id == null ? null : LineDeleted(id);
@@ -182,7 +184,8 @@ ChatUpdate? _convert(CoreChatEvent e) {
   }
 }
 
-ChatLine _line(CoreChatMessage m) => ChatLine(
+/// A rendered message of the core as a line of the view.
+ChatLine coreChatLine(CoreChatMessage m) => ChatLine(
   id: m.id,
   userId: m.userId,
   login: m.login,

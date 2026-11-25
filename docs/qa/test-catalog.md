@@ -924,8 +924,14 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 | TWI-129 | Четыре эфира 720p на компьютере 30 мин: звук и картинка каждого не расходятся, все у края эфира, кадры не теряются (только full) | — | ⬜ | — | — | — | ⬜ | ⬜ | ⬜ |
 | TWI-135 | Эфир и VOD во встроенном плеере Twitch на macOS (`twitch-embed`) → плеер Twitch под шапкой с «Назад», а не серое окно на всё приложение (BUG-026) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | TWI-136 | Экран Twitch (нативный плеер, встроенный плеер, мультипросмотр) упал при построении → «На этом экране что-то пошло не так» (`screen-error`) вместо серого окна; «Повторить» (`screen-error-retry`) строит экран заново, «Назад» (`screen-error-back`) закрывает его; ошибка пишется в журнал (BUG-026) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-140 | VOD в нативном плеере (только full, конфиг включает чат записи): справа от видео «Чат записи» (`twitch-replay-chat`) с сообщениями до текущей позиции видео; бейджи, эмоуты Twitch и 7TV/BTTV/FFZ как в живом чате; поля ввода нет | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
+| TWI-141 | Перемотка VOD назад и вперёд → чат перерисовывается и показывает последние сообщения до новой позиции, ничего «из будущего»; пауза → чат стоит; скорость 2× → чат идёт вдвое быстрее | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
+| TWI-142 | Задержка чата: «Показывать чат раньше / позже» (`twitch-replay-sooner`, `twitch-replay-later`) → ±1 с за нажатие, до ±30 с, подпись «Чат позже на N с» / «Чат раньше на N с»; «Вернуть чат к видео» (`twitch-replay-sync`) → «Совпадает с видео» | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
+| TWI-143 | Ширина чата на компьютере: потянуть полоску между видео и чатом (`twitch-chat-resize`) → ширина меняется и запоминается для следующего открытия (live и VOD); «Режим «театр»» → чат поверх видео; «Скрыть чат» → только видео | — | — | — | — | — | 🤖 | 🤖 | 🤖 |
+| TWI-144 | Twitch не отдал чат (нет сети, отказ GQL, VOD удалён) → вместо чата «Чат записи недоступен» (`twitch-replay-unavailable`), видео играет дальше; флаг конфига выключен или store-сборка → панели и кнопки чата у VOD нет | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
+| TWI-145 | Скачанный VOD (TWI-017): рядом с файлом сохраняется файл чата .chat.json.gz (формат TwitchDownloader); чат-файл TwitchDownloader рядом с видео читается без сети | ⬜ | ⬜ | — | — | — | ⬜ | ⬜ | ⬜ |
 
-Автотесты: TWI-42, TWI-43, TWI-44, TWI-45, TWI-116, TWI-117 — `test/twitch_embed_test.dart` (desktop); TWI-46…TWI-54, TWI-56, TWI-57 — `test/twitch_player_test.dart` (desktop); TWI-110, TWI-111, TWI-113 — `test/twitch_skip_chatting_test.dart` (desktop); TWI-112 — `test/twitch_skip_chatting_test.dart` (desktop, tv). TWI-135, TWI-136 — `test/twitch_gray_screen_test.dart` (desktop).
+Автотесты: TWI-42, TWI-43, TWI-44, TWI-45, TWI-116, TWI-117 — `test/twitch_embed_test.dart` (desktop); TWI-46…TWI-54, TWI-56, TWI-57 — `test/twitch_player_test.dart` (desktop); TWI-110, TWI-111, TWI-113 — `test/twitch_skip_chatting_test.dart` (desktop); TWI-140…TWI-144 — `test/twitch_chat_replay_test.dart` (desktop); TWI-112 — `test/twitch_skip_chatting_test.dart` (desktop, tv). TWI-135, TWI-136 — `test/twitch_gray_screen_test.dart` (desktop).
 
 ### Чат
 

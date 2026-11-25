@@ -41,6 +41,10 @@
 //!   GQL `moments` only behind the `twitch.chapters_gql` flag (full builds)
 //!   and falls back to the current category marked "≈"; the `library`
 //!   feature stores the result in `pa-library` (TWI-007).
+//! - **VOD chat replay** (TWI-016, full builds only): `chat_replay`
+//!   reads GQL `VideoCommentsByOffsetOrCursor` behind the
+//!   `twitch.chat_replay` flag and TwitchDownloader chat files, and finds
+//!   the comments of a playhead position by binary search.
 //!
 //! # Policy (ADR-0011 §5, docs/legal/providers.md §2.4)
 //!
@@ -57,6 +61,8 @@ mod auth;
 mod cache;
 pub mod chapters;
 mod chat_api;
+#[cfg(pa_twitch_native)]
+pub mod chat_replay;
 mod client;
 mod error;
 mod model;

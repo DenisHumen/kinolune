@@ -497,6 +497,7 @@ mod imp {
     use pa_library::twitch::{self as lib, AssetKind, RecordRule};
     use pa_storage::{StorageManager, Target, TargetKind};
     use pa_twitch::chapters::{Chapter, ChapterGame, ChapterSource};
+    use pa_twitch::chat_replay::{ChatReplayError, ChatReplayGql, OnlineReplay};
     use pa_twitch::playback::TwitchFeatures;
     use pa_twitch_archive::import::FoundKind;
     use pa_twitch_archive::library::{self as alib, UserLookup};
@@ -542,6 +543,46 @@ mod imp {
         source: Arc<TwitchSource>,
         auto: AutoRecord,
         naming: Mutex<Naming>,
+    }
+
+    /// Pages a downloaded VOD's chat may take (a long, busy VOD has a few
+    /// thousand).
+    const MAX_CHAT_PAGES: usize = 20_000;
+
+    /// The whole chat of `video` in TwitchDownloader JSON (TWI-016), so the
+    /// saved VOD replays its chat without network. Its own thread: the
+    /// download job may run inside a runtime already.
+    fn download_chat(
+        gql: &ChatReplayGql,
+        video: &pa_twitch::Video,
+    ) -> Result<Option<Vec<u8>>, pa_twitch_archive::ArchiveError> {
+        use pa_twitch_archive::ArchiveError;
+        if !gql.is_on() {
+            return Ok(None);
+        }
+        let (gql, video) = (gql.clone(), video.clone());
+        let fetch = move || -> Result<Vec<u8>, ArchiveError> {
+            let fail = |e: ChatReplayError| ArchiveError::fatal(e.code(), e.to_string());
+            let transport = pa_twitch::ReqwestTransport::new(Duration::from_secs(30))
+                .map_err(|e| ArchiveError::fatal("io", e.0))?;
+            let replay = OnlineReplay::new(&gql, &video.id, Arc::new(transport)).map_err(fail)?;
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| ArchiveError::fatal("io", e.to_string()))?;
+            rt.block_on(replay.fetch_all(0, None, MAX_CHAT_PAGES))
+                .map_err(fail)?;
+            Ok(replay
+                .to_file(&video.user_login, Some(&video.title))
+                .to_json())
+        };
+        std::thread::Builder::new()
+            .name("twitch-vod-chat".into())
+            .spawn(fetch)
+            .map_err(|e| ArchiveError::fatal("io", e.to_string()))?
+            .join()
+            .map_err(|_| ArchiveError::fatal("io", "chat download panicked"))?
+            .map(Some)
     }
 
     /// Chapters stored for a VOD (TWI-008) in the library at `db`.
@@ -617,10 +658,14 @@ mod imp {
             let transport = pa_twitch::ReqwestTransport::new(Duration::from_secs(30))
                 .map_err(|e| CoreDownloadError::new("io", e.0))?;
             let db_for_chapters = db.clone();
+            // TWI-016: the chat of the VOD as `.chat.json.gz` beside it,
+            // when the config allows the chat replay.
+            let chat = ChatReplayGql::resolve(&cfg, &ctx);
             let source = Arc::new(
                 TwitchSource::new(features, helix, Arc::new(transport))
                     .map_err(|e| CoreDownloadError::new("io", e))?
-                    .with_chapters(Box::new(move |v| stored_chapters(&db_for_chapters, v))),
+                    .with_chapters(Box::new(move |v| stored_chapters(&db_for_chapters, v)))
+                    .with_chat_replay(Box::new(move |v| download_chat(&chat, v))),
             );
             pa_twitch_archive::ArchiveSource::check_allowed(source.as_ref())
                 .map_err(|e| CoreDownloadError::new(e.code, e.message))?;

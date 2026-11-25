@@ -27,6 +27,10 @@ pa_twitch::playback::live
 9pa_twitch8playback6native
 9pa_twitch8playback4live
 
+# VOD chat replay through GQL and TwitchDownloader files (TWI-016).
+pa_twitch::chat_replay
+9pa_twitch11chat_replay
+
 # Twitch archive: VOD downloads and live recording (TWI-017, TWI-018). The
 # module path is reserved for that code.
 pa_twitch::archive
