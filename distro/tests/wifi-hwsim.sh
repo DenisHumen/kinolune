@@ -20,7 +20,7 @@
 #
 # Needs: NetworkManager with the Wi-Fi plugin, hostapd, dnsmasq, iw,
 # python3, the mac80211_hwsim module (Fedora: kernel-modules-internal).
-set -euo pipefail
+set -Eeuo pipefail
 
 PROBE="$(readlink -f "${1:?nm_probe binary required}")"
 RULE="${2:-}"
@@ -35,7 +35,14 @@ ok() { printf '  \033[1;32mok\033[0m %s\n' "$*" >&2; }
 bad() { printf '  \033[1;31mFAIL\033[0m %s\n' "$*" >&2; fail=1; }
 
 [[ $(id -u) == 0 ]] || { echo "run as root (in a VM)" >&2; exit 1; }
-trap 'echo "wifi-hwsim.sh: failed at line ${LINENO}: ${BASH_COMMAND}" >&2' ERR
+on_err() {
+    echo "wifi-hwsim.sh: failed at line $1: $2" >&2
+    for f in "${RUN:-/nonexistent}"/*.log; do
+        [[ -f "$f" ]] && { echo "--- $f" >&2; tail -20 "$f" >&2; }
+    done
+    journalctl -u NetworkManager --no-pager -n 30 >&2 2>/dev/null || true
+}
+trap 'on_err ${LINENO} "${BASH_COMMAND}"' ERR
 
 cleanup() {
     pkill -F "${RUN}/hostapd-wpa.pid" 2>/dev/null || true
@@ -76,6 +83,9 @@ cat > /etc/NetworkManager/conf.d/90-kinolune-hwsim.conf <<EOF
 unmanaged-devices=interface-name:${AP_WPA};interface-name:${AP_OPEN}
 EOF
 systemctl reload NetworkManager || systemctl restart NetworkManager
+# The reload is asynchronous: make sure NetworkManager lets go of the AP radios.
+for i in "${AP_WPA}" "${AP_OPEN}"; do nmcli dev set "$i" managed no >/dev/null 2>&1 || true; done
+sleep 2
 
 start_ap() { # IFACE SSID NET PASS(optional)
     local iface="$1" ssid="$2" net="$3" pass="${4:-}" name="$5"
@@ -95,10 +105,12 @@ start_ap() { # IFACE SSID NET PASS(optional)
             echo "wpa_passphrase=${pass}"
         fi
     } > "${RUN}/hostapd-${name}.conf"
-    hostapd -B -P "${RUN}/hostapd-${name}.pid" "${RUN}/hostapd-${name}.conf" >/dev/null
+    hostapd -B -P "${RUN}/hostapd-${name}.pid" -f "${RUN}/hostapd-${name}.log" \
+        "${RUN}/hostapd-${name}.conf"
     dnsmasq --interface="${iface}" --bind-interfaces --except-interface=lo \
         --dhcp-range="${net}.10,${net}.50,1h" --port=0 \
-        --pid-file="${RUN}/dnsmasq-${name}.pid" --dhcp-leasefile="${RUN}/leases-${name}"
+        --pid-file="${RUN}/dnsmasq-${name}.pid" --dhcp-leasefile="${RUN}/leases-${name}" \
+        --log-facility="${RUN}/dnsmasq-${name}.log"
 }
 
 log "Access points: ${WPA_SSID} (WPA2) on ${AP_WPA}, ${OPEN_SSID} (open) on ${AP_OPEN}"
