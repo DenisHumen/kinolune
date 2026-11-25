@@ -74,9 +74,9 @@ T[ru.which]="Найдено несколько файлов, введите но
 T[en.busy]="An installation is already running on another console."
 T[uk.busy]="Встановлення вже йде на іншій консолі."
 T[ru.busy]="Установка уже идёт на другой консоли."
-T[en.done]="Kinolune OS is installed. Remove the USB stick and press Enter to reboot."
-T[uk.done]="Kinolune OS встановлено. Вийміть флешку й натисніть Enter для перезавантаження."
-T[ru.done]="Kinolune OS установлена. Извлеките флешку и нажмите Enter для перезагрузки."
+T[en.finished]="Kinolune OS is installed. Remove the USB stick and press Enter to reboot."
+T[uk.finished]="Kinolune OS встановлено. Вийміть флешку й натисніть Enter для перезавантаження."
+T[ru.finished]="Kinolune OS установлена. Извлеките флешку и нажмите Enter для перезагрузки."
 T[en.failed]="The installation did not finish, see the messages above. The disk may be partly written."
 T[uk.failed]="Встановлення не завершилося, див. повідомлення вище. Диск міг бути частково записаний."
 T[ru.failed]="Установка не завершилась, см. сообщения выше. Диск мог быть частично записан."
@@ -84,6 +84,7 @@ T[en.payload]="Warning: the OS image is missing from this ISO, offline installat
 T[uk.payload]="Увага: образу ОС немає на цьому ISO, офлайн-встановлення неможливе."
 T[ru.payload]="Внимание: образа ОС нет на этом ISO, офлайн-установка невозможна."
 
+say() { t "$1"; echo; }
 pause() { printf '\n%s ' "$(t enter)"; read -r _ || true; }
 
 choose_language() {
@@ -121,7 +122,7 @@ find_answers() {
         done
     done < <(lsblk -rpno NAME,FSTYPE)
     if (( ${#found[@]} == 0 )); then
-        echo "$(t notfound)"
+        say notfound
     else
         local pick=0 i
         if (( ${#found[@]} > 1 )); then
@@ -141,29 +142,29 @@ find_answers() {
 
 need_answers() {
     [[ -s "${ANSWERS}" ]] && return 0
-    echo "$(t nofile)"
+    say nofile
     return 1
 }
 
 do_install() {
     need_answers || return 0
     exec 9> "${LOCK}"
-    if ! flock -n 9; then echo "$(t busy)"; return 0; fi
+    if ! flock -n 9; then say busy; return 0; fi
     # alpha-installer shows the plan and asks to type the disk name before wiping it.
     if alpha-installer install --answers "${ANSWERS}"; then
-        printf '\n%s ' "$(t done)"
+        printf '\n%s ' "$(t finished)"
         read -r _ || true
         systemctl reboot
     else
         echo
-        echo "$(t failed)"
+        say failed
     fi
     exec 9>&-
 }
 
 payload_check() {
     # The offline OS image (--bootc-installer-payload-ref) lives in containers-storage.
-    [[ -n "$(podman images -q 2>/dev/null)" ]] || echo "$(t payload)"
+    [[ -n "$(podman images -q 2>/dev/null)" ]] || say payload
 }
 
 choose_language
