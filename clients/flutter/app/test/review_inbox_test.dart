@@ -251,10 +251,7 @@ void main() {
         'Why: title matches by 100% · year differs by 2 (−8%)',
       );
       final uk = lookupAppLocalizations(const Locale('uk'));
-      expect(
-        reviewWhy(uk, split),
-        contains(uk.reviewWhyYearOff(2, '−8')),
-      );
+      expect(reviewWhy(uk, split), contains(uk.reviewWhyYearOff(2, '−8')));
       // The remake penalty and another type are their own parts.
       const remake = MatchSignals(
         title: 0.752,
@@ -276,10 +273,10 @@ void main() {
         'Почему: название совпало на 75 % · '
         '${ru.reviewWhyYearDiffers(1959, 1957)}',
       );
-      expect(
-        reviewSignals(ru, split).map((x) => (x.text, x.good)),
-        [(ru.reviewWhyTitle(100), true), (ru.reviewWhyYearOff(2, '−8'), false)],
-      );
+      expect(reviewSignals(ru, split).map((x) => (x.text, x.good)), [
+        (ru.reviewWhyTitle(100), true),
+        (ru.reviewWhyYearOff(2, '−8'), false),
+      ]);
     });
 
     testWidgets('the inbox row says 100 %, not 75 %', (t) async {
