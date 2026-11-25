@@ -30607,6 +30607,26 @@ impl SseDecode for crate::api::review::CoreReviewItem {
     }
 }
 
+impl SseDecode for crate::api::episodes::CoreRuntimeTotal {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_episodes = <u32>::sse_decode(deserializer);
+        let mut var_watched = <u32>::sse_decode(deserializer);
+        let mut var_totalMs = <i64>::sse_decode(deserializer);
+        let mut var_remainingMs = <i64>::sse_decode(deserializer);
+        let mut var_estimated = <bool>::sse_decode(deserializer);
+        let mut var_remainingEstimated = <bool>::sse_decode(deserializer);
+        return crate::api::episodes::CoreRuntimeTotal {
+            episodes: var_episodes,
+            watched: var_watched,
+            total_ms: var_totalMs,
+            remaining_ms: var_remainingMs,
+            estimated: var_estimated,
+            remaining_estimated: var_remainingEstimated,
+        };
+    }
+}
+
 impl SseDecode for crate::api::twitch_archive::CoreSavedFile {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -30758,6 +30778,18 @@ impl SseDecode for crate::api::library::CoreSearchGroup {
     }
 }
 
+impl SseDecode for crate::api::episodes::CoreSeasonRuntime {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_season = <i32>::sse_decode(deserializer);
+        let mut var_total = <crate::api::episodes::CoreRuntimeTotal>::sse_decode(deserializer);
+        return crate::api::episodes::CoreSeasonRuntime {
+            season: var_season,
+            total: var_total,
+        };
+    }
+}
+
 impl SseDecode for crate::api::secrets::CoreSecretStoreInfo {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -30852,10 +30884,25 @@ impl SseDecode for crate::api::episodes::CoreShowEpisodes {
             <Vec<crate::api::episodes::CoreEpisodeOrder>>::sse_decode(deserializer);
         let mut var_episodes =
             <Vec<crate::api::episodes::CoreShowEpisode>>::sse_decode(deserializer);
+        let mut var_runtime = <crate::api::episodes::CoreShowRuntime>::sse_decode(deserializer);
         return crate::api::episodes::CoreShowEpisodes {
             order: var_order,
             available: var_available,
             episodes: var_episodes,
+            runtime: var_runtime,
+        };
+    }
+}
+
+impl SseDecode for crate::api::episodes::CoreShowRuntime {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_show_ = <crate::api::episodes::CoreRuntimeTotal>::sse_decode(deserializer);
+        let mut var_seasons =
+            <Vec<crate::api::episodes::CoreSeasonRuntime>>::sse_decode(deserializer);
+        return crate::api::episodes::CoreShowRuntime {
+            show: var_show_,
+            seasons: var_seasons,
         };
     }
 }
@@ -33435,6 +33482,20 @@ impl SseDecode for Vec<crate::api::library::CoreSearchGroup> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::library::CoreSearchGroup>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::episodes::CoreSeasonRuntime> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::episodes::CoreSeasonRuntime>::sse_decode(
                 deserializer,
             ));
         }
@@ -41610,6 +41671,31 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::review::CoreReviewItem>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::episodes::CoreRuntimeTotal {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.episodes.into_into_dart().into_dart(),
+            self.watched.into_into_dart().into_dart(),
+            self.total_ms.into_into_dart().into_dart(),
+            self.remaining_ms.into_into_dart().into_dart(),
+            self.estimated.into_into_dart().into_dart(),
+            self.remaining_estimated.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::episodes::CoreRuntimeTotal
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::episodes::CoreRuntimeTotal>
+    for crate::api::episodes::CoreRuntimeTotal
+{
+    fn into_into_dart(self) -> crate::api::episodes::CoreRuntimeTotal {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::twitch_archive::CoreSavedFile {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -41795,6 +41881,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::library::CoreSearchGroup>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::episodes::CoreSeasonRuntime {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.season.into_into_dart().into_dart(),
+            self.total.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::episodes::CoreSeasonRuntime
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::episodes::CoreSeasonRuntime>
+    for crate::api::episodes::CoreSeasonRuntime
+{
+    fn into_into_dart(self) -> crate::api::episodes::CoreSeasonRuntime {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::secrets::CoreSecretStoreInfo {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -41921,6 +42028,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::episodes::CoreShowEpisodes {
             self.order.into_into_dart().into_dart(),
             self.available.into_into_dart().into_dart(),
             self.episodes.into_into_dart().into_dart(),
+            self.runtime.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -41933,6 +42041,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::episodes::CoreShowEpisodes>
     for crate::api::episodes::CoreShowEpisodes
 {
     fn into_into_dart(self) -> crate::api::episodes::CoreShowEpisodes {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::episodes::CoreShowRuntime {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.show.into_into_dart().into_dart(),
+            self.seasons.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::episodes::CoreShowRuntime
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::episodes::CoreShowRuntime>
+    for crate::api::episodes::CoreShowRuntime
+{
+    fn into_into_dart(self) -> crate::api::episodes::CoreShowRuntime {
         self
     }
 }
@@ -47101,6 +47230,18 @@ impl SseEncode for crate::api::review::CoreReviewItem {
     }
 }
 
+impl SseEncode for crate::api::episodes::CoreRuntimeTotal {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.episodes, serializer);
+        <u32>::sse_encode(self.watched, serializer);
+        <i64>::sse_encode(self.total_ms, serializer);
+        <i64>::sse_encode(self.remaining_ms, serializer);
+        <bool>::sse_encode(self.estimated, serializer);
+        <bool>::sse_encode(self.remaining_estimated, serializer);
+    }
+}
+
 impl SseEncode for crate::api::twitch_archive::CoreSavedFile {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -47211,6 +47352,14 @@ impl SseEncode for crate::api::library::CoreSearchGroup {
     }
 }
 
+impl SseEncode for crate::api::episodes::CoreSeasonRuntime {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.season, serializer);
+        <crate::api::episodes::CoreRuntimeTotal>::sse_encode(self.total, serializer);
+    }
+}
+
 impl SseEncode for crate::api::secrets::CoreSecretStoreInfo {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -47280,6 +47429,15 @@ impl SseEncode for crate::api::episodes::CoreShowEpisodes {
         <crate::api::episodes::CoreEpisodeOrder>::sse_encode(self.order, serializer);
         <Vec<crate::api::episodes::CoreEpisodeOrder>>::sse_encode(self.available, serializer);
         <Vec<crate::api::episodes::CoreShowEpisode>>::sse_encode(self.episodes, serializer);
+        <crate::api::episodes::CoreShowRuntime>::sse_encode(self.runtime, serializer);
+    }
+}
+
+impl SseEncode for crate::api::episodes::CoreShowRuntime {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::episodes::CoreRuntimeTotal>::sse_encode(self.show, serializer);
+        <Vec<crate::api::episodes::CoreSeasonRuntime>>::sse_encode(self.seasons, serializer);
     }
 }
 
@@ -49086,6 +49244,16 @@ impl SseEncode for Vec<crate::api::library::CoreSearchGroup> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::library::CoreSearchGroup>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::episodes::CoreSeasonRuntime> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::episodes::CoreSeasonRuntime>::sse_encode(item, serializer);
         }
     }
 }

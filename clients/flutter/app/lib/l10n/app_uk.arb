@@ -2339,5 +2339,9 @@
   "commonScreenErrorBack": "Назад",
   "reviewWhyYearOff": "рік відрізняється на {years} ({delta} %)",
   "reviewWhyRemake": "можливо, ремейк ({delta} %)",
-  "reviewWhyKindOff": "тип не збігся ({delta} %)"
+  "reviewWhyKindOff": "тип не збігся ({delta} %)",
+  "formatTotal": "усього {time}",
+  "formatLeft": "залишилося {time}",
+  "formatAllWatched": "переглянуто",
+  "formatHours": "{hours, plural, one{{hours} год} few{{hours} год} many{{hours} год} other{{hours} год}}"
 }

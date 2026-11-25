@@ -2339,5 +2339,9 @@
   "commonScreenErrorBack": "[Ɓáçķ··]",
   "reviewWhyYearOff": "[ýéáŕ ðíƒƒéŕš ƀý······ {years} ({delta}%)]",
   "reviewWhyRemake": "[ɱáýƀé á ŕéɱáķé (·······{delta}%)]",
-  "reviewWhyKindOff": "[ţýþé ðíƒƒéŕš (······{delta}%)]"
+  "reviewWhyKindOff": "[ţýþé ðíƒƒéŕš (······{delta}%)]",
+  "formatTotal": "[{time} ţóţáļ··]",
+  "formatLeft": "[{time} ļéƒţ··]",
+  "formatAllWatched": "[ŵáţçĥéð···]",
+  "formatHours": "{hours, plural, one{{hours} ĥ·} other{{hours} ĥ·}}"
 }
