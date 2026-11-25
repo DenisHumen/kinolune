@@ -26,7 +26,7 @@
 - **Show and tell** — поделитесь настройкой, экспериментом или результатом.
 - **Announcements** — новости и релизы публикуют сопровождающие.
 
-Путь идеи: обсуждение → сбор отзывов и, если нужно, голосование → решение сопровождающего → задача с критериями и зависимостями в `docs/ROADMAP.md`. Сопровождающий оставляет ссылку на задачу в обсуждении и обновляет её статус при старте и завершении работы. Реакции и голоса помогают понять спрос, но не обещают включение функции.
+Путь идеи: обсуждение → сбор отзывов и, если нужно, голосование → решение сопровождающего → задача с критериями и зависимостями в `docs/ROADMAP.md`. Сопровождающий оставляет решение и ссылку на задачу в обсуждении. Открытый draft PR показывает, что работа началась; после слияния PR сопровождающий отмечает задачу выполненной. Реакции и голоса помогают понять спрос, но не обещают включение функции.
 
 ## Process: from discussion to ROADMAP
 
@@ -35,7 +35,7 @@
 - **Recognition errors** should include the version, platform, anonymized filename, expected match, and actual result. Never post full paths, usernames, private links, or personal media.
 - **Show and tell** is for setups, experiments, and results. **Announcements** are maintainer-only.
 
-Flow: discussion → feedback and an optional poll → maintainer decision → a task with acceptance criteria and dependencies in `docs/ROADMAP.md`. The maintainer links the task from the discussion and updates its status when work starts and finishes. Votes inform prioritization; they do not promise implementation.
+Flow: discussion → feedback and an optional poll → maintainer decision → a task with acceptance criteria and dependencies in `docs/ROADMAP.md`. The maintainer records the decision and links the task in the discussion. An open draft PR shows that work has started; after it merges, the maintainer marks the task complete. Votes inform prioritization; they do not promise implementation.
 
 ## Процесс: одна задача — одна ветка — один worktree
 

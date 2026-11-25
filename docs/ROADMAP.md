@@ -2259,7 +2259,7 @@ project_alpha/
   - Что: аккаунты GitHub Sponsors, Open Collective (по возможности с фискальным хостом), Liberapay, Ko-fi; `.github/FUNDING.yml` (без российских площадок, ADR-0142).
   - deps: — · size: S · parallel: yes · веха: M0 · ref: S §4, §7
   - done when: кнопка Sponsor в репозитории ведёт на все площадки.
-- [ ] **COMM-002** GitHub Discussions и запросы функций
+- [x] **COMM-002** GitHub Discussions и запросы функций
   - Что: категории (Q&A, Ideas с голосованием, Show and tell, Announcements, «Ошибки распознавания»); процесс «идея → голосование → статус → задача в ROADMAP».
   - deps: DEC-001 · size: S · parallel: yes · веха: M0 · ref: 01 §3 п.11
   - done when: шаблоны обсуждений созданы; процесс описан в CONTRIBUTING.
