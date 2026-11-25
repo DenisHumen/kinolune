@@ -125,21 +125,33 @@ class CoreTwitchBackend implements TwitchBackend {
   Future<List<TwitchStream>> liveStreams(List<String> userIds) =>
       _call(() async {
         final streams = await _core.liveStreams(userIds: userIds);
-        return [
-          for (final s in streams)
-            TwitchStream(
-              userId: s.userId,
-              login: s.userLogin,
-              displayName: s.userName,
-              title: s.title,
-              viewers: s.viewerCount,
-              gameId: s.gameId,
-              gameName: s.gameName,
-              startedAt: _time(s.startedAtMs),
-              thumbnailUrl: s.thumbnailUrl,
-            ),
-        ];
+        return streams.map(_stream).toList();
       });
+
+  @override
+  Future<TwitchPage<TwitchCategory>> topCategories({
+    String? cursor,
+    int limit = 40,
+  }) => _call(() async {
+    final page = await _core.topCategories(limit: limit, after: cursor);
+    return TwitchPage(page.items.map(_category).toList(), page.cursor);
+  });
+
+  @override
+  Future<TwitchPage<TwitchStream>> categoryStreams(
+    String gameId, {
+    String? language,
+    String? cursor,
+    int limit = 30,
+  }) => _call(() async {
+    final page = await _core.categoryStreams(
+      gameId: gameId,
+      language: language,
+      limit: limit,
+      after: cursor,
+    );
+    return TwitchPage(page.items.map(_stream).toList(), page.cursor);
+  });
 
   @override
   Future<List<TwitchChannel>> followed() =>
@@ -206,10 +218,7 @@ class CoreTwitchBackend implements TwitchBackend {
   Future<List<TwitchCategory>> searchCategories(String query) =>
       _call(() async {
         final cats = await _core.searchCategories(query: query, limit: 20);
-        return [
-          for (final c in cats)
-            TwitchCategory(id: c.gameId, name: c.name, boxArtUrl: c.boxArtUrl),
-        ];
+        return cats.map(_category).toList();
       });
 
   @override
@@ -340,6 +349,22 @@ class CoreTwitchBackend implements TwitchBackend {
 
   static DateTime? _time(int? ms) =>
       ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+
+  static TwitchCategory _category(core.CoreTwitchCategory c) =>
+      TwitchCategory(id: c.gameId, name: c.name, boxArtUrl: c.boxArtUrl);
+
+  static TwitchStream _stream(core.CoreTwitchStream s) => TwitchStream(
+    userId: s.userId,
+    login: s.userLogin,
+    displayName: s.userName,
+    title: s.title,
+    viewers: s.viewerCount,
+    gameId: s.gameId,
+    gameName: s.gameName,
+    startedAt: _time(s.startedAtMs),
+    thumbnailUrl: s.thumbnailUrl,
+    language: s.language,
+  );
 
   static TwitchChannel _channel(core.CoreTwitchUser u) => TwitchChannel(
     login: u.login,

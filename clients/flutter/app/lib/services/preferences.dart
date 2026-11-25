@@ -165,6 +165,12 @@ abstract class Preferences {
   /// `TwitchAccountProfile`; no token.
   static const twitchAccountProfile = 'twitch_account_profile';
 
+  /// Browse (TWI-034): the broadcast language of category pages (absent =
+  /// the UI language, `*` = all languages) and the recent searches of the
+  /// section (JSON list of strings, this device only).
+  static const twitchBrowseLanguage = 'twitch_browse_language';
+  static const twitchRecentSearches = 'twitch_recent_searches';
+
   /// Offline downloads (NET-019): Wi-Fi only (`false` = also over mobile
   /// data; on by default).
   static const offlineWifiOnly = 'offline_wifi_only';

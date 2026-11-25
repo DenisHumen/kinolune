@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MPL-2.0
 //
 // The "Streams" section (Twitch, TWI-013; research 06 §6.2, design 01
-// §2.6). Three tabs:
+// §2.6). Four tabs:
 // * Home — Live now, favourites with the LIVE ring, Continue, new VODs
 //   with "deleted in N days", downloaded (placeholder until TWI-017),
 //   Soon live from schedules, categories of the favourites;
+// * Browse — the most watched categories, each with its live streams
+//   (TWI-034, twitch/twitch_browse.dart);
 // * Channels — favourites (sort and filter, pin) and, signed in, the
 //   channels the user follows;
-// * Search — channels and categories; without a login favourites, saved
-//   channels and "Add channel <name>".
+// * Search — channels (on air first, with viewers) and categories, recent
+//   searches; without a login favourites, saved channels and "Add channel
+//   <name>".
 // The section is called "Streams", never after Twitch; Twitch is credited
 // in text at the bottom (brand guidelines, research 06 §1.5).
 
@@ -29,13 +32,14 @@ import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import 'library_grid_screen.dart' show FilterPill;
 import 'twitch/twitch_archive_screens.dart';
+import 'twitch/twitch_browse.dart';
 import 'twitch/twitch_channel_screen.dart';
 import 'twitch/twitch_downloads_screen.dart';
 import 'twitch/twitch_multiview_screen.dart';
 import 'twitch/twitch_play.dart';
 import 'twitch/twitch_widgets.dart';
 
-enum TwitchTab { home, channels, search }
+enum TwitchTab { home, browse, channels, search }
 
 class TwitchScreen extends StatefulWidget {
   const TwitchScreen({super.key, this.initialTab = TwitchTab.home});
@@ -53,6 +57,9 @@ class _TwitchScreenState extends State<TwitchScreen> {
   TwitchHome? _lastHome;
   String _signature = '';
 
+  /// Infinite scroll of Browse (TWI-034).
+  final _scrollEnd = TwitchScrollEnd();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -68,6 +75,7 @@ class _TwitchScreenState extends State<TwitchScreen> {
   @override
   void dispose() {
     _twitch?.removeListener(_onChange);
+    _scrollEnd.dispose();
     super.dispose();
   }
 
@@ -106,6 +114,18 @@ class _TwitchScreenState extends State<TwitchScreen> {
     final d = KDensity.of(context);
     final l = context.l10n;
     final twitch = _twitch!;
+    return NotificationListener<ScrollNotification>(
+      onNotification: _scrollEnd.onScroll,
+      child: _slivers(context, d, l, twitch),
+    );
+  }
+
+  Widget _slivers(
+    BuildContext context,
+    KDensity d,
+    AppLocalizations l,
+    TwitchService twitch,
+  ) {
     return CustomScrollView(
       clipBehavior: Clip.none,
       slivers: [
@@ -147,6 +167,7 @@ class _TwitchScreenState extends State<TwitchScreen> {
             children: [
               for (final (tab, label) in [
                 (TwitchTab.home, l.twitchTabHome),
+                (TwitchTab.browse, l.twitchTabBrowse),
                 (TwitchTab.channels, l.twitchTabChannels),
                 (TwitchTab.search, l.twitchTabSearch),
               ])
@@ -178,6 +199,11 @@ class _TwitchScreenState extends State<TwitchScreen> {
                   );
                 },
               ),
+            ),
+          ],
+          TwitchTab.browse => [
+            SliverToBoxAdapter(
+              child: TwitchBrowseTab(twitch: twitch, scrollEnd: _scrollEnd),
             ),
           ],
           TwitchTab.channels => [
@@ -828,13 +854,27 @@ class _ChannelList extends StatelessWidget {
 /// A channel in a list: avatar with the LIVE ring, name, status, and the
 /// favourite (and pin) toggles.
 class ChannelTile extends StatelessWidget {
-  const ChannelTile({super.key, required this.channel, this.live, this.pinned});
+  const ChannelTile({
+    super.key,
+    required this.channel,
+    this.live,
+    this.pinned,
+    this.onOpened,
+    this.showWatch = false,
+  });
 
   final TwitchChannel channel;
   final TwitchStream? live;
 
   /// Shows the pin toggle (favourites list).
   final bool? pinned;
+
+  /// Called when the tile opens the channel or the stream (search: the
+  /// query goes to the recent searches).
+  final VoidCallback? onOpened;
+
+  /// A "Watch live" button while the channel is live (search, TWI-034).
+  final bool showWatch;
 
   @override
   Widget build(BuildContext context) {
@@ -863,7 +903,10 @@ class ChannelTile extends StatelessWidget {
         vertical: 2,
       ),
       child: KFocusable(
-        onActivate: () => _openChannel(context, channel),
+        onActivate: () {
+          onOpened?.call();
+          _openChannel(context, channel);
+        },
         light: false,
         radius: 12,
         semanticLabel: channel.displayName,
@@ -898,6 +941,16 @@ class ChannelTile extends StatelessWidget {
                   ],
                 ),
               ),
+              if (showWatch && s != null)
+                IconButton(
+                  key: ValueKey('twitch-search-watch-${channel.login}'),
+                  tooltip: l.twitchWatchLive,
+                  onPressed: () {
+                    onOpened?.call();
+                    playTwitch(context, TwitchPlayTarget.live(channel.login));
+                  },
+                  icon: Icon(Icons.play_circle_fill, color: KColors.live),
+                ),
               if (pinned != null)
                 IconButton(
                   key: ValueKey('twitch-pin-${channel.login}'),
@@ -948,11 +1001,71 @@ class _SearchTabState extends State<_SearchTab> {
     super.dispose();
   }
 
+  /// The last answer, shown while the next one loads (no flicker while
+  /// typing).
+  TwitchSearchResults? _last;
+
   void _search(String q) {
     final results = widget.twitch.search(q);
+    results.then((r) => _last = r, onError: (_) {});
     setState(() {
-      _results = results;
+      _results = q.trim().isEmpty ? null : results;
+      if (q.trim().isEmpty) _last = null;
     });
+  }
+
+  /// Enter, or a result opened: the query goes to the recent searches.
+  void _remember() => unawaited(widget.twitch.rememberSearch(_controller.text));
+
+  void _useRecent(String q) {
+    _controller.text = q;
+    _controller.selection = TextSelection.collapsed(offset: q.length);
+    _search(q);
+  }
+
+  Widget _recent(BuildContext context) {
+    final d = KDensity.of(context);
+    final l = context.l10n;
+    final recent = widget.twitch.recentSearches;
+    if (recent.isEmpty) return const SizedBox.shrink();
+    return Column(
+      key: const ValueKey('twitch-search-recent'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(right: d.pageInsets.right - 8),
+          child: Row(
+            children: [
+              Expanded(child: TwitchRowTitle(l.twitchSearchRecent)),
+              TextButton(
+                key: const ValueKey('twitch-search-recent-clear'),
+                onPressed: widget.twitch.clearRecentSearches,
+                child: Text(l.commonClear),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: d.pageInsets.left),
+          child: FocusTraversalGroup(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final q in recent)
+                  FilterPill(
+                    key: ValueKey('twitch-search-recent-$q'),
+                    label: q,
+                    icon: Icons.history,
+                    selected: false,
+                    onTap: () => _useRecent(q),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -975,7 +1088,10 @@ class _SearchTabState extends State<_SearchTab> {
               prefixIcon: const Icon(Icons.search),
             ),
             onChanged: (q) => _debounce(() => _search(q)),
-            onSubmitted: _search,
+            onSubmitted: (q) {
+              _search(q);
+              _remember();
+            },
           ),
         ),
         const SizedBox(height: 12),
@@ -992,10 +1108,11 @@ class _SearchTabState extends State<_SearchTab> {
               style: theme.textTheme.bodySmall,
             ),
           ),
+        if (_results == null) _recent(context),
         FutureBuilder<TwitchSearchResults>(
           future: _results,
           builder: (context, snap) {
-            final r = snap.data;
+            final r = _results == null ? null : (snap.data ?? _last);
             if (r == null) return const SizedBox.shrink();
             final add = r.addByName;
             if (r.channels.isEmpty && r.categories.isEmpty && add == null) {
@@ -1039,34 +1156,41 @@ class _SearchTabState extends State<_SearchTab> {
                 if (r.channels.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   TwitchRowTitle(l.twitchSearchChannels),
-                  for (final c in r.channels)
-                    ChannelTile(
-                      key: ValueKey('twitch-result-${c.login}'),
-                      channel: c,
-                      live: widget.twitch.liveOf(c),
-                    ),
-                ],
-                if (r.categories.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  TwitchRowTitle(l.twitchSearchCategories),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: d.pageInsets.left,
-                    ),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                  // On air first, most viewers first (TWI-034).
+                  FocusTraversalGroup(
+                    child: Column(
                       children: [
-                        for (final c in r.categories)
-                          FilterPill(
-                            key: ValueKey('twitch-result-category-${c.id}'),
-                            label: c.name,
-                            icon: Icons.sports_esports_outlined,
-                            selected: false,
-                            onTap: () => _openCategory(context, c),
+                        for (final c in r.channels)
+                          ChannelTile(
+                            key: ValueKey('twitch-result-${c.login}'),
+                            channel: c,
+                            live: widget.twitch.liveOf(c),
+                            onOpened: _remember,
+                            showWatch: true,
                           ),
                       ],
                     ),
+                  ),
+                ],
+                if (r.categories.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  MediaRow(
+                    key: const ValueKey('twitch-result-categories'),
+                    title: l.twitchSearchCategories,
+                    itemCount: r.categories.length,
+                    height: d.posterWidth * 4 / 3 + cardCaptionHeight(d) + 8,
+                    itemBuilder: (context, i) {
+                      final c = r.categories[i];
+                      return TwitchCategoryCard(
+                        key: ValueKey('twitch-result-category-${c.id}'),
+                        category: c,
+                        width: d.posterWidth,
+                        onTap: () {
+                          _remember();
+                          _openCategory(context, c);
+                        },
+                      );
+                    },
                   ),
                 ],
               ],

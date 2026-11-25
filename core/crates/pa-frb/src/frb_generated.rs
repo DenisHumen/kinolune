@@ -62,7 +62,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1076903267;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 73149790;
 
 // Section: executor
 
@@ -23541,6 +23541,65 @@ fn wire__crate__api__twitch__CoreTwitch_can_sign_in_impl(
         },
     )
 }
+fn wire__crate__api__twitch__CoreTwitch_category_streams_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreTwitch_category_streams",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreTwitch>,
+            >>::sse_decode(&mut deserializer);
+            let api_game_id = <String>::sse_decode(&mut deserializer);
+            let api_language = <Option<String>>::sse_decode(&mut deserializer);
+            let api_limit = <u32>::sse_decode(&mut deserializer);
+            let api_after = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::twitch::TwitchApiError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::twitch::CoreTwitch::category_streams(
+                        &*api_that_guard,
+                        api_game_id,
+                        api_language,
+                        api_limit,
+                        api_after,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__twitch__CoreTwitch_category_videos_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -24719,6 +24778,61 @@ fn wire__crate__api__twitch__CoreTwitch_start_login_impl(
                     }
                     let api_that_guard = api_that_guard.unwrap();
                     let output_ok = crate::api::twitch::CoreTwitch::start_login(&*api_that_guard)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__twitch__CoreTwitch_top_categories_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreTwitch_top_categories",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreTwitch>,
+            >>::sse_decode(&mut deserializer);
+            let api_limit = <u32>::sse_decode(&mut deserializer);
+            let api_after = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::twitch::TwitchApiError>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::twitch::CoreTwitch::top_categories(
+                        &*api_that_guard,
+                        api_limit,
+                        api_after,
+                    )?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -31820,6 +31934,18 @@ impl SseDecode for crate::api::twitch::CoreTwitchCategory {
     }
 }
 
+impl SseDecode for crate::api::twitch::CoreTwitchCategoryPage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_items = <Vec<crate::api::twitch::CoreTwitchCategory>>::sse_decode(deserializer);
+        let mut var_cursor = <Option<String>>::sse_decode(deserializer);
+        return crate::api::twitch::CoreTwitchCategoryPage {
+            items: var_items,
+            cursor: var_cursor,
+        };
+    }
+}
+
 impl SseDecode for crate::api::twitch::CoreTwitchChapter {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -32058,6 +32184,7 @@ impl SseDecode for crate::api::twitch::CoreTwitchStream {
         let mut var_viewerCount = <i64>::sse_decode(deserializer);
         let mut var_startedAtMs = <Option<i64>>::sse_decode(deserializer);
         let mut var_thumbnailUrl = <Option<String>>::sse_decode(deserializer);
+        let mut var_language = <Option<String>>::sse_decode(deserializer);
         return crate::api::twitch::CoreTwitchStream {
             stream_id: var_streamId,
             user_id: var_userId,
@@ -32069,6 +32196,19 @@ impl SseDecode for crate::api::twitch::CoreTwitchStream {
             viewer_count: var_viewerCount,
             started_at_ms: var_startedAtMs,
             thumbnail_url: var_thumbnailUrl,
+            language: var_language,
+        };
+    }
+}
+
+impl SseDecode for crate::api::twitch::CoreTwitchStreamPage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_items = <Vec<crate::api::twitch::CoreTwitchStream>>::sse_decode(deserializer);
+        let mut var_cursor = <Option<String>>::sse_decode(deserializer);
+        return crate::api::twitch::CoreTwitchStreamPage {
+            items: var_items,
+            cursor: var_cursor,
         };
     }
 }
@@ -36931,228 +37071,240 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        444 => wire__crate__api__twitch__CoreTwitch_category_videos_impl(
+        444 => wire__crate__api__twitch__CoreTwitch_category_streams_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        445 => wire__crate__api__twitch__CoreTwitch_channel_videos_impl(
+        445 => wire__crate__api__twitch__CoreTwitch_category_videos_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        446 => {
+        446 => wire__crate__api__twitch__CoreTwitch_channel_videos_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        447 => {
             wire__crate__api__twitch__CoreTwitch_chapters_impl(port, ptr, rust_vec_len, data_len)
         }
-        447 => wire__crate__api__twitch__CoreTwitch_check_live_once_impl(
+        448 => wire__crate__api__twitch__CoreTwitch_check_live_once_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        448 => wire__crate__api__twitch__CoreTwitch_clips_impl(port, ptr, rust_vec_len, data_len),
-        449 => wire__crate__api__twitch__CoreTwitch_continue_vods_impl(
+        449 => wire__crate__api__twitch__CoreTwitch_clips_impl(port, ptr, rust_vec_len, data_len),
+        450 => wire__crate__api__twitch__CoreTwitch_continue_vods_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        450 => {
+        451 => {
             wire__crate__api__twitch__CoreTwitch_favorites_impl(port, ptr, rust_vec_len, data_len)
         }
-        451 => {
+        452 => {
             wire__crate__api__twitch__CoreTwitch_followed_impl(port, ptr, rust_vec_len, data_len)
         }
-        454 => wire__crate__api__twitch__CoreTwitch_live_streams_impl(
+        455 => wire__crate__api__twitch__CoreTwitch_live_streams_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        455 => wire__crate__api__twitch__CoreTwitch_open_impl(port, ptr, rust_vec_len, data_len),
-        456 => {
+        456 => wire__crate__api__twitch__CoreTwitch_open_impl(port, ptr, rust_vec_len, data_len),
+        457 => {
             wire__crate__api__twitch__CoreTwitch_poll_login_impl(port, ptr, rust_vec_len, data_len)
         }
-        457 => wire__crate__api__twitch__CoreTwitch_purge_expired_impl(
+        458 => wire__crate__api__twitch__CoreTwitch_purge_expired_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        458 => {
+        459 => {
             wire__crate__api__twitch__CoreTwitch_schedule_impl(port, ptr, rust_vec_len, data_len)
         }
-        459 => wire__crate__api__twitch__CoreTwitch_search_cached_impl(
+        460 => wire__crate__api__twitch__CoreTwitch_search_cached_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        460 => wire__crate__api__twitch__CoreTwitch_search_categories_impl(
+        461 => wire__crate__api__twitch__CoreTwitch_search_categories_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        461 => wire__crate__api__twitch__CoreTwitch_search_channels_impl(
+        462 => wire__crate__api__twitch__CoreTwitch_search_channels_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        462 => wire__crate__api__twitch__CoreTwitch_set_favorite_impl(
+        463 => wire__crate__api__twitch__CoreTwitch_set_favorite_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        463 => wire__crate__api__twitch__CoreTwitch_set_favorite_notify_impl(
+        464 => wire__crate__api__twitch__CoreTwitch_set_favorite_notify_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        464 => {
+        465 => {
             wire__crate__api__twitch__CoreTwitch_sign_out_impl(port, ptr, rust_vec_len, data_len)
         }
-        465 => wire__crate__api__twitch__CoreTwitch_start_chat_login_impl(
+        466 => wire__crate__api__twitch__CoreTwitch_start_chat_login_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        466 => {
+        467 => {
             wire__crate__api__twitch__CoreTwitch_start_login_impl(port, ptr, rust_vec_len, data_len)
         }
-        467 => wire__crate__api__twitch__CoreTwitch_users_impl(port, ptr, rust_vec_len, data_len),
-        468 => wire__crate__api__anime_db__anime_db_info_impl(port, ptr, rust_vec_len, data_len),
-        469 => wire__crate__api__anime_db__anime_db_refresh_impl(port, ptr, rust_vec_len, data_len),
-        476 => wire__crate__api__twitch_chat__core_chat_filters_default_impl(
+        468 => wire__crate__api__twitch__CoreTwitch_top_categories_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        477 => wire__crate__api__twitch_chat__core_chat_room_modes_default_impl(
+        469 => wire__crate__api__twitch__CoreTwitch_users_impl(port, ptr, rust_vec_len, data_len),
+        470 => wire__crate__api__anime_db__anime_db_info_impl(port, ptr, rust_vec_len, data_len),
+        471 => wire__crate__api__anime_db__anime_db_refresh_impl(port, ptr, rust_vec_len, data_len),
+        478 => wire__crate__api__twitch_chat__core_chat_filters_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        478 => wire__crate__api__discovery__core_discovery_config_default_impl(
+        479 => wire__crate__api__twitch_chat__core_chat_room_modes_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        480 => wire__crate__api__jellyfin__core_jellyfin_import_default_impl(
+        480 => wire__crate__api__discovery__core_discovery_config_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        481 => wire__crate__api__library_query__core_library_filter_default_impl(
+        482 => wire__crate__api__jellyfin__core_jellyfin_import_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        482 => wire__crate__api__music__core_music_metadata_update_default_impl(
+        483 => wire__crate__api__library_query__core_library_filter_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        483 => wire__crate__api__subtitle_search__core_open_subtitles_account_default_impl(
+        484 => wire__crate__api__music__core_music_metadata_update_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        484 => wire__crate__api__personal_media__core_personal_filter_default_impl(
+        485 => wire__crate__api__subtitle_search__core_open_subtitles_account_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        485 => wire__crate__api__scrobble__core_scrobble_status_default_impl(
+        486 => wire__crate__api__personal_media__core_personal_filter_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        486 => wire__crate__api__sources__core_source_options_default_impl(
+        487 => wire__crate__api__scrobble__core_scrobble_status_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        489 => wire__crate__api__lyrics__core_track_lyrics_default_impl(
+        488 => wire__crate__api__sources__core_source_options_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        490 => wire__crate__api__trakt__core_trakt_sync_report_default_impl(
+        491 => wire__crate__api__lyrics__core_track_lyrics_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        496 => wire__crate__api__diagnostics__diagnostics_export_report_impl(
+        492 => wire__crate__api__trakt__core_trakt_sync_report_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        500 => wire__crate__api__diagnostics__diagnostics_recent_log_impl(
+        498 => wire__crate__api__diagnostics__diagnostics_export_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        506 => wire__crate__api__dlna__dlna_search_impl(port, ptr, rust_vec_len, data_len),
-        509 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
-        510 => {
+        502 => wire__crate__api__diagnostics__diagnostics_recent_log_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        508 => wire__crate__api__dlna__dlna_search_impl(port, ptr, rust_vec_len, data_len),
+        511 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
+        512 => {
             wire__crate__api__library__is_legacy_v0_library_impl(port, ptr, rust_vec_len, data_len)
         }
-        512 => wire__crate__api__lan__lan_search_impl(port, ptr, rust_vec_len, data_len),
-        513 => wire__crate__api__subtitle_search__opensubtitles_account_status_impl(
+        514 => wire__crate__api__lan__lan_search_impl(port, ptr, rust_vec_len, data_len),
+        515 => wire__crate__api__subtitle_search__opensubtitles_account_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        515 => {
+        517 => {
             wire__crate__api__recognition__parse_filename_impl(port, ptr, rust_vec_len, data_len)
         }
-        516 => wire__crate__api__recognition__parse_filename_with_impl(
+        518 => wire__crate__api__recognition__parse_filename_with_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        517 => wire__crate__api__secrets__platform_secret_reply_default_impl(
+        519 => wire__crate__api__secrets__platform_secret_reply_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        518 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
-        519 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
-        520 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
-        521 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
-        522 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
-        523 => {
+        520 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
+        521 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
+        522 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
+        523 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
+        524 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
+        525 => {
             wire__crate__api__secrets__secrets_open_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        524 => {
+        526 => {
             wire__crate__api__secrets__secrets_open_platform_impl(port, ptr, rust_vec_len, data_len)
         }
-        527 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
-        529 => wire__crate__api__app_update__update_verify_artifact_impl(
+        529 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
+        531 => wire__crate__api__app_update__update_verify_artifact_impl(
             port,
             ptr,
             rust_vec_len,
@@ -37436,85 +37588,85 @@ fn pde_ffi_dispatcher_sync_impl(
         440 => wire__crate__api__twitch__CoreTwitch_cached_user_impl(ptr, rust_vec_len, data_len),
         442 => wire__crate__api__twitch__CoreTwitch_can_send_chat_impl(ptr, rust_vec_len, data_len),
         443 => wire__crate__api__twitch__CoreTwitch_can_sign_in_impl(ptr, rust_vec_len, data_len),
-        452 => wire__crate__api__twitch__CoreTwitch_live_monitor_impl(ptr, rust_vec_len, data_len),
-        453 => wire__crate__api__twitch__CoreTwitch_live_notifications_allowed_impl(
+        453 => wire__crate__api__twitch__CoreTwitch_live_monitor_impl(ptr, rust_vec_len, data_len),
+        454 => wire__crate__api__twitch__CoreTwitch_live_notifications_allowed_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        470 => wire__crate__api__twitch_archive__archive_default_templates_impl(
+        472 => wire__crate__api__twitch_archive__archive_default_templates_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        471 => {
+        473 => {
             wire__crate__api__twitch_archive__archive_name_preview_impl(ptr, rust_vec_len, data_len)
         }
-        472 => wire__crate__api__version__build_capabilities_impl(ptr, rust_vec_len, data_len),
-        473 => wire__crate__api__version__build_flavor_impl(ptr, rust_vec_len, data_len),
-        474 => wire__crate__api__twitch_chat_replay__chat_replay_online_allowed_impl(
+        474 => wire__crate__api__version__build_capabilities_impl(ptr, rust_vec_len, data_len),
+        475 => wire__crate__api__version__build_flavor_impl(ptr, rust_vec_len, data_len),
+        476 => wire__crate__api__twitch_chat_replay__chat_replay_online_allowed_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        475 => {
+        477 => {
             wire__crate__api__twitch_chat__check_chat_word_rule_impl(ptr, rust_vec_len, data_len)
         }
-        479 => wire__crate__api__events__core_events_listen_impl(ptr, rust_vec_len, data_len),
-        487 => wire__crate__api__events__core_stream_close_impl(ptr, rust_vec_len, data_len),
-        488 => wire__crate__api__events__core_stream_next_id_impl(ptr, rust_vec_len, data_len),
-        491 => wire__crate__api__version__core_version_impl(ptr, rust_vec_len, data_len),
-        492 => wire__crate__api__diagnostics__diagnostics_clear_impl(ptr, rust_vec_len, data_len),
-        493 => {
+        481 => wire__crate__api__events__core_events_listen_impl(ptr, rust_vec_len, data_len),
+        489 => wire__crate__api__events__core_stream_close_impl(ptr, rust_vec_len, data_len),
+        490 => wire__crate__api__events__core_stream_next_id_impl(ptr, rust_vec_len, data_len),
+        493 => wire__crate__api__version__core_version_impl(ptr, rust_vec_len, data_len),
+        494 => wire__crate__api__diagnostics__diagnostics_clear_impl(ptr, rust_vec_len, data_len),
+        495 => {
             wire__crate__api__diagnostics__diagnostics_crash_text_impl(ptr, rust_vec_len, data_len)
         }
-        494 => wire__crate__api__diagnostics__diagnostics_crashes_impl(ptr, rust_vec_len, data_len),
-        495 => wire__crate__api__diagnostics__diagnostics_engine_versions_impl(
+        496 => wire__crate__api__diagnostics__diagnostics_crashes_impl(ptr, rust_vec_len, data_len),
+        497 => wire__crate__api__diagnostics__diagnostics_engine_versions_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        497 => {
+        499 => {
             wire__crate__api__diagnostics__diagnostics_issue_url_impl(ptr, rust_vec_len, data_len)
         }
-        498 => wire__crate__api__diagnostics__diagnostics_log_impl(ptr, rust_vec_len, data_len),
-        499 => wire__crate__api__diagnostics__diagnostics_open_impl(ptr, rust_vec_len, data_len),
-        501 => wire__crate__api__diagnostics__diagnostics_record_crash_impl(
+        500 => wire__crate__api__diagnostics__diagnostics_log_impl(ptr, rust_vec_len, data_len),
+        501 => wire__crate__api__diagnostics__diagnostics_open_impl(ptr, rust_vec_len, data_len),
+        503 => wire__crate__api__diagnostics__diagnostics_record_crash_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        502 => wire__crate__api__diagnostics__diagnostics_redact_impl(ptr, rust_vec_len, data_len),
-        503 => {
+        504 => wire__crate__api__diagnostics__diagnostics_redact_impl(ptr, rust_vec_len, data_len),
+        505 => {
             wire__crate__api__diagnostics__diagnostics_set_enabled_impl(ptr, rust_vec_len, data_len)
         }
-        504 => wire__crate__api__diagnostics__diagnostics_status_impl(ptr, rust_vec_len, data_len),
-        505 => {
+        506 => wire__crate__api__diagnostics__diagnostics_status_impl(ptr, rust_vec_len, data_len),
+        507 => {
             wire__crate__api__discovery__discovery_source_kinds_impl(ptr, rust_vec_len, data_len)
         }
-        507 => {
+        509 => {
             wire__crate__api__recognition__filename_parser_version_impl(ptr, rust_vec_len, data_len)
         }
-        508 => wire__crate__api__twitch_chat_replay__find_chat_replay_file_impl(
+        510 => wire__crate__api__twitch_chat_replay__find_chat_replay_file_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        511 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
-        514 => wire__crate__api__subtitle_search__opensubtitles_has_project_key_impl(
+        513 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
+        516 => wire__crate__api__subtitle_search__opensubtitles_has_project_key_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        525 => {
+        527 => {
             wire__crate__api__sources__sources_set_ssh_rsa_allowed_impl(ptr, rust_vec_len, data_len)
         }
-        526 => wire__crate__api__subtitle_search__subdl_has_project_key_impl(
+        528 => wire__crate__api__subtitle_search__subdl_has_project_key_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        528 => {
+        530 => {
             wire__crate__api__twitch_play__twitch_master_variants_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -43264,6 +43416,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::twitch::CoreTwitchCategory>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::twitch::CoreTwitchCategoryPage {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.items.into_into_dart().into_dart(),
+            self.cursor.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::twitch::CoreTwitchCategoryPage
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::twitch::CoreTwitchCategoryPage>
+    for crate::api::twitch::CoreTwitchCategoryPage
+{
+    fn into_into_dart(self) -> crate::api::twitch::CoreTwitchCategoryPage {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::twitch::CoreTwitchChapter {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -43539,6 +43712,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::twitch::CoreTwitchStream {
             self.viewer_count.into_into_dart().into_dart(),
             self.started_at_ms.into_into_dart().into_dart(),
             self.thumbnail_url.into_into_dart().into_dart(),
+            self.language.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -43551,6 +43725,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::twitch::CoreTwitchStream>
     for crate::api::twitch::CoreTwitchStream
 {
     fn into_into_dart(self) -> crate::api::twitch::CoreTwitchStream {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::twitch::CoreTwitchStreamPage {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.items.into_into_dart().into_dart(),
+            self.cursor.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::twitch::CoreTwitchStreamPage
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::twitch::CoreTwitchStreamPage>
+    for crate::api::twitch::CoreTwitchStreamPage
+{
+    fn into_into_dart(self) -> crate::api::twitch::CoreTwitchStreamPage {
         self
     }
 }
@@ -48056,6 +48251,14 @@ impl SseEncode for crate::api::twitch::CoreTwitchCategory {
     }
 }
 
+impl SseEncode for crate::api::twitch::CoreTwitchCategoryPage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<crate::api::twitch::CoreTwitchCategory>>::sse_encode(self.items, serializer);
+        <Option<String>>::sse_encode(self.cursor, serializer);
+    }
+}
+
 impl SseEncode for crate::api::twitch::CoreTwitchChapter {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -48201,6 +48404,15 @@ impl SseEncode for crate::api::twitch::CoreTwitchStream {
         <i64>::sse_encode(self.viewer_count, serializer);
         <Option<i64>>::sse_encode(self.started_at_ms, serializer);
         <Option<String>>::sse_encode(self.thumbnail_url, serializer);
+        <Option<String>>::sse_encode(self.language, serializer);
+    }
+}
+
+impl SseEncode for crate::api::twitch::CoreTwitchStreamPage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<crate::api::twitch::CoreTwitchStream>>::sse_encode(self.items, serializer);
+        <Option<String>>::sse_encode(self.cursor, serializer);
     }
 }
 

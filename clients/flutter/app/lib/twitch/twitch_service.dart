@@ -325,6 +325,13 @@ class TwitchService extends ChangeNotifier {
   TwitchFavoriteFilter _filter = TwitchFavoriteFilter.all;
   bool _liveKnown = false;
 
+  /// Browse (TWI-034): the stored language choice and recent searches.
+  String? _browseLanguage;
+  List<String> _recentSearches = const [];
+  static const maxRecentSearches = 8;
+  static const categoriesPageSize = 40;
+  static const streamsPageSize = 30;
+
   List<TwitchFavorite> get favorites => _favorites;
   TwitchFavoriteSort get sort => _sort;
   TwitchFavoriteFilter get filter => _filter;
@@ -477,6 +484,18 @@ class TwitchService extends ChangeNotifier {
       (f) => f.name == filterPref,
       orElse: () => TwitchFavoriteFilter.all,
     );
+    _browseLanguage = await preferences.read(Preferences.twitchBrowseLanguage);
+    final recent = await preferences.read(Preferences.twitchRecentSearches);
+    if (recent != null) {
+      try {
+        _recentSearches = [
+          for (final q in jsonDecode(recent) as List)
+            if (q is String && q.trim().isNotEmpty) q,
+        ].take(maxRecentSearches).toList();
+      } catch (_) {
+        _recentSearches = const [];
+      }
+    }
     notifyListeners();
     // At start: at most once a day (refreshAccount checks the age).
     if (account != null) unawaited(refreshAccount());
@@ -984,8 +1003,87 @@ class TwitchService extends ChangeNotifier {
     );
   }
 
+  // ----- Browse (TWI-034) ----------------------------------------------------
+
+  /// One page of the most watched categories (needs a sign-in).
+  Future<TwitchPage<TwitchCategory>> topCategories({String? cursor}) =>
+      backend.topCategories(cursor: cursor, limit: categoriesPageSize);
+
+  /// One page of live streams of [category], most viewers first, in
+  /// [language] (ISO 639-1; null = every language). The channels' avatars
+  /// come along when Helix has them (best effort).
+  Future<TwitchPage<TwitchStream>> categoryStreams(
+    TwitchCategory category, {
+    String? language,
+    String? cursor,
+  }) async {
+    final page = await backend.categoryStreams(
+      category.id,
+      language: language,
+      cursor: cursor,
+      limit: streamsPageSize,
+    );
+    for (final s in page.items) {
+      _live[s.userId] = s;
+    }
+    final missing = [
+      for (final s in page.items)
+        if (_channels[s.login]?.avatarUrl == null) s.userId,
+    ];
+    if (missing.isNotEmpty) {
+      try {
+        _remember(await backend.users(ids: missing));
+      } on TwitchUnavailable catch (e) {
+        debugPrint('Twitch browse: avatars: $e');
+      }
+    }
+    return page;
+  }
+
+  /// The broadcast language of category pages: the stored choice, else
+  /// the UI language [uiLanguage]; null = all languages.
+  String? browseLanguage(String uiLanguage) => switch (_browseLanguage) {
+    null || '' => uiLanguage,
+    '*' => null,
+    final code => code,
+  };
+
+  /// Stores the language of category pages (null = all languages); the UI
+  /// language itself is stored as "follow the UI language".
+  Future<void> setBrowseLanguage(String? code, {required String uiLanguage}) {
+    _browseLanguage = code == null ? '*' : (code == uiLanguage ? null : code);
+    notifyListeners();
+    return preferences.write(Preferences.twitchBrowseLanguage, _browseLanguage);
+  }
+
+  /// Recent searches of the section, newest first (this device only).
+  List<String> get recentSearches => _recentSearches;
+
+  Future<void> rememberSearch(String query) async {
+    final q = query.trim();
+    if (q.length < 2) return;
+    final lower = q.toLowerCase();
+    _recentSearches = [
+      q,
+      for (final r in _recentSearches)
+        if (r.toLowerCase() != lower) r,
+    ].take(maxRecentSearches).toList();
+    notifyListeners();
+    await preferences.write(
+      Preferences.twitchRecentSearches,
+      jsonEncode(_recentSearches),
+    );
+  }
+
+  Future<void> clearRecentSearches() async {
+    _recentSearches = const [];
+    notifyListeners();
+    await preferences.write(Preferences.twitchRecentSearches, null);
+  }
+
   /// Channels and categories. Without a login: the favourites and the
-  /// library cache, plus "Add channel `name`".
+  /// library cache, plus "Add channel `name`". Channels on air come first,
+  /// most viewers first (TWI-034).
   Future<TwitchSearchResults> search(String query) async {
     final q = query.trim();
     if (q.isEmpty) return const TwitchSearchResults();
@@ -1008,13 +1106,34 @@ class TwitchService extends ChangeNotifier {
       for (final c in found) {
         channels.putIfAbsent(c.login, () => c);
       }
-      if (online) categories.addAll(await backend.searchCategories(q));
+      if (online) {
+        // Search results know "live" but not the viewers: ask once.
+        final ids = [for (final c in channels.values) ?c.userId];
+        if (ids.isNotEmpty) {
+          final streams = await backend.liveStreams(ids);
+          _live.removeWhere((id, _) => ids.contains(id));
+          for (final s in streams) {
+            _live[s.userId] = s;
+          }
+        }
+        categories.addAll(await backend.searchCategories(q));
+      }
     } on TwitchUnavailable catch (e) {
       debugPrint('Twitch search: $e');
     }
     final login = normalizeLogin(q);
+    final found = channels.values.toList();
+    final order = {for (final (i, c) in found.indexed) c.login: i};
+    found.sort((a, b) {
+      final la = liveOf(a), lb = liveOf(b);
+      if ((la == null) != (lb == null)) return la == null ? 1 : -1;
+      if (la != null && lb != null && la.viewers != lb.viewers) {
+        return lb.viewers.compareTo(la.viewers);
+      }
+      return order[a.login]!.compareTo(order[b.login]!);
+    });
     return TwitchSearchResults(
-      channels: channels.values.toList(),
+      channels: found,
       categories: categories,
       addByName: login != null && !channels.containsKey(login) ? login : null,
       online: online,

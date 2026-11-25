@@ -221,6 +221,8 @@ class _MediaCard extends StatelessWidget {
     this.overlays = const [],
     this.below,
     this.leading,
+    this.onCaptionTap,
+    this.onContextMenu,
   });
 
   final String seed;
@@ -233,6 +235,11 @@ class _MediaCard extends StatelessWidget {
   final Widget? below;
   final Widget? leading;
 
+  /// A tap on the caption (the channel line) when it does something else
+  /// than [onTap] (TWI-034: open the channel).
+  final VoidCallback? onCaptionTap;
+  final ValueChanged<Offset>? onContextMenu;
+
   @override
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
@@ -244,6 +251,7 @@ class _MediaCard extends StatelessWidget {
         children: [
           KFocusable(
             onActivate: onTap,
+            onContextMenu: onContextMenu,
             semanticLabel: title,
             builder: (context, focused) => AspectRatio(
               aspectRatio: 16 / 9,
@@ -260,7 +268,7 @@ class _MediaCard extends StatelessWidget {
           SizedBox(height: d.isTv ? 8 : 6),
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: onTap,
+            onTap: onCaptionTap ?? onTap,
             // The card above is the button for screen readers (UI-021).
             excludeFromSemantics: true,
             child: Row(
@@ -302,6 +310,10 @@ class TwitchLiveCard extends StatelessWidget {
     required this.channel,
     required this.width,
     this.onTap,
+    this.onChannel,
+    this.onContextMenu,
+    this.showGame = true,
+    this.language,
   });
 
   final TwitchStream stream;
@@ -309,17 +321,36 @@ class TwitchLiveCard extends StatelessWidget {
   final double width;
   final VoidCallback? onTap;
 
+  /// A tap on the channel line opens the channel (TWI-034).
+  final VoidCallback? onChannel;
+  final ValueChanged<Offset>? onContextMenu;
+
+  /// The category in the caption (off on a category page).
+  final bool showGame;
+
+  /// The broadcast language (ISO 639-1) in the caption, by its own name.
+  final String? language;
+
+  /// [code] by its own name; null for none or "other".
+  static String? languageLabel(String? code) =>
+      code == null || code.isEmpty || code == 'other'
+      ? null
+      : twitchLanguageName(code);
+
   @override
   Widget build(BuildContext context) {
     final d = KDensity.of(context);
-    final game = stream.gameName;
+    final game = showGame ? stream.gameName : null;
+    final lang = languageLabel(language);
     return _MediaCard(
       seed: 'live-${stream.login}',
       imageUrl: twitchImage(stream.thumbnailUrl, 640, 360),
       title: stream.displayName,
-      subtitle: [stream.title, ?game].join(' · '),
+      subtitle: [stream.title, ?game, ?lang].join(' · '),
       width: width,
       onTap: onTap,
+      onCaptionTap: onChannel,
+      onContextMenu: onContextMenu,
       leading: TwitchAvatar(
         channel: channel,
         size: d.isTv ? 30 : 32,

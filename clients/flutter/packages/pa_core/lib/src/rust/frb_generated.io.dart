@@ -1621,6 +1621,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTwitchCategory dco_decode_core_twitch_category(dynamic raw);
 
   @protected
+  CoreTwitchCategoryPage dco_decode_core_twitch_category_page(dynamic raw);
+
+  @protected
   CoreTwitchChapter dco_decode_core_twitch_chapter(dynamic raw);
 
   @protected
@@ -1654,6 +1657,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchStream dco_decode_core_twitch_stream(dynamic raw);
+
+  @protected
+  CoreTwitchStreamPage dco_decode_core_twitch_stream_page(dynamic raw);
 
   @protected
   CoreTwitchUser dco_decode_core_twitch_user(dynamic raw);
@@ -4110,6 +4116,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreTwitchCategoryPage sse_decode_core_twitch_category_page(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreTwitchChapter sse_decode_core_twitch_chapter(
     SseDeserializer deserializer,
   );
@@ -4157,6 +4168,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchStream sse_decode_core_twitch_stream(SseDeserializer deserializer);
+
+  @protected
+  CoreTwitchStreamPage sse_decode_core_twitch_stream_page(
+    SseDeserializer deserializer,
+  );
 
   @protected
   CoreTwitchUser sse_decode_core_twitch_user(SseDeserializer deserializer);
@@ -7409,6 +7425,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_twitch_category_page(
+    CoreTwitchCategoryPage self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_twitch_chapter(
     CoreTwitchChapter self,
     SseSerializer serializer,
@@ -7471,6 +7493,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_twitch_stream(
     CoreTwitchStream self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_twitch_stream_page(
+    CoreTwitchStreamPage self,
     SseSerializer serializer,
   );
 
