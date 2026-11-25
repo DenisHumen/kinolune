@@ -19,6 +19,8 @@
 #      PAYLOAD_TARGET  ref expected in the ISO (default ghcr.io/denishumen/alpha-os:stable);
 #      SERIAL_PORT     TCP port of the serial console on 127.0.0.1 (default 22541);
 #      BOOT_TIMEOUT    seconds until the installer prompt (default 600);
+#      INSTALL=tui     the same through the TUI screens (DIST-006), plus the saved
+#                      repeat-install answer file (yescrypt hash, valid for --dry-run);
 #      INSTALL=1       then install offline from the ISO onto the NVMe (unsigned payload,
 #                      ~10 min more) and boot the installed disk up to its login prompt.
 set -euo pipefail
@@ -77,7 +79,8 @@ python3 - "${SERIAL_PORT}" "${LOG}" "${BOOT_TIMEOUT}" "${PAYLOAD_TARGET}" "${INS
 import codecs, re, socket, sys, time
 
 port, log_path, boot_timeout, payload = int(sys.argv[1]), sys.argv[2], int(sys.argv[3]), sys.argv[4]
-install = sys.argv[5] == "1"
+mode = sys.argv[5]
+install = mode in ("1", "tui")
 log = open(log_path, "wb")
 dec = codecs.getincrementaldecoder("utf-8")("replace")
 buf = ""
@@ -197,13 +200,52 @@ wait(r"The name does not match", 30, "TUI: a wrong disk name is refused")
 send("\x15nvme0n1" + ENTER)
 wait(r"Dry run finished", 120, "TUI: dry run through the installer finished")
 send(DOWN); send(ENTER)
-m = wait(r"TUIEXIT=(\d+):(\w*)", 60, "TUI exited")
+m = wait(r"TUIEXIT=(\d+):(\w*)\r?\n", 60, "TUI exited")
 if m.group(1) != "0" or m.group(2) != "menu":
     errors.append(f"TUI dry run: exit {m.group(1)}, action {m.group(2)!r}")
 if errors:
     sys.exit("FAILED:\n  " + "\n  ".join(errors))
 print(f"==> live system: {osr}; payload: {images.strip()}", flush=True)
-if install:
+if mode == "tui":
+    # Real offline installation through the TUI screens (unsigned test payload: the
+    # answer file only pre-fills what the screens do not ask).
+    send("printf '%s' '{\"version\":1,\"hostname\":\"kinolune-iso\",\"image\":{\"enforce_signature_policy\":false},"
+         "\"kernel_args\":[\"console=ttyS0,115200\"]}' > /root/base.json; "
+         "alpha-installer tui --answers /root/base.json --lang en --action-file /tmp/tui-action; "
+         "echo TUI\"\"INSTALL=$?:$(cat /tmp/tui-action)\r")
+    wait(r"Мова / Language / Язык", 60, "TUI install: started")
+    send(ENTER)
+    wait(r"System disk", 60, "TUI install: disk")
+    send(ENTER)
+    wait(r"Disk layout", 30, "TUI install: layout")
+    send(" "); send(DOWN); send("\x15" + "20"); send(ENTER); send(ENTER)
+    wait(r"Computer name", 30, "TUI install: host name (data partition, 20 GiB system)")
+    send(ENTER)
+    wait(r"Administrator", 30, "TUI install: user")
+    send(DOWN); send(DOWN); send("smoke-test-pw"); send(DOWN); send("smoke-test-pw"); send(ENTER)
+    wait(r"Network", 30, "TUI install: network")
+    send(ENTER); send(ENTER)
+    wait(r"To start, type the disk name nvme0n1", 30, "TUI install: summary")
+    send("nvme0n1" + ENTER)
+    wait(r"Installing Kinolune OS", 60, "TUI install: progress screen")
+    wait(r"Kinolune OS is installed", 1800, "TUI install: success screen")
+    send(DOWN); send(ENTER)
+    wait(r"Save an answer file", 30, "TUI install: save screen")
+    send(ENTER)
+    wait(r"Saved: /root/kinolune-answers.json", 30, "TUI install: answer file saved")
+    send("\x1b"); time.sleep(1); send(DOWN); send(DOWN); send(ENTER)
+    m = wait(r"TUIINSTALL=(\d+):(\w*)\r?\n", 60, "TUI install: exited")
+    if m.group(1) != "0" or m.group(2) != "menu":
+        sys.exit(f"FAILED: TUI install: exit {m.group(1)}, action {m.group(2)!r}")
+    # The saved file carries the yescrypt hash, no clear-text password, and is valid.
+    send("echo HA\"\"SH=$(grep -c 'password_hash\": \"\\$y\\$' /root/kinolune-answers.json)"
+         ":$(grep -c smoke-test-pw /root/kinolune-answers.json)"
+         ":$(alpha-installer install --answers /root/kinolune-answers.json --dry-run >/dev/null 2>&1; echo $?)\r")
+    m = wait(r"HASH=(\d+):(\d+):(\d+)\r?\n", 60, "saved answer file checked")
+    if m.groups() != ("1", "0", "0"):
+        sys.exit(f"FAILED: saved answer file: hash/clear-text/dry-run = {m.groups()}")
+    send("systemctl poweroff\r")
+elif install:
     # Real offline installation from the ISO onto the NVMe (unsigned test payload).
     send("printf '%s' '{\"version\":1,\"disk\":{\"path\":\"/dev/nvme0n1\",\"data_partition\":true,\"root_size_gib\":20},"
          "\"hostname\":\"kinolune-iso\",\"user\":{\"name\":\"admin\",\"password\":\"smoke-test-pw\"},"
@@ -218,7 +260,7 @@ else:
     wait(r"Choose an action \[1-9\]", 60, "back in the menu after the shell")
 EOF
 
-if [[ "${INSTALL}" == 1 ]]; then
+if [[ "${INSTALL}" == 1 || "${INSTALL}" == tui ]]; then
     for _ in $(seq 1 60); do
         pid="$("${QEMU_EXEC_ARR[@]}" cat "${W}/qemu.pid" 2>/dev/null || echo 0)"
         "${QEMU_EXEC_ARR[@]}" kill -0 "${pid}" 2>/dev/null || break
