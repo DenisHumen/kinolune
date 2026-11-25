@@ -22,7 +22,9 @@
 | `admin/` | `alpha-admin` (Go): бэкенд админки — вход пользователями ОС, REST поверх D-Bus, прокси к `alpha-updated`, самоподписанный TLS (DIST-013), см. [admin/README.md](admin/README.md) |
 | `installer/` | `alpha-installer` (Go): пока только обнаружение дисков (DIST-004), см. [installer/README.md](installer/README.md) |
 | `updated/` | `alpha-updated` (Go): агент обновлений — check, download-only, apply, rollback через bootc, API на unix-сокете, окно обслуживания (DIST-009), см. [updated/README.md](updated/README.md) |
+| `installer/` | `alpha-installer` (Go): обнаружение дисков (DIST-004), установка по файлу ответов (DIST-005), см. [installer/README.md](installer/README.md) |
 | `tests/vm-switch-rollback.sh` | сценарий фазы 0: switch → rollback → upgrade → rollback → digest-пин и возврат на тег |
+| `tests/vm-install.sh` | DIST-005: установка `alpha-installer` по файлу ответов на виртуальный NVMe (UEFI), загрузка установленной системы, проверки по SSH, `bootc upgrade --check` против реестра |
 | `.work/` | локальные артефакты (диски, ключи SSH, логи); в git не попадает |
 
 ## Что в образе
@@ -76,6 +78,7 @@ docker build -f distro/Containerfile -t localhost/alpha-os:dev distro
 
 ```bash
 distro/tests/vm-switch-rollback.sh          # ~10 минут; KEEP=1 — оставить VM и реестр
+distro/tests/vm-install.sh                  # ~20 минут: установка по файлу ответов в QEMU (OVMF, NVMe)
 ```
 
 Сценарий поднимает локальный реестр `registry:2` на `127.0.0.1:5000` (VM видит хост как `10.0.2.2`), собирает v1 и v2, ставит **стоковую** базу на raw-диск, загружает её в QEMU и по SSH проверяет:

@@ -1639,10 +1639,10 @@ project_alpha/
   - Что: `lsblk -J` + udev + `/sys/class/nvme/*/model`; имена вида «Samsung 990 PRO 1TB — /dev/nvme0n1»; десятичные размеры; фильтр loop, zram, sr и загрузочной флешки; признаки существующих данных (PTTYPE, blkid, mdraid); SMART.
   - deps: DIST-001 · size: M · parallel: yes · веха: M8 · ref: 05 §2.4 (чтение дисков)
   - done when: `go test` на записанных выводах lsblk и udev с 10 конфигурациями железа.
-- [ ] **DIST-005** Установщик: разметка, `bootc install`, конфигурация, файл ответов
+- [x] **DIST-005** Установщик: разметка, `bootc install`, конфигурация, файл ответов
   - Что: GPT и UEFI (ESP 1 GiB, /boot 2 GiB, root на btrfs с `@var`, опционально раздел данных); `bootc install to-filesystem` из containers-storage с `--target-imgref ghcr.io/…/alpha-os:stable` и `--enforce-container-sigpolicy`; hostname, пользователь (yescrypt, wheel), NetworkManager connection, `/var/lib/alpha/install.json`; режим `--answers answers.json`.
   - deps: DIST-004 · size: L · parallel: no · веха: M8 · ref: 05 §2.4
-  - done when: неинтерактивная установка в QEMU даёт загружаемую систему, которая отслеживает реестр, а не локальный путь.
+  - done when: неинтерактивная установка в QEMU даёт загружаемую систему, которая отслеживает реестр, а не локальный путь. Сделано: `alpha-installer install --answers FILE [--dry-run] [--yes]` (`distro/installer/internal/{answers,install}`, ADR-0166): GPT/UEFI через `sfdisk` (ESP 1 GiB, `/boot` 2 GiB ext4, root btrfs, опционально `kinolune-data`), `bootc install to-filesystem` из `containers-storage` (по умолчанию в контейнере payload через podman) с `--target-imgref` на реестр и `--enforce-container-sigpolicy`, `/var` в сабволюме `@var` через fstab, hostname, пользователь (yescrypt, wheel, `/var/home`), NetworkManager keyfile, `/var/lib/alpha/install.json`, метки SELinux; отказ для загрузочного/смонтированного диска и без `--yes`; минимальный диск ≈20.4 GB вместо временных 16 GB. Go-тесты на фейковом runner; `distro/tests/vm-install.sh` (OVMF, виртуальный NVMe): установленная система загружается, `bootc status` — `registry 10.0.2.2:…/alpha-os:dev`, `bootc upgrade --check` видит новый образ. Live-ISO — DIST-007, Secure Boot и CI-прогон — DIST-008.
 - [ ] **DIST-006** Установщик: TUI (bubbletea)
   - Что: экран 1 (hostname, пользователь, пароль дважды, сеть DHCP или статика, выбор интерфейса); экран 2 (диск, «остаток под данные», опция LUKS); подтверждение вводом имени диска; прогресс; перезагрузка; ru и en.
   - deps: DIST-005 · size: M · parallel: yes · веха: M8 · ref: 05 §2.1, §2.3

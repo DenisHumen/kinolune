@@ -5,7 +5,7 @@
 Общие правила — в корневом [AGENTS.md](../AGENTS.md). Подробности — [distro/README.md](README.md), решения — ADR-0010. По ADR-0011 NAS-ОС идёт после релиза 0.1 клиентов.
 
 - **Что здесь:** image-based ОС на bootc: `Containerfile`, `packages.txt`, `rootfs/`, скрипты в `scripts/`, VM-тест в `tests/`. Владелец — workstream DIST.
-- **Нужно:** docker (пользователь в группе `docker`) или rootful podman; для VM-теста — `qemu-system-x86_64`, `/dev/kvm`, `ssh`, `python3`, ~6 GB диска. sudo на хосте не нужен.
+- **Нужно:** docker (пользователь в группе `docker`) или rootful podman; для VM-тестов — `qemu-system-x86_64`, OVMF (для `vm-install.sh`), `/dev/kvm`, `ssh`, `python3`, ~6–10 GB диска. sudo на хосте не нужен.
 
 ## Сборка и тесты (из корня репозитория)
 
@@ -16,6 +16,7 @@ distro/tests/vm-switch-rollback.sh                     # ~10 мин: switch → 
 (cd distro/admin && go vet ./... && go test -race ./...) # alpha-admin: нужен dbus-daemon (иначе D-Bus-тесты пропускаются)
 distro/admin/tests/pam-container.sh                    # alpha-admin с настоящим PAM в контейнере Fedora
 distro/admin/tests/vm-admin-e2e.sh                     # ~15 мин: alpha-admin в QEMU против настоящих systemd/NM/firewalld/UDisks2/logind
+distro/tests/vm-install.sh                             # ~20 мин: установщик по файлу ответов (OVMF, NVMe)
 shellcheck distro/scripts/*.sh distro/tests/*.sh       # если установлен
 just distro::installer-test                            # Go: установщик (DIST-004)
 just distro::updated-test                              # Go: агент обновлений alpha-updated на fake bootc (DIST-009)

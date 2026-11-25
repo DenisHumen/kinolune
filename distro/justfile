@@ -6,9 +6,17 @@
 installer-disks *args:
     cd installer && go run ./cmd/alpha-installer disks {{args}}
 
-# Installer Go checks: gofmt, vet, tests on recorded lsblk/udev fixtures
+# Installer plan for an answer file (validates it, touches nothing)
+installer-plan answers *args:
+    cd installer && go run ./cmd/alpha-installer install --answers {{answers}} --dry-run {{args}}
+
+# Installer Go checks: gofmt, vet, tests on recorded lsblk/udev fixtures and a fake runner
 installer-test:
     cd installer && test -z "$(gofmt -l .)" && go vet ./... && go test ./...
+
+# QEMU: non-interactive install onto a virtual NVMe (OVMF), boot it, checks over SSH (~20 min)
+installer-vm-test:
+    tests/vm-install.sh
 
 # Update agent (alpha-updated) Go checks: gofmt, vet, tests on a fake bootc
 updated-test:
