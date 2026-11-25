@@ -12,6 +12,7 @@
 ```bash
 distro/scripts/build-image.sh localhost/alpha-os:dev   # сборка образа + bootc container lint
 distro/tests/vm-switch-rollback.sh                     # ~10 мин: switch → rollback → upgrade → digest-пин
+distro/tests/wifi-hwsim-vm.sh FEDORA_CLOUD.qcow2 nm_probe  # ~10 мин: Wi-Fi приложения в VM с mac80211_hwsim (DIST-032)
 shellcheck distro/scripts/*.sh distro/tests/*.sh       # если установлен
 ```
 

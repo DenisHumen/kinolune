@@ -19,6 +19,7 @@
 | `scripts/run-vm.sh` | запуск диска в QEMU/KVM (2 vCPU, 3 GiB, SSH на `127.0.0.1:22522`, `VM_UEFI=1` для OVMF) |
 | `installer/` | `alpha-installer` (Go): пока только обнаружение дисков (DIST-004), см. [installer/README.md](installer/README.md) |
 | `tests/vm-switch-rollback.sh` | сценарий фазы 0: switch → rollback → upgrade → rollback → digest-пин и возврат на тег |
+| `tests/wifi-hwsim.sh`, `tests/wifi-hwsim-vm.sh` | DIST-032: Wi-Fi приложения (клиент NetworkManager, `tool/nm_probe.dart`) в VM Fedora Cloud с `mac80211_hwsim` — точки WPA2 и открытая, пользователь группы `kinolune` без root |
 | `.work/` | локальные артефакты (диски, ключи SSH, логи); в git не попадает |
 
 ## Что в образе
@@ -26,6 +27,7 @@
 - **Наши сервисы — заглушки** (`/usr/libexec/alpha/alpha-stub`, Python): `alpha-media` (:8487), `alpha-admin` (:80), `alpha-updated` (:7091, наружу не открыт). Каждая отвечает `GET /health` и `/healthz` JSON-ом с версией образа. Юниты с `DynamicUser=yes` и `ProtectSystem=strict`.
 - **Samba**: SMB3, `vfs_fruit` для macOS, шара `Media` → `/var/srv/media` (гостевое чтение). **wsdd** (Windows), **Avahi** + nss-mdns (`<hostname>.local`).
 - **firewalld**: зона по умолчанию `home`; открыты samba, mdns, ws-discovery, http, https, 8487/tcp. (ssh и dhcpv6-client остаются из стандартной зоны `home` — на прототипе SSH нужен для тестов; выключение по умолчанию — в DIST-013.)
+- **NetworkManager** с Wi-Fi (`NetworkManager-wifi`, `wpa_supplicant`): группа `kinolune` (`sysusers.d`) по polkit-правилу `50-kinolune-network.rules` подключает сети, сканирует, включает и выключает Wi-Fi, сохраняет и забывает профили без root — для панели «Сеть» на главной Kinolune (DIST-032, ADR-NNNN).
 - **smartd**, **chronyd**, **greenboot** (проверки появятся в DIST-011), **Cockpit** установлен, `cockpit.socket` выключен.
 - `bootc-fetch-apply-updates.timer` **замаскирован**: обновлениями будет управлять `alpha-updated` (DIST-009).
 - Версия образа — `/usr/share/alpha/version` (`ALPHA_OS_VERSION`, build-arg).
