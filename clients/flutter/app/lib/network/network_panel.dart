@@ -608,7 +608,10 @@ class _PasswordDialogState extends State<_PasswordDialog> {
   Widget build(BuildContext context) {
     final l = context.l10n;
     return AlertDialog(
-      title: Text(l.networkPasswordTitle(widget.ssid)),
+      title: Text(
+        l.networkPasswordTitle(widget.ssid),
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -704,7 +707,10 @@ class _HiddenDialogState extends State<_HiddenDialog> {
       _ => l.networkSecurityWpa,
     };
     return AlertDialog(
-      title: Text(l.networkHiddenTitle),
+      title: Text(
+        l.networkHiddenTitle,
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -796,7 +802,10 @@ class _DetailsDialog extends StatelessWidget {
             .firstOrNull;
         final auto = n?.autoconnect ?? true;
         return AlertDialog(
-          title: Text(ssid),
+          title: Text(
+        ssid,
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
