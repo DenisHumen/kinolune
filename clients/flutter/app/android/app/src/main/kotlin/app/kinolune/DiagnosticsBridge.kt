@@ -5,6 +5,8 @@ import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -23,7 +25,8 @@ import java.util.concurrent.Executors
  *   signals, so the core does not install its own handlers on Android. Dart saves them as crash reports only
  *   when the user opted in.
  * * `saveToDownloads(path, name)` — copies the diagnostic report into the shared Downloads (Android 10+) so the
- *   user can attach it to a GitHub issue; returns `Download/<name>` or null.
+ *   user can attach it to a GitHub issue; returns `{shown: "Download/<name>", uri: "content://…"}` or null.
+ * * `share(uri, name)` — the system share sheet with that copy (BUG-024); false when it did not open.
  *
  * Nothing is sent anywhere.
  */
@@ -67,6 +70,15 @@ object DiagnosticsBridge {
                         }
                         main.post { result.success(saved) }
                     }
+                }
+                "share" -> {
+                    val uri = call.argument<String>("uri")
+                    val name = call.argument<String>("name") ?: "kinolune-diagnostics.zip"
+                    if (uri == null) {
+                        result.error("args", "uri is required", null)
+                        return@setMethodCallHandler
+                    }
+                    result.success(share(app, Uri.parse(uri), name))
                 }
                 else -> result.notImplemented()
             }
@@ -116,7 +128,24 @@ object DiagnosticsBridge {
         return out.toByteArray()
     }
 
-    private fun saveToDownloads(context: Context, file: File, name: String): String? {
+    private fun share(context: Context, uri: Uri, name: String): Boolean = try {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, name)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val chooser = Intent.createChooser(send, name).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(chooser)
+        true
+    } catch (e: Exception) {
+        Log.w(TAG, "share sheet not opened: $e")
+        false
+    }
+
+    private fun saveToDownloads(context: Context, file: File, name: String): Map<String, String>? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
         val resolver = context.contentResolver
         val values = ContentValues().apply {
@@ -135,6 +164,6 @@ object DiagnosticsBridge {
             resolver.delete(uri, null, null)
             throw e
         }
-        return "Download/$name"
+        return mapOf("shown" to "Download/$name", "uri" to uri.toString())
     }
 }

@@ -223,7 +223,7 @@ jobs:
           pkg-config --modversion mpv
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build linux --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_BUILD_NUMBER="$BUILD_NUMBER" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
       - name: Package tar.gz and AppImage (with our libmpv and libsmb2)
         env:
           PA_LIBMPV_DIR: ${{ runner.temp }}/libmpv-linux-x86_64
@@ -383,7 +383,7 @@ jobs:
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           common=(--release --target-platform "android-arm,android-arm64,android-x64"
                   --build-name "$VERSION" --build-number "$BUILD_NUMBER"
-                  --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID")
+                  --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_BUILD_NUMBER="$BUILD_NUMBER" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID")
           out="$GITHUB_WORKSPACE/dist"
           mkdir -p "$out"
           apks=build/app/outputs/flutter-apk
@@ -532,7 +532,7 @@ jobs:
           xcodebuild -version
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build macos --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_BUILD_NUMBER="$BUILD_NUMBER" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
           # What CocoaPods and SwiftPM wrote into the runner project; commit it
           # when it changes (uploaded with the smoke results).
           mkdir -p "$RUNNER_TEMP/smoke"
@@ -701,7 +701,7 @@ jobs:
         run: |
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build windows --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
-            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
+            --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_BUILD_NUMBER="$BUILD_NUMBER" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
           ls -l build/windows/x64/runner/Release
       - name: Package zip (with libsmb2, VC++ runtime and licences)
         run: |

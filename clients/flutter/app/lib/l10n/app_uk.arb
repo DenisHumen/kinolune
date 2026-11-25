@@ -2343,5 +2343,12 @@
   "formatTotal": "усього {time}",
   "formatLeft": "залишилося {time}",
   "formatAllWatched": "переглянуто",
-  "formatHours": "{hours, plural, one{{hours} год} few{{hours} год} many{{hours} год} other{{hours} год}}"
+  "formatHours": "{hours, plural, one{{hours} год} few{{hours} год} many{{hours} год} other{{hours} год}}",
+  "settingsDiagnosticsSavedFolder": "Папка",
+  "settingsDiagnosticsSavedFile": "Файл",
+  "settingsDiagnosticsSavedNote": "Нічого не надіслано. Щоб повідомити про проблему, відкрийте issue на GitHub і додайте цей файл; перед цим його можна переглянути.",
+  "settingsDiagnosticsOpenFolder": "Відкрити папку",
+  "settingsDiagnosticsShare": "Поділитися",
+  "settingsDiagnosticsOpenFolderFailed": "Не вдалося відкрити папку",
+  "settingsDiagnosticsShareFailed": "Не вдалося відкрити меню «Поділитися»"
 }
