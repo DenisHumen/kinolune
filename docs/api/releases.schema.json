@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/DenisHumen/kinolune/main/docs/api/releases.schema.json",
+  "title": "GitHub Releases API: fields read by the Kinolune updater",
+  "description": "Subset of GET https://api.github.com/repos/DenisHumen/kinolune/releases?per_page=30 that the full-flavor updater reads (PKG-018/PKG-022; clients/flutter/app/lib/features/updates/releases.dart, AppRelease.fromGitHub). The list also holds releases with other tags; the app keeps only non-draft releases whose tag_name is app-v followed by a semver. Other GitHub fields are allowed. CI stand-in: packaging/app/update-test/release-json.py.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "tag_name",
+      "html_url"
+    ],
+    "properties": {
+      "tag_name": {
+        "type": "string",
+        "description": "App releases: app-v<semver>, e.g. app-v0.1.0-alpha.21."
+      },
+      "name": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Title; 'debug-signed' marks APKs signed with the CI debug key."
+      },
+      "draft": {
+        "type": "boolean"
+      },
+      "prerelease": {
+        "type": "boolean",
+        "description": "A semver pre-release version counts as a pre-release even if this is false."
+      },
+      "body": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Release notes (Markdown); the changelog is the part before '## Downloads'."
+      },
+      "html_url": {
+        "type": "string",
+        "format": "uri"
+      },
+      "published_at": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "date-time"
+      },
+      "assets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "name",
+            "browser_download_url"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "An installable app release carries SHA256SUMS and SHA256SUMS.minisig."
+            },
+            "size": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "browser_download_url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "additionalProperties": true
+  }
+}
