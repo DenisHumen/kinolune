@@ -165,7 +165,10 @@ vm "systemd-analyze security alpha-admin.service | tail -1; systemd-analyze secu
 FP_BEFORE="$(vm python3 - fingerprint < "${ADMIN_TESTS}/vm_api_check.py")"
 BOOT_ID="$(vm cat /proc/sys/kernel/random/boot_id)"
 sleep 12   # the login rate limit (10 a minute per address) refills
-vm python3 - reboot < "${ADMIN_TESTS}/vm_api_check.py"
+# The VM may go down before SSH returns: judge by the output, not the exit code.
+REBOOT_OUT="$(vm python3 - reboot < "${ADMIN_TESTS}/vm_api_check.py" 2>&1)" || true
+echo "${REBOOT_OUT}" | grep -v '^Connection to'
+grep -q '^OK reboot confirmed' <<< "${REBOOT_OUT}" || die "reboot through the API failed"
 wait_reboot "${BOOT_ID}"
 wait_ssh
 for _ in $(seq 1 24); do
