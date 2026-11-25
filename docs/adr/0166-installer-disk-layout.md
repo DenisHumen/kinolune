@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
-# ADR-NNNN. Установщик NAS-ОС: своя разметка и `bootc install to-filesystem`, `/var` в сабволюме `@var`, файл ответов
+# ADR-0166. Установщик NAS-ОС: своя разметка и `bootc install to-filesystem`, `/var` в сабволюме `@var`, файл ответов
 
 - Статус: **предложен** (DIST-005)
 - Дата: 2026-11-25

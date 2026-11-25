@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
 # distro/installer — `alpha-installer` (Go)
 
-Установщик NAS-ОС ([исследование 05 §2.3–2.4](../../docs/research/05-nas-linux-distro.md), [ADR-0010](../../docs/adr/0010-nas-os-phase0.md)). В нём **обнаружение дисков** (DIST-004) и **установка по файлу ответов** (DIST-005, решения — [ADR-NNNN](../../docs/adr/NNNN-installer-disk-layout.md)). TUI — в DIST-006, live-ISO — в DIST-007.
+Установщик NAS-ОС ([исследование 05 §2.3–2.4](../../docs/research/05-nas-linux-distro.md), [ADR-0010](../../docs/adr/0010-nas-os-phase0.md)). В нём **обнаружение дисков** (DIST-004) и **установка по файлу ответов** (DIST-005, решения — [ADR-0166](../../docs/adr/0166-installer-disk-layout.md)). TUI — в DIST-006, live-ISO — в DIST-007.
 
 ## Обнаружение дисков (`internal/disks`)
 
