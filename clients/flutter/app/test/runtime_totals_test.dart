@@ -146,6 +146,9 @@ const _expected = {
 };
 
 void main() {
+  // Readable screenshots in docs/screenshots/progress/ui-056.
+  setUpAll(loadAppFonts);
+
   group('format', () {
     final ru = lookupAppLocalizations(const Locale('ru'));
     final en = lookupAppLocalizations(const Locale('en'));
