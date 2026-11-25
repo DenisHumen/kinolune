@@ -49,7 +49,7 @@ async fn get(addr: SocketAddr, path: &str, extra: &str) -> (u16, Value) {
     (status, serde_json::from_str(body).unwrap())
 }
 
-async fn activity(addr: SocketAddr) -> Value {
+async fn report(addr: SocketAddr) -> Value {
     let (status, body) = get(addr, PATH, "").await;
     assert_eq!(status, 200, "{body}");
     body
@@ -63,7 +63,7 @@ fn idle() -> Value {
 async fn wait_for(addr: SocketAddr, want: &Value) -> Duration {
     let started = Instant::now();
     loop {
-        let got = activity(addr).await;
+        let got = report(addr).await;
         if &got == want {
             return started.elapsed();
         }
@@ -112,7 +112,7 @@ where
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn playing_heartbeat_is_busy_until_its_ttl() {
     with_server(&config("127.0.0.1:0"), |addr, _| async move {
-        assert_eq!(activity(addr).await, idle());
+        assert_eq!(report(addr).await, idle());
 
         let url = format!("ws://{addr}{}", pa_server::sync::PATH);
         let (mut ws, _) = tokio_tungstenite::connect_async(url).await.unwrap();
@@ -137,7 +137,10 @@ async fn playing_heartbeat_is_busy_until_its_ttl() {
         let busy = json!({"busy": true, "sessions": 1, "reason": "playback"});
         wait_for(addr, &busy).await;
         let gone = wait_for(addr, &idle()).await;
-        assert!(gone >= Duration::from_millis(500), "idle too early: {gone:?}");
+        assert!(
+            gone >= Duration::from_millis(500),
+            "idle too early: {gone:?}"
+        );
 
         // A fresh heartbeat makes it busy again; pause ends it at once.
         ws.send(send(&pb(PlayState::Playing, 2_000, None)))
@@ -158,21 +161,21 @@ async fn running_work_is_busy_until_it_ends() {
     with_server(&config("127.0.0.1:0"), |addr, activity| async move {
         let scan = activity.begin(ActivityKind::Scan);
         assert_eq!(
-            activity(addr).await,
+            report(addr).await,
             json!({"busy": true, "sessions": 0, "reason": "scan"})
         );
         let recording = activity.begin(ActivityKind::Recording);
         assert_eq!(
-            activity(addr).await,
+            report(addr).await,
             json!({"busy": true, "sessions": 0, "reason": "recording"})
         );
         let stream = activity.begin(ActivityKind::Playback);
         assert_eq!(
-            activity(addr).await,
+            report(addr).await,
             json!({"busy": true, "sessions": 1, "reason": "playback"})
         );
         drop((scan, recording, stream));
-        assert_eq!(activity(addr).await, idle());
+        assert_eq!(report(addr).await, idle());
     })
     .await;
 }
@@ -219,7 +222,7 @@ async fn refused_from_the_network() {
         assert!(body["error"].is_string());
         // The same server still answers the machine itself.
         let local = SocketAddr::new("127.0.0.1".parse().unwrap(), addr.port());
-        assert_eq!(activity(local).await, idle());
+        assert_eq!(report(local).await, idle());
     })
     .await;
 }

@@ -324,7 +324,11 @@ impl Server {
         let announcer = self.announce(addr).await;
         let scheme = if self.tls.is_some() { "https" } else { "http" };
         tracing::info!(%addr, scheme, version = VERSION, "listening");
-        let app = http::router(self.library.clone(), self.hub.clone(), self.activity.clone());
+        let app = http::router(
+            self.library.clone(),
+            self.hub.clone(),
+            self.activity.clone(),
+        );
         let hub = self.hub.clone();
         let shutdown = async move {
             shutdown.await;

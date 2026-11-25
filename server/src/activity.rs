@@ -206,7 +206,11 @@ pub(crate) async fn system_activity(
     let report = ActivityReport {
         busy: now.busy,
         sessions: now.sessions,
-        reason: now.reason.map(ActivityKind::as_str).unwrap_or("").to_owned(),
+        reason: now
+            .reason
+            .map(ActivityKind::as_str)
+            .unwrap_or("")
+            .to_owned(),
     };
     ([(header::CACHE_CONTROL, "no-store")], Json(report)).into_response()
 }
@@ -266,10 +270,7 @@ mod tests {
     fn guards_count_until_dropped() {
         let activity = Activity::default();
         let scan = activity.begin(ActivityKind::Scan);
-        assert_eq!(
-            Snapshot::new(&activity, 0).reason,
-            Some(ActivityKind::Scan)
-        );
+        assert_eq!(Snapshot::new(&activity, 0).reason, Some(ActivityKind::Scan));
         let rec = activity.begin(ActivityKind::Recording);
         // Recording outranks a scan.
         assert_eq!(

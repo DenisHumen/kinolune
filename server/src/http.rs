@@ -25,10 +25,10 @@ use utoipa_axum::routes;
 
 use crate::tls::TlsListener;
 
+use crate::activity::Activity;
 use crate::api::{
     ApiDoc, ApiError, ApiVersion, DbHealth, DeviceInfo, Devices, Health, InviteResponse, Status,
 };
-use crate::activity::Activity;
 use crate::pairing::Pairing;
 use crate::sync::Hub;
 use crate::{Library, SERVICE, VERSION};
