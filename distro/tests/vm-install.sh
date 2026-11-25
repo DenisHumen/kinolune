@@ -54,15 +54,15 @@ vm_as() { local u="$1"; shift; ssh "${SSH_OPTS[@]}" -p "${VM_SSH_PORT}" "${u}@12
 vm_put() { scp -q "${SSH_OPTS[@]}" -P "${VM_SSH_PORT}" "$1" "root@127.0.0.1:$2"; }
 
 vm_stop() {
-    if [[ -f "${W}/qemu.pid" ]]; then
-        "${QEMU_EXEC_ARR[@]}" kill "$(cat "${W}/qemu.pid")" 2>/dev/null || true
-        local i
-        for i in $(seq 1 30); do
-            "${QEMU_EXEC_ARR[@]}" kill -0 "$(cat "${W}/qemu.pid")" 2>/dev/null || break
-            sleep 1
-        done
-        rm -f "${W}/qemu.pid" 2>/dev/null || "${QEMU_EXEC_ARR[@]}" rm -f "${W}/qemu.pid"
-    fi
+    local pid i
+    # The pid file belongs to whoever runs QEMU (root in a helper container).
+    pid="$("${QEMU_EXEC_ARR[@]}" cat "${W}/qemu.pid" 2>/dev/null)" || return 0
+    "${QEMU_EXEC_ARR[@]}" kill "${pid}" 2>/dev/null || true
+    for i in $(seq 1 30); do
+        "${QEMU_EXEC_ARR[@]}" kill -0 "${pid}" 2>/dev/null || break
+        sleep 1
+    done
+    "${QEMU_EXEC_ARR[@]}" rm -f "${W}/qemu.pid"
 }
 
 cleanup() {
@@ -144,8 +144,9 @@ vm "printf '[[registry]]\nlocation = \"10.0.2.2:${REGISTRY_PORT}\"\ninsecure = t
     > /etc/containers/registries.conf.d/50-alpha-local.conf"
 log "Pulling the payload into the installer's containers-storage"
 vm podman pull -q "${VM_REPO}:dev" >/dev/null
-vm_put "${W}/alpha-installer" /usr/local/bin/alpha-installer
-vm chmod 0755 /usr/local/bin/alpha-installer
+# /usr is read-only on a bootc system; the live ISO (DIST-007) will ship the binary in the image.
+vm_put "${W}/alpha-installer" /root/alpha-installer
+vm chmod 0755 /root/alpha-installer
 
 TARGET_BY_ID="/dev/disk/by-id/nvme-QEMU_NVMe_Ctrl_${NVME_SERIAL}"
 vm test -e "${TARGET_BY_ID}" || die "${TARGET_BY_ID} not found in the installer VM"
@@ -174,17 +175,17 @@ sed "s|${TARGET_BY_ID}|/dev/vda|" "${W}/answers.json" > "${W}/answers-boot-disk.
 vm_put "${W}/answers-boot-disk.json" /root/answers-boot-disk.json
 
 # --- 3. safety checks ----------------------------------------------------------------------
-out="$(vm alpha-installer install --answers /root/answers-boot-disk.json --yes 2>&1 || true)"
+out="$(vm /root/alpha-installer install --answers /root/answers-boot-disk.json --yes 2>&1 || true)"
 check "the installer's own disk is refused" grep -q "boots from this disk" <<< "${out}"
-out="$(vm alpha-installer install --answers /root/answers.json < /dev/null 2>&1 || true)"
+out="$(vm /root/alpha-installer install --answers /root/answers.json < /dev/null 2>&1 || true)"
 check "--yes is required without a terminal" grep -q "add --yes" <<< "${out}"
-vm alpha-installer install --answers /root/answers.json --dry-run | tee "${W}/plan.txt"
+vm /root/alpha-installer install --answers /root/answers.json --dry-run | tee "${W}/plan.txt"
 check "dry run prints the plan" grep -q "Dry run: nothing was written" "${W}/plan.txt"
 check "dry run left the NVMe empty" test -z "$(vm "lsblk -no PTTYPE,FSTYPE /dev/nvme0n1 | tr -d ' \n'")"
 
 # --- 4. install ----------------------------------------------------------------------------
 log "Installing onto ${TARGET_BY_ID}"
-vm alpha-installer install --answers /root/answers.json --yes 2>&1 | tee "${W}/install.log"
+vm /root/alpha-installer install --answers /root/answers.json --yes 2>&1 | tee "${W}/install.log"
 vm "lsblk -o NAME,SIZE,FSTYPE,LABEL,PARTLABEL /dev/nvme0n1 /dev/vda" | tee "${W}/lsblk-installer.txt"
 check "the installer's disk is untouched" grep -q "vda.*xfs\|vda[0-9].*xfs" "${W}/lsblk-installer.txt"
 vm systemctl poweroff || true

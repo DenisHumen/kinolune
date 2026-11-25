@@ -5,13 +5,14 @@
 Общие правила — в корневом [AGENTS.md](../AGENTS.md). Подробности — [distro/README.md](README.md), решения — ADR-0010. По ADR-0011 NAS-ОС идёт после релиза 0.1 клиентов.
 
 - **Что здесь:** image-based ОС на bootc: `Containerfile`, `packages.txt`, `rootfs/`, скрипты в `scripts/`, VM-тест в `tests/`. Владелец — workstream DIST.
-- **Нужно:** docker (пользователь в группе `docker`) или rootful podman; для VM-теста — `qemu-system-x86_64`, `/dev/kvm`, `ssh`, `python3`, ~6 GB диска. sudo на хосте не нужен.
+- **Нужно:** docker (пользователь в группе `docker`) или rootful podman; для VM-тестов — `qemu-system-x86_64`, OVMF (для `vm-install.sh`), `/dev/kvm`, `ssh`, `python3`, ~6–10 GB диска. sudo на хосте не нужен.
 
 ## Сборка и тесты (из корня репозитория)
 
 ```bash
 distro/scripts/build-image.sh localhost/alpha-os:dev   # сборка образа + bootc container lint
 distro/tests/vm-switch-rollback.sh                     # ~10 мин: switch → rollback → upgrade → digest-пин
+distro/tests/vm-install.sh                             # ~20 мин: установщик по файлу ответов (OVMF, NVMe)
 shellcheck distro/scripts/*.sh distro/tests/*.sh       # если установлен
 ```
 
