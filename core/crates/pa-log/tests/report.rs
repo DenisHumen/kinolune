@@ -289,10 +289,7 @@ fn report_has_full_version_and_settings_without_secrets() {
         "tmdb_api_key",
         "profiles_pin",
     ] {
-        assert!(
-            config.contains(&format!("{key}: <redacted>\n")),
-            "{config}"
-        );
+        assert!(config.contains(&format!("{key}: <redacted>\n")), "{config}");
     }
     for secret in [
         "q8xzb3twitchoauthtoken5k2m9",
