@@ -13,6 +13,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/l10n.dart';
+import '../../platform/local_path.dart';
 import '../../services/app_services.dart';
 import '../../services/preferences.dart';
 import '../../theme/kinolune_theme.dart';
@@ -1025,7 +1026,9 @@ class _TwitchArchiveSettingsScreenState
                       title: rec
                           ? l.twitchArchiveRecordingsFolder
                           : l.twitchArchiveDownloadsFolder,
-                      subtitle: rec ? s.recordingsDir : s.downloadsDir,
+                      subtitle: displayLocalPath(
+                        rec ? s.recordingsDir : s.downloadsDir,
+                      ),
                       subtitleLines: 2,
                       onTap: () => _pickDir(rec),
                     ),

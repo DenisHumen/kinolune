@@ -19,6 +19,7 @@ import 'audio_processing.dart';
 import 'audio_profile.dart';
 import 'macos_gl.dart';
 import 'mpv_stats.dart';
+import 'native_heap.dart';
 import 'parts.dart';
 import 'playback_activity.dart';
 import 'playback_error.dart';
@@ -1120,6 +1121,8 @@ class MediaKitEngine
       await s.cancel();
     }
     await _player.dispose();
+    // BUG-001: hand the freed libmpv memory back to the system on Linux.
+    NativeHeap.afterPlayerDisposed();
     // _state is left to GC: widgets may still detach listeners after this.
   }
 }

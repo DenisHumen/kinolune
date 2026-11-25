@@ -10,7 +10,7 @@
 //! the network file. Playback, sidecar subtitles, the parts of a split
 //! movie and local art then work with the server off.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use pa_library::rusqlite::{Connection, params};
 use pa_vfs::{ByteSource, LocalFs, Vfs, VfsPath};
@@ -42,7 +42,7 @@ pub(crate) fn copy_roots(
         .query_map(params![source_id, vfs_path(path)], |r| {
             let target: String = r.get(0)?;
             let rel: String = r.get(1)?;
-            Ok(PathBuf::from(target).join(rel))
+            Ok(pa_vfs::host::join_relative(Path::new(&target), &rel))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(roots)
@@ -57,7 +57,7 @@ impl Catalog {
         let rel = path.trim_start_matches('/');
         Ok(roots
             .into_iter()
-            .map(|root| root.join(rel))
+            .map(|root| pa_vfs::host::join_relative(&root, rel))
             .find(|p| p.is_file()))
     }
 

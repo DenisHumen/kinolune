@@ -7485,5 +7485,348 @@
   "settingsAudioOutputDecode": "Always decode",
   "@settingsAudioOutputDecode": {
     "description": "Sound choice: decode everything to PCM on the device (PLAY-AND-004)."
+  },
+  "sourcesStatusNoAccess": "No access",
+  "@sourcesStatusNoAccess": {
+    "description": "UI-053: source status chip when the server refuses the password or rights."
+  },
+  "availabilityStatusAvailable": "Online",
+  "@availabilityStatusAvailable": {
+    "description": "UI-053: status word of a source or server."
+  },
+  "availabilityStatusSlow": "Slow",
+  "@availabilityStatusSlow": {
+    "description": "UI-053: status word: answers slowly."
+  },
+  "availabilityStatusNoAccess": "No access",
+  "@availabilityStatusNoAccess": {
+    "description": "UI-053: status word: password or rights refused."
+  },
+  "availabilityStatusUnavailable": "No connection",
+  "@availabilityStatusUnavailable": {
+    "description": "UI-053: status word: does not answer."
+  },
+  "availabilityStatusNoNetwork": "No network",
+  "@availabilityStatusNoNetwork": {
+    "description": "UI-053: status word: this device has no network."
+  },
+  "availabilityStatusUnknown": "Not checked",
+  "@availabilityStatusUnknown": {
+    "description": "UI-053: status word: not checked yet."
+  },
+  "availabilityNever": "not yet",
+  "@availabilityNever": {
+    "description": "UI-053: no last answer or sync yet."
+  },
+  "availabilityLineAvailable": "{name} is online",
+  "@availabilityLineAvailable": {
+    "description": "UI-053: status line of a source or server.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilityLineSlow": "{name} answers slowly",
+  "@availabilityLineSlow": {
+    "description": "UI-053: status line.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilityLineNoAccess": "No access to {name}",
+  "@availabilityLineNoAccess": {
+    "description": "UI-053: status line: password or rights refused.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilityLineNoAccessSince": "No access to {name} since {time}",
+  "@availabilityLineNoAccessSince": {
+    "description": "UI-053: status line with the time it started, e.g. 14:05.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilityLineUnavailable": "No connection to {name}",
+  "@availabilityLineUnavailable": {
+    "description": "UI-053: status line: does not answer.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilityLineUnavailableSince": "No connection to {name} since {time}",
+  "@availabilityLineUnavailableSince": {
+    "description": "UI-053: status line with the time it started.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilityLineNoNetwork": "This device has no network",
+  "@availabilityLineNoNetwork": {
+    "description": "UI-053: status line."
+  },
+  "availabilityLineUnknown": "{name}: not checked yet",
+  "@availabilityLineUnknown": {
+    "description": "UI-053: status line.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilityReasonPassword": "The server did not accept the user name or password.",
+  "@availabilityReasonPassword": {
+    "description": "UI-053: why there is no access."
+  },
+  "availabilityReasonRights": "No rights to this folder.",
+  "@availabilityReasonRights": {
+    "description": "UI-053: why there is no access."
+  },
+  "availabilityReasonSecretStore": "The saved password could not be read: type it again.",
+  "@availabilityReasonSecretStore": {
+    "description": "UI-053: why there is no access."
+  },
+  "availabilityReasonHostNotFound": "The address is not found on the network: it may have changed.",
+  "@availabilityReasonHostNotFound": {
+    "description": "UI-053: why there is no connection."
+  },
+  "availabilityReasonRefused": "The device is on the network, but the service does not answer: is it on?",
+  "@availabilityReasonRefused": {
+    "description": "UI-053: why there is no connection (connection refused)."
+  },
+  "availabilityReasonTimeout": "No answer in time: is it switched on?",
+  "@availabilityReasonTimeout": {
+    "description": "UI-053: why there is no connection (timeout)."
+  },
+  "availabilityReasonNotSeen": "The device is not seen on the network: is it on and nearby?",
+  "@availabilityReasonNotSeen": {
+    "description": "UI-053: why a device of the family is not reachable."
+  },
+  "availabilityReasonNoAnswer": "It does not answer.",
+  "@availabilityReasonNoAnswer": {
+    "description": "UI-053: why there is no connection (other)."
+  },
+  "availabilityActionRetry": "Retry",
+  "@availabilityActionRetry": {
+    "description": "UI-053: the one action: probe again."
+  },
+  "availabilityActionPassword": "Enter password",
+  "@availabilityActionPassword": {
+    "description": "UI-053: the one action: open the source form to type the password."
+  },
+  "availabilityActionAddress": "Change address",
+  "@availabilityActionAddress": {
+    "description": "UI-053: the one action: open the source form to change the address."
+  },
+  "availabilitySyncPaused": "{count, plural, =0{Sync via {name} is paused. Nothing waits on this device.} =1{Sync via {name} is paused: 1 change waits on this device and will go by itself when the connection is back.} other{Sync via {name} is paused: {count} changes wait on this device and will go by themselves when the connection is back.}}",
+  "@availabilitySyncPaused": {
+    "description": "UI-053: the plate while a sync channel (folder, hub, server, device) is down.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "availabilitySyncLast": "Last sync via {name}: {when}",
+  "@availabilitySyncLast": {
+    "description": "UI-053: last successful sync of a channel; when is 'just now', '5 minutes ago', 'at 14:05' or 'not yet'.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilityScreenTitle": "Connection status",
+  "@availabilityScreenTitle": {
+    "description": "UI-053: title of the screen in advanced settings."
+  },
+  "availabilityScreenIntro": "Sources, servers and sync channels: what works now, what waits to be sent and what changed.",
+  "@availabilityScreenIntro": {
+    "description": "UI-053: intro of the connection status screen."
+  },
+  "availabilitySectionTargets": "Sources and servers",
+  "@availabilitySectionTargets": {
+    "description": "UI-053: section of the connection status screen."
+  },
+  "availabilitySectionSync": "Sync",
+  "@availabilitySectionSync": {
+    "description": "UI-053: section of the connection status screen."
+  },
+  "availabilitySectionHistory": "History",
+  "@availabilitySectionHistory": {
+    "description": "UI-053: section of the connection status screen."
+  },
+  "availabilityNothing": "Nothing to check yet: add a source or another device.",
+  "@availabilityNothing": {
+    "description": "UI-053: empty list of the connection status screen."
+  },
+  "availabilityOutbox": "Waiting on this device for the other devices: {count}",
+  "@availabilityOutbox": {
+    "description": "UI-053: LAN outbox size.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "availabilityFolderOutbox": "Waiting for the sync folder: {count}",
+  "@availabilityFolderOutbox": {
+    "description": "UI-053: folder sync outbox size.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "availabilityChannelWaiting": "waiting: {count}",
+  "@availabilityChannelWaiting": {
+    "description": "UI-053: changes waiting for a paused channel.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "availabilityHistoryEmpty": "No changes yet",
+  "@availabilityHistoryEmpty": {
+    "description": "UI-053: empty history."
+  },
+  "availabilityHistoryLine": "{name}: {from} → {to}",
+  "@availabilityHistoryLine": {
+    "description": "UI-053: a status change in the history.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilityPassive": "seen in use",
+  "@availabilityPassive": {
+    "description": "UI-053: the change was seen in a real operation, not a probe."
+  },
+  "availabilityKindDevice": "Device of the family",
+  "@availabilityKindDevice": {
+    "description": "UI-053: kind of target."
+  },
+  "availabilityKindServer": "{app} server",
+  "@availabilityKindServer": {
+    "description": "UI-053: kind of target: the own server.",
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilityKindHub": "Sync hub",
+  "@availabilityKindHub": {
+    "description": "UI-053: kind of target."
+  },
+  "availabilityOriginSynced": "from another device",
+  "@availabilityOriginSynced": {
+    "description": "UI-053: the source arrived by sync."
+  },
+  "availabilityOriginAuto": "picked by the app",
+  "@availabilityOriginAuto": {
+    "description": "UI-053: picked automatically (sync folder)."
+  },
+  "availabilityChannelMark": "sync channel",
+  "@availabilityChannelMark": {
+    "description": "UI-053: sync goes through it."
+  },
+  "availabilityRtt": "{ms} ms",
+  "@availabilityRtt": {
+    "description": "UI-053: round trip of the last probe.",
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "availabilityLastOk": "last answer: {when}",
+  "@availabilityLastOk": {
+    "description": "UI-053: last time it answered.",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilitySettingsTitle": "Connections",
+  "@availabilitySettingsTitle": {
+    "description": "UI-053: advanced settings section."
+  },
+  "availabilitySettingsSubtitle": "Servers and the state of sources and sync",
+  "@availabilitySettingsSubtitle": {
+    "description": "UI-053: advanced settings section subtitle."
+  },
+  "availabilitySettingsTile": "Connection status",
+  "@availabilitySettingsTile": {
+    "description": "UI-053: settings tile opening the screen."
+  },
+  "availabilitySettingsTileSubtitle": "All sources and sync channels, history, waiting changes",
+  "@availabilitySettingsTileSubtitle": {
+    "description": "UI-053: settings tile subtitle."
+  },
+  "availabilityBannerTitle": "No connection to {name}",
+  "@availabilityBannerTitle": {
+    "description": "UI-053: banner when a source or server is down for more than 2 minutes.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "availabilityBannerSync": "Sync through it is paused; changes will go by themselves later.",
+  "@availabilityBannerSync": {
+    "description": "UI-053: banner line for a sync channel."
+  },
+  "availabilityBannerDetails": "Details",
+  "@availabilityBannerDetails": {
+    "description": "UI-053: banner button opening the connection status screen."
+  },
+  "commonScreenErrorTitle": "Something went wrong on this screen",
+  "@commonScreenErrorTitle": {
+    "description": "BUG-026: a screen failed to build; shown instead of a blank window."
+  },
+  "commonScreenErrorMessage": "The error is saved in the app log. Try again or go back.",
+  "@commonScreenErrorMessage": {
+    "description": "BUG-026: under commonScreenErrorTitle."
+  },
+  "commonScreenErrorRetry": "Try again",
+  "@commonScreenErrorRetry": {
+    "description": "BUG-026: rebuilds the failed screen."
+  },
+  "commonScreenErrorBack": "Back",
+  "@commonScreenErrorBack": {
+    "description": "BUG-026: leaves the failed screen."
   }
 }

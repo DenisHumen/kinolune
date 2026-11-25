@@ -7,16 +7,576 @@
       "name": "MPL-2.0",
       "identifier": "MPL-2.0"
     },
-    "version": "1.0"
+    "version": "1.1"
   },
   "paths": {
+    "/api/v1/auth/challenge": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "A challenge for a paired device to sign.",
+        "description": "Valid for 60 s and once.",
+        "operationId": "createChallenge",
+        "responses": {
+          "200": {
+            "description": "A fresh challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Challenge"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many open challenges",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/device": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Signs a paired device in with its device key.",
+        "description": "The device signs the challenge (SYNC-005 `auth` transcript with the\nserver as verifier) and gets a device session: it can list profiles and\nsign members in with a PIN. Revoking the device ends the session.",
+        "operationId": "loginDevice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Device signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tokens"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unknown or revoked device, bad signature or challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Locked after failed attempts; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Signs in with name and password.",
+        "description": "With the access token of a device session in `Authorization`, the new\nsession is bound to that device and ends when the device is revoked.\nFive wrong passwords lock the account for 30 s, doubling up to 15 min;\n20 failures lock the client address the same way.",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tokens"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Wrong name or password, or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Locked after failed attempts; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {},
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Ends the session of a refresh token.",
+        "operationId": "logout",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Signed out (also for unknown tokens)"
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "The caller's session.",
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "The session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/pin": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Signs a household member in with a profile PIN.",
+        "description": "Only on a paired device: the request needs the access token of a session\nbound to one (a device session). Locks like a password.",
+        "operationId": "loginPin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tokens"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Wrong profile or PIN, or no valid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not on a paired device",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Locked after failed attempts; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/profiles": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Profiles to pick on a device.",
+        "description": "Every account with its name and whether it has a PIN; for any signed-in\nsession, typically a device session before a member picks a profile.",
+        "operationId": "listProfiles",
+        "responses": {
+          "200": {
+            "description": "The accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Users"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Exchanges a refresh token for a new pair.",
+        "description": "Each refresh token works once. Presenting a used one again means it was\ncopied: the whole session is revoked.",
+        "operationId": "refresh",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "A new pair",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tokens"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unknown, expired or reused token, or the session ended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/setup": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Creates the first administrator.",
+        "description": "Works once, while no administrator exists: from the server itself, or\nfrom elsewhere with the code of `setup-code.txt` in the data directory.\nSigns the administrator in.",
+        "operationId": "setup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Administrator created and signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid name or password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Setup code missing or wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An administrator already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many wrong codes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices": {
       "get": {
         "tags": [
           "pairing"
         ],
         "summary": "Lists the devices of the family, revoked ones too.",
-        "description": "Allowed from the server itself only (loopback) until user accounts exist.",
+        "description": "For an administrator (or the server itself before the first\nadministrator exists).",
         "operationId": "listDevices",
         "responses": {
           "200": {
@@ -29,8 +589,18 @@
               }
             }
           },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "403": {
-            "description": "Not from the server itself",
+            "description": "Not an administrator",
             "content": {
               "application/json": {
                 "schema": {
@@ -39,7 +609,13 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {},
+          {
+            "bearer": []
+          }
+        ]
       }
     },
     "/api/v1/devices/{id}": {
@@ -48,7 +624,7 @@
           "pairing"
         ],
         "summary": "Revokes a device and rotates the family key.",
-        "description": "Allowed from the server itself only (loopback) until user accounts exist.",
+        "description": "Its connections close and every session bound to it ends (its tokens stop\nworking at once). For an administrator (or the server itself before the\nfirst administrator exists).",
         "operationId": "revokeDevice",
         "parameters": [
           {
@@ -75,8 +651,18 @@
               }
             }
           },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "403": {
-            "description": "Not from the server itself",
+            "description": "Not an administrator",
             "content": {
               "application/json": {
                 "schema": {
@@ -105,7 +691,13 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {},
+          {
+            "bearer": []
+          }
+        ]
       }
     },
     "/api/v1/pair": {
@@ -122,6 +714,26 @@
           },
           "400": {
             "description": "Not a WebSocket upgrade"
+          },
+          "401": {
+            "description": "Invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -132,7 +744,7 @@
           "pairing"
         ],
         "summary": "Opens a pairing invitation.",
-        "description": "A new code and its QR payload, replacing an open invitation. Allowed\nfrom the server itself only (loopback) until user accounts exist.",
+        "description": "A new code and its QR payload, replacing an open invitation. For an\nadministrator (or the server itself before the first administrator\nexists).",
         "operationId": "createInvite",
         "parameters": [
           {
@@ -164,8 +776,18 @@
           "400": {
             "description": "Invalid query"
           },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "403": {
-            "description": "Not from the server itself",
+            "description": "Not an administrator",
             "content": {
               "application/json": {
                 "schema": {
@@ -184,7 +806,13 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {},
+          {
+            "bearer": []
+          }
+        ]
       }
     },
     "/api/v1/sync": {
@@ -202,6 +830,26 @@
           "400": {
             "description": "Not a WebSocket upgrade"
           },
+          "401": {
+            "description": "Invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "From the network before the first administrator exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "503": {
             "description": "The hub has no free connection slot",
             "content": {
@@ -213,6 +861,320 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/system/activity": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Reports whether the server is busy (for OS updates).",
+        "description": "Playback (devices playing through the sync hub, streams served by the\nserver), recordings and scans make the server busy; the OS update agent\npostpones updates and reboots until it is not. Allowed from the server\nmachine itself only (loopback, not through a proxy); needs no token.",
+        "operationId": "systemActivity",
+        "responses": {
+          "200": {
+            "description": "What the server is doing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityReport"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not from the server machine itself",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Lists the accounts.",
+        "description": "For an administrator (or the server itself before the first\nadministrator exists).",
+        "operationId": "listUsers",
+        "responses": {
+          "200": {
+            "description": "The accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Users"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {},
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Adds an account: a household member (with a PIN and/or a password) or\nanother administrator (with a password).",
+        "operationId": "createUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid name, password or PIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The name is taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {},
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Deletes an account and ends its sessions.",
+        "description": "The last administrator cannot be deleted.",
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The last administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {},
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Changes the password and/or PIN of an account.",
+        "description": "For an administrator or the user themselves. Ends the user's other\nsessions.",
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid password or PIN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Neither an administrator nor the user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {},
+          {
+            "bearer": []
+          }
+        ]
       }
     },
     "/health": {
@@ -282,6 +1244,31 @@
   },
   "components": {
     "schemas": {
+      "ActivityReport": {
+        "type": "object",
+        "description": "What the server is doing that a reboot must not interrupt (SRV-019).\n\nThe OS update agent postpones an update and a reboot while `busy` is\ntrue or `sessions` is above zero.",
+        "required": [
+          "busy",
+          "sessions",
+          "reason"
+        ],
+        "properties": {
+          "busy": {
+            "type": "boolean",
+            "description": "Something is running that a reboot would interrupt."
+          },
+          "reason": {
+            "type": "string",
+            "description": "The main reason when busy: `playback`, `recording` or `scan`\n(in this order of precedence); empty when idle. New reasons may be\nadded."
+          },
+          "sessions": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Playback sessions: devices watching (last `pb.update` `playing` or\n`paused`, within its TTL) or streams served by the server, whichever\nis more.",
+            "minimum": 0
+          }
+        }
+      },
       "ApiError": {
         "type": "object",
         "description": "Error body of the API endpoints (status codes 4xx and 5xx).",
@@ -314,6 +1301,30 @@
             "format": "int32",
             "description": "Minor version: grows with additive changes.",
             "minimum": 0
+          }
+        }
+      },
+      "Challenge": {
+        "type": "object",
+        "description": "A device challenge.",
+        "required": [
+          "challenge",
+          "server_id",
+          "expires_ms"
+        ],
+        "properties": {
+          "challenge": {
+            "type": "string",
+            "description": "Nonce to sign (64 hex characters)."
+          },
+          "expires_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Expiry, Unix ms."
+          },
+          "server_id": {
+            "type": "string",
+            "description": "Id of the server: the verifier in the signed transcript."
           }
         }
       },
@@ -381,6 +1392,35 @@
             "minimum": 0
           }
         }
+      },
+      "DeviceLoginRequest": {
+        "type": "object",
+        "description": "Proof of a paired device key.",
+        "required": [
+          "device_id",
+          "nonce",
+          "challenge",
+          "sig"
+        ],
+        "properties": {
+          "challenge": {
+            "type": "string",
+            "description": "The challenge from `/api/v1/auth/challenge`."
+          },
+          "device_id": {
+            "type": "string",
+            "description": "Device id in the family."
+          },
+          "nonce": {
+            "type": "string",
+            "description": "The device's own fresh nonce (64 hex characters)."
+          },
+          "sig": {
+            "type": "string",
+            "description": "`pa_pairing::auth::prove(identity, server_id, nonce, challenge)`:\nEd25519 signature, hex."
+          }
+        },
+        "additionalProperties": false
       },
       "Devices": {
         "type": "object",
@@ -466,6 +1506,208 @@
           }
         }
       },
+      "LoginRequest": {
+        "type": "object",
+        "description": "Name and password.",
+        "required": [
+          "name",
+          "password"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "User name (any case)."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Me": {
+        "type": "object",
+        "description": "The caller's session.",
+        "required": [
+          "session_id",
+          "scope",
+          "method"
+        ],
+        "properties": {
+          "device_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The paired device it is bound to."
+          },
+          "method": {
+            "$ref": "#/components/schemas/Method",
+            "description": "How it was opened."
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope",
+            "description": "What the session may do."
+          },
+          "session_id": {
+            "type": "string",
+            "description": "Session id."
+          },
+          "user": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UserInfo",
+                "description": "The signed-in user; absent for a device session."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "Method": {
+        "type": "string",
+        "description": "How a session was opened.",
+        "enum": [
+          "password",
+          "pin",
+          "device"
+        ]
+      },
+      "NewUser": {
+        "type": "object",
+        "description": "A new account.",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name, unique without regard to case."
+          },
+          "password": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Password (required for an administrator)."
+          },
+          "pin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "PIN of 4–8 digits."
+          },
+          "role": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Role",
+                "description": "`member` (default) or `admin`."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "PinRequest": {
+        "type": "object",
+        "description": "Profile PIN.",
+        "required": [
+          "user_id",
+          "pin"
+        ],
+        "properties": {
+          "pin": {
+            "type": "string",
+            "description": "Its PIN."
+          },
+          "user_id": {
+            "type": "string",
+            "description": "The profile (user id) picked on the device."
+          }
+        },
+        "additionalProperties": false
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "description": "A refresh token.",
+        "required": [
+          "refresh_token"
+        ],
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "description": "The refresh token of the last pair."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Role": {
+        "type": "string",
+        "description": "Role of an account.",
+        "enum": [
+          "admin",
+          "member"
+        ]
+      },
+      "Scope": {
+        "type": "string",
+        "description": "What a session may do.",
+        "enum": [
+          "admin",
+          "member",
+          "device"
+        ]
+      },
+      "SetupRequest": {
+        "type": "object",
+        "description": "First administrator.",
+        "required": [
+          "name",
+          "password"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the administrator."
+          },
+          "password": {
+            "type": "string",
+            "description": "Password, 8–256 characters."
+          },
+          "setup_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The code from `setup-code.txt` in the data directory; not needed on\nthe server itself."
+          }
+        },
+        "additionalProperties": false
+      },
+      "SetupResponse": {
+        "type": "object",
+        "description": "The first administrator, signed in.",
+        "required": [
+          "user",
+          "tokens"
+        ],
+        "properties": {
+          "tokens": {
+            "$ref": "#/components/schemas/Tokens",
+            "description": "Its session."
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserInfo",
+            "description": "The new account."
+          }
+        }
+      },
       "Status": {
         "type": "string",
         "description": "`ok` or `error`.",
@@ -473,6 +1715,132 @@
           "ok",
           "error"
         ]
+      },
+      "Tokens": {
+        "type": "object",
+        "description": "Access and refresh tokens of a session.",
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_in",
+          "refresh_token",
+          "refresh_expires_in",
+          "scope"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "PASETO `v4.public` access token for `Authorization: Bearer`."
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds the access token is valid.",
+            "minimum": 0
+          },
+          "refresh_expires_in": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds the refresh token is valid.",
+            "minimum": 0
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Single-use refresh token: exchange it at `/api/v1/auth/refresh`\nfor a new pair. Presenting a used one again ends the session."
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope",
+            "description": "What the session may do."
+          },
+          "token_type": {
+            "type": "string",
+            "description": "Always `Bearer`."
+          }
+        }
+      },
+      "UserInfo": {
+        "type": "object",
+        "description": "A user, without secrets.",
+        "required": [
+          "id",
+          "name",
+          "role",
+          "has_password",
+          "has_pin",
+          "created_ms"
+        ],
+        "properties": {
+          "created_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Created, Unix ms."
+          },
+          "has_password": {
+            "type": "boolean",
+            "description": "Signs in with a password."
+          },
+          "has_pin": {
+            "type": "boolean",
+            "description": "Has a profile PIN."
+          },
+          "id": {
+            "type": "string",
+            "description": "User id."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name."
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role",
+            "description": "Role."
+          }
+        }
+      },
+      "UserPatch": {
+        "type": "object",
+        "description": "Changes of an account; absent fields stay.",
+        "properties": {
+          "password": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "New password; an empty string removes it (not for administrators)."
+          },
+          "pin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "New PIN of 4–8 digits; an empty string removes it."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Users": {
+        "type": "object",
+        "description": "Accounts of the server.",
+        "required": [
+          "users"
+        ],
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserInfo"
+            },
+            "description": "By name."
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "PASETO v4.public",
+        "description": "Access token from /api/v1/auth/login, /pin, /device or /refresh; valid 15 min."
       }
     }
   },
@@ -488,6 +1856,14 @@
     {
       "name": "sync",
       "description": "Sync protocol over WebSocket (docs/api/sync-protocol.md)"
+    },
+    {
+      "name": "system",
+      "description": "The machine the server runs on: activity for OS updates (SRV-019)"
+    },
+    {
+      "name": "auth",
+      "description": "Accounts, sign-in and tokens (SRV-003)"
     }
   ]
 }

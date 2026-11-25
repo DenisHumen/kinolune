@@ -33,6 +33,9 @@ enum InAppNoticeKind {
 
   /// A phone types into the focused field of this TV (UI-027).
   remoteInput,
+
+  /// A source or server went down for a while (UI-053).
+  availability,
 }
 
 /// A text of a notice in the current UI language.

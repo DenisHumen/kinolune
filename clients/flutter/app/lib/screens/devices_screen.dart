@@ -17,6 +17,7 @@ import '../sync/device_sync.dart';
 import '../sync/family_join.dart';
 import '../sync/new_device_setup.dart';
 import '../theme/kinolune_theme.dart';
+import '../widgets/availability_status.dart';
 import '../widgets/cards.dart';
 import '../widgets/focusable.dart';
 import '../widgets/qr_code.dart';
@@ -217,6 +218,8 @@ class _DevicesScreenState extends State<DevicesScreen> {
                           style: theme.textTheme.bodyMedium,
                         ),
                       ),
+                      // UI-053: «Синхронизация через NAS на паузе…».
+                      const SyncPausedPlate(),
                       if (!sync.available)
                         _Panel(
                           title: l.devicesTitle,
@@ -536,10 +539,21 @@ class _FolderSyncPanelState extends State<_FolderSyncPanel> {
       title: l.devicesFolderTitle,
       subtitle: l.devicesFolderBody,
       children: [
-        Text(
-          _status(state, services.clock()),
-          key: const ValueKey('devices-folder-status'),
-          style: theme.textTheme.bodyLarge,
+        Row(
+          children: [
+            // UI-053: the folder's source as the monitor sees it.
+            if (state.sourceId case final id?) ...[
+              SourceAvailabilityDot(sourceId: id),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(
+                _status(state, services.clock()),
+                key: const ValueKey('devices-folder-status'),
+                style: theme.textTheme.bodyLarge,
+              ),
+            ),
+          ],
         ),
         if (state.enabled)
           Padding(

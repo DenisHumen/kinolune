@@ -477,8 +477,7 @@ class PlayerScreenState extends State<PlayerScreen>
     final s = engine.state.value;
     switch (command) {
       case MediaSessionCommand.play:
-        if (s.completed) engine.seek(Duration.zero);
-        engine.play();
+        resume();
       case MediaSessionCommand.pause:
       case MediaSessionCommand.stop:
         engine.pause();
@@ -1068,14 +1067,36 @@ class PlayerScreenState extends State<PlayerScreen>
   // ---- actions -------------------------------------------------------------
 
   void togglePlay() {
-    final s = engine.state.value;
-    if (s.playing) {
+    if (engine.state.value.playing) {
       engine.pause();
     } else {
-      if (s.completed) engine.seek(Duration.zero);
-      engine.play();
+      resume();
     }
     osd.show();
+  }
+
+  /// Play (Space, the Play button, the media keys, TV OK, the lock screen).
+  /// At the end of an item (BUG-020) it goes on to the next one, with or
+  /// without the Up Next card, and never restarts an item that has an Up
+  /// Next chain (an episode): a replay would write a position near the
+  /// start over the finished episode. While the next item is loading, or
+  /// after the last episode, it does nothing. Only a video without a chain
+  /// (a movie, a loose file) plays again from the start.
+  void resume() {
+    if (engine.state.value.completed) {
+      if (upNext.visible) {
+        upNext.playNow();
+        return;
+      }
+      final next = _next;
+      if (next != null) {
+        playNext(next);
+        return;
+      }
+      if (_loadNext != null) return;
+      engine.seek(Duration.zero);
+    }
+    engine.play();
   }
 
   void seekBy(Duration delta) {
@@ -1400,7 +1421,7 @@ class PlayerScreenState extends State<PlayerScreen>
         k == LogicalKeyboardKey.mediaPause) {
       if (repeat) return KeyEventResult.handled;
       if (k == LogicalKeyboardKey.mediaPlay) {
-        engine.play();
+        resume();
       } else if (k == LogicalKeyboardKey.mediaPause) {
         engine.pause();
       } else {
