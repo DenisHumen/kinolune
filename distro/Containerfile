@@ -21,7 +21,7 @@ FROM ${BASE_IMAGE} AS admin-build
 RUN dnf -y install --setopt=install_weak_deps=False golang gcc pam-devel && dnf clean all
 COPY admin/ /src/admin/
 RUN cd /src/admin && \
-    export GOTOOLCHAIN=local GOFLAGS="-trimpath -mod=readonly" && \
+    export GOTOOLCHAIN=local GOFLAGS="-trimpath -mod=readonly" GOCACHE=/tmp/gocache GOPATH=/tmp/gopath && \
     CGO_ENABLED=0 go build -ldflags=-s -o /out/alpha-admin ./cmd/alpha-admin && \
     CGO_ENABLED=1 go build -tags pam -ldflags=-s -o /out/alpha-admin-auth ./cmd/alpha-admin-auth
 
