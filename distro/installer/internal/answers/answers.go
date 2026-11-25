@@ -180,11 +180,15 @@ var (
 	imageRe    = regexp.MustCompile(`^[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:[0-9]+)?(/[a-z0-9._-]+)+(:[A-Za-z0-9._-]{1,128}|@sha256:[a-f0-9]{64})$`)
 	langRe     = regexp.MustCompile(`^[a-z]{2,3}(_[A-Z]{2})?$`)
 	yescryptRe = regexp.MustCompile(`^\$y\$[./A-Za-z0-9]+\$[./A-Za-z0-9]{1,86}\$[./A-Za-z0-9]{43}$`)
-	// Names that exist in every Fedora image or would shadow a system role.
+	// Names that exist in every Fedora image or would shadow a system role,
+	// including the accounts our sysusers.d creates on first boot
+	// (alpha-admin: DIST-013 admin backend; kinolune: DIST-032 Wi-Fi group;
+	// alpha-media: the media server).
 	reservedUsers = map[string]bool{
 		"root": true, "bin": true, "daemon": true, "adm": true, "lp": true, "sync": true,
 		"shutdown": true, "halt": true, "mail": true, "operator": true, "games": true,
-		"ftp": true, "nobody": true, "wheel": true, "admin-ui": true, "systemd-network": true,
+		"ftp": true, "nobody": true, "wheel": true, "systemd-network": true,
+		"alpha-admin": true, "alpha-media": true, "kinolune": true,
 	}
 )
 

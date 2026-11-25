@@ -196,8 +196,18 @@ class _FamilyJoinDialogState extends State<FamilyJoinDialog> {
     }
   }
 
+  // Removes this dialog's own route even when another page or sheet was
+  // opened over it (a notification tap, a remote input sheet), so a plain
+  // pop() never closes the wrong screen.
   void _close() {
-    if (mounted) Navigator.of(context).pop();
+    if (!mounted) return;
+    final route = ModalRoute.of(context);
+    if (route == null) return;
+    if (route.isCurrent) {
+      Navigator.of(context).pop();
+    } else if (route.isActive) {
+      Navigator.of(context).removeRoute(route);
+    }
   }
 
   Future<void> _answer(Future<void> Function() f) async {

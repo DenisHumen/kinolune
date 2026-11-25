@@ -9,6 +9,8 @@
 // core/crates/pa-sync/tests/service.rs and
 // core/crates/pa-catalog/tests/family_join.rs.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_device_sync.dart';
 import 'package:kinolune/fakes/fake_library.dart';
@@ -137,6 +139,33 @@ void main() {
     await settle(t);
     expect(_dialog, findsNothing);
     expect(pc.paired || phone.paired, isFalse);
+  });
+
+  testWidgets('a page opened over the dialog stays when the request ends', (
+    t,
+  ) async {
+    final (:tv, :phone) = _lan();
+    final services = await _services(phone);
+    setSurface(t, const Size(1280, 900));
+    await t.pumpWidget(testApp(services));
+    await settle(t);
+
+    await tv.joinAsk(phone.offeredFamilyId);
+    await settle(t);
+    expect(_dialog, findsOneWidget);
+    // A notification tap opens a page on the root navigator over the dialog.
+    unawaited(
+      Navigator.of(t.element(_dialog), rootNavigator: true).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('page over the dialog')),
+        ),
+      ),
+    );
+    await settle(t);
+    await tv.joinAskCancel();
+    await settle(t);
+    expect(find.text('page over the dialog'), findsOneWidget);
+    expect(_dialog, findsNothing);
   });
 
   testWidgets('on a TV the remote sits on «Отклонить»', (t) async {

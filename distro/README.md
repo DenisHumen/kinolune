@@ -34,9 +34,8 @@
 
 ## Что в образе
 
-- **`alpha-media` и `alpha-admin` пока заглушки** (`/usr/libexec/alpha/alpha-stub`, Python): `alpha-media` (:8487), `alpha-admin` (:80). Каждая отвечает `GET /health` и `/healthz` JSON-ом с версией образа. Юниты с `DynamicUser=yes` и `ProtectSystem=strict`.
 - **`alpha-updated` — настоящий агент обновлений** (Go, DIST-009): бинарник `/usr/libexec/alpha/alpha-updated` собирается в стадии `go-build` `Containerfile`, API — только на unix-сокете `/run/alpha-updated/api.sock` (`root:alpha-admin 0660`, `alpha-updated.socket`), состояние — `/var/lib/alpha/updated`. Подробно — [updated/README.md](updated/README.md).
-- **Наши сервисы — заглушки** (`/usr/libexec/alpha/alpha-stub`, Python): `alpha-media` (:8487), `alpha-updated` (:7091, наружу не открыт). Каждая отвечает `GET /health` и `/healthz` JSON-ом с версией образа. Юниты с `DynamicUser=yes` и `ProtectSystem=strict`.
+- **`alpha-media` пока заглушка** (`/usr/libexec/alpha/alpha-stub`, Python): `alpha-media` (:8487). Отвечает `GET /health` и `/healthz` JSON-ом с версией образа. Юниты с `DynamicUser=yes` и `ProtectSystem=strict`.
 - **`alpha-admin`** (DIST-013) — настоящий бэкенд админки: HTTPS на :443 с самоподписанным сертификатом, :80 перенаправляет и отвечает `/health`; только LAN; работает от пользователя `alpha-admin`, права на D-Bus — через polkit-правило, пароли проверяет PAM-помощник `alpha-admin-auth`. Подробно — [admin/README.md](admin/README.md).
 - **Samba**: SMB3, `vfs_fruit` для macOS, шара `Media` → `/var/srv/media` (гостевое чтение). **wsdd** (Windows), **Avahi** + nss-mdns (`<hostname>.local`).
 - **firewalld**: зона по умолчанию `home`; открыты samba, mdns, ws-discovery, http, https, 8487/tcp. (ssh и dhcpv6-client остаются из стандартной зоны `home` — на прототипе SSH нужен для тестов; выключение по умолчанию — в DIST-013.)
