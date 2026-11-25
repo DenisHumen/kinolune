@@ -262,11 +262,8 @@ void main() {
 
     // Seek back and play again, end again: the card returns.
     h.engine.emit(
-      (s) => s.copyWith(
-        position: Duration.zero,
-        completed: false,
-        playing: true,
-      ),
+      (s) =>
+          s.copyWith(position: Duration.zero, completed: false, playing: true),
     );
     await t.pump();
     h.engine.finish();
@@ -347,9 +344,7 @@ void main() {
     expect(h.saves.last, ('e1', 1200000, 1200000));
   });
 
-  testWidgets('Space after a video without Up Next plays it again', (
-    t,
-  ) async {
+  testWidgets('Space after a video without Up Next plays it again', (t) async {
     final h = await _open(t, withNext: false);
     h.engine.finish();
     await t.pump();

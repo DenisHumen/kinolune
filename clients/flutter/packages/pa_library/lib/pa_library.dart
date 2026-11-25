@@ -25,7 +25,11 @@ export 'src/library_profiles.dart';
 export 'src/library_query.dart';
 export 'src/models.dart';
 export 'src/playback_session.dart'
-    show resumePositionMs, nextEpisodeIn, showContinueTarget, ShowContinueTarget;
+    show
+        resumePositionMs,
+        nextEpisodeIn,
+        showContinueTarget,
+        ShowContinueTarget;
 export 'src/open_library.dart'
     show
         OpenedLibrary,

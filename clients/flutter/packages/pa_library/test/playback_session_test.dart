@@ -56,7 +56,10 @@ void main() {
 
     test('a started episode resumes', () {
       final t = showContinueTarget(
-        show({'e1': at('e1', 120000, 1, watched: true), 'e2': at('e2', 60000, 2)}),
+        show({
+          'e1': at('e1', 120000, 1, watched: true),
+          'e2': at('e2', 60000, 2),
+        }),
       );
       expect(id(t), 'e2');
       expect(t!.resume, isTrue);
