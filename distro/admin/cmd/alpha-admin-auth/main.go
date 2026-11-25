@@ -27,25 +27,26 @@ func main() {
 	timeout := flag.Duration("timeout", 10*time.Second, "time limit for the whole check")
 	flag.Parse()
 	log := slog.New(slog.NewJSONHandler(os.Stderr, nil))
-	if err := run(*allowUser, *minUID, *timeout, log); err != nil {
-		log.Error("auth helper", "err", err)
-		os.Exit(1)
-	}
-}
-
-func run(allowUser string, minUID int, timeout time.Duration, log *slog.Logger) error {
 	if !authhelper.Available() {
 		log.Warn("built without PAM: every password is refused")
 	}
 	f := os.NewFile(0, "socket")
 	conn, err := net.FileConn(f)
-	if err != nil {
-		return fmt.Errorf("stdin is not a socket (run from alpha-admin-auth.socket): %w", err)
-	}
 	f.Close()
+	if err != nil {
+		log.Error("stdin is not a socket (run from alpha-admin-auth.socket)", "err", err)
+		os.Exit(1)
+	}
 	defer conn.Close()
-	_ = conn.SetDeadline(time.Now().Add(timeout))
+	if err := serve(conn, authhelper.NewSystem(), *allowUser, authhelper.Policy{MinUID: *minUID}, *timeout, log); err != nil {
+		log.Error("auth helper", "err", err)
+		os.Exit(1)
+	}
+}
 
+// serve answers one request on conn if the peer is root or allowUser.
+func serve(conn net.Conn, a authhelper.Authenticator, allowUser string, policy authhelper.Policy, timeout time.Duration, log *slog.Logger) error {
+	_ = conn.SetDeadline(time.Now().Add(timeout))
 	uid, err := authhelper.PeerUID(conn)
 	if err != nil {
 		return fmt.Errorf("peer credentials: %w", err)
@@ -57,5 +58,5 @@ func run(allowUser string, minUID int, timeout time.Duration, log *slog.Logger) 
 			return fmt.Errorf("peer uid %d may not ask", uid)
 		}
 	}
-	return authhelper.Serve(conn, authhelper.NewSystem(), authhelper.Policy{MinUID: minUID})
+	return authhelper.Serve(conn, a, policy)
 }

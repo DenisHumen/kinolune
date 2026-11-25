@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: MPL-2.0
+//
+// Kinolune OS (DIST-013): what the admin backend may do over D-Bus. The rule
+// matches only the alpha-admin system user, i.e. the alpha-admin.service
+// daemon; which person may trigger an action is decided by the daemon (role
+// admin = groups wheel or alpha-admin). Humans get nothing from this file.
+polkit.addRule(function (action, subject) {
+    if (subject.user !== "alpha-admin") {
+        return polkit.Result.NOT_HANDLED;
+    }
+    // systemd: restart our services only (same list as
+    // distro/admin/internal/system/systemd.go, OurUnits with restartable=true).
+    if (action.id === "org.freedesktop.systemd1.manage-units") {
+        var units = [
+            "alpha-media.service", "alpha-admin.service", "alpha-updated.service",
+            "smb.service", "wsdd.service", "avahi-daemon.service",
+            "smartd.service", "chronyd.service"
+        ];
+        if (action.lookup("verb") === "restart" && units.indexOf(action.lookup("unit")) >= 0) {
+            return polkit.Result.YES;
+        }
+        return polkit.Result.NOT_HANDLED;
+    }
+    var allowed = [
+        // NetworkManager: switch connections, Wi-Fi radio on/off.
+        "org.freedesktop.NetworkManager.network-control",
+        "org.freedesktop.NetworkManager.enable-disable-wifi",
+        // firewalld: read zones, open/close our ports (runtime + permanent).
+        "org.fedoraproject.FirewallD1.info",
+        "org.fedoraproject.FirewallD1.config",
+        "org.fedoraproject.FirewallD1.config.info",
+        // UDisks2: mount and unmount data file systems.
+        "org.freedesktop.udisks2.filesystem-mount",
+        "org.freedesktop.udisks2.filesystem-mount-system",
+        "org.freedesktop.udisks2.filesystem-mount-other-seat",
+        "org.freedesktop.udisks2.filesystem-unmount-others",
+        // logind: reboot and power off after the confirmation in the UI.
+        "org.freedesktop.login1.reboot",
+        "org.freedesktop.login1.reboot-multiple-sessions",
+        "org.freedesktop.login1.reboot-ignore-inhibit",
+        "org.freedesktop.login1.power-off",
+        "org.freedesktop.login1.power-off-multiple-sessions",
+        "org.freedesktop.login1.power-off-ignore-inhibit"
+    ];
+    if (allowed.indexOf(action.id) >= 0) {
+        return polkit.Result.YES;
+    }
+    return polkit.Result.NOT_HANDLED;
+});

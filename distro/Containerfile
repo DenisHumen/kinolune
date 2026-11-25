@@ -10,7 +10,20 @@
 #
 # The base is pinned by the digest of the multi-arch manifest list.
 # Bump it deliberately (one PR per bump) and re-run the VM checks in distro/README.md.
-ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:1989dd9223dc2ef03e3be158165be13e55b5571c62e9f3c88992950cf355416d
+ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:d440aea898005f376bbf0bbe06c216abdba68dcdb6dfa5cb0fa246cd03fa8d8a
+
+# Admin backend (DIST-013), built with the Go toolchain of the same pinned
+# Fedora base; only the binaries reach the OS image. alpha-admin is static;
+# alpha-admin-auth links libpam (cgo), which the base image has. Go modules
+# (godbus, msteinert/pam) come from the module proxy, checked against go.sum.
+FROM ${BASE_IMAGE} AS admin-build
+# hadolint ignore=DL3041
+RUN dnf -y install --setopt=install_weak_deps=False golang gcc pam-devel && dnf clean all
+COPY admin/ /src/admin/
+RUN cd /src/admin && \
+    export GOTOOLCHAIN=local GOFLAGS="-trimpath -mod=readonly" && \
+    CGO_ENABLED=0 go build -ldflags=-s -o /out/alpha-admin ./cmd/alpha-admin && \
+    CGO_ENABLED=1 go build -tags pam -ldflags=-s -o /out/alpha-admin-auth ./cmd/alpha-admin-auth
 
 FROM ${BASE_IMAGE}
 
@@ -24,6 +37,8 @@ RUN set -eux; \
     rm -rf /var/cache/dnf /var/lib/dnf /var/log/dnf* /var/log/hawkey.log
 
 COPY rootfs/ /
+# Admin backend (DIST-013), see distro/admin/README.md.
+COPY --from=admin-build /out/alpha-admin /out/alpha-admin-auth /usr/libexec/alpha/
 # Public cosign key of the project (distro/keys/alpha-os.pub, committed by the owner).
 COPY keys/ /usr/share/alpha/keys/
 
@@ -59,7 +74,7 @@ RUN set -eux; \
     systemctl mask bootc-fetch-apply-updates.timer; \
     # Enable/disable services according to rootfs/usr/lib/systemd/system-preset/.
     # Cockpit is shipped but off; the admin UI turns it on for LAN only (05 §5.1).
-    systemctl preset alpha-media.service alpha-admin.service alpha-updated.service \
+    systemctl preset alpha-media.service alpha-admin.service alpha-admin-auth.socket alpha-updated.service \
         smb.service wsdd.service avahi-daemon.service firewalld.service smartd.service \
         chronyd.service sshd.service cockpit.socket; \
     # Firewall: default zone "home", only the services we need (05 §5.2).

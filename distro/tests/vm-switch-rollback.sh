@@ -91,6 +91,10 @@ check_services() {
     for port in 8487 80 7091; do
         vm "curl -fsS http://127.0.0.1:${port}/health" >/dev/null || die "no /health on :${port}"
     done
+    # alpha-admin (DIST-013): HTTPS with the self-signed certificate, :80 redirects.
+    vm "curl -fsSk https://127.0.0.1/healthz" >/dev/null || die "alpha-admin: no HTTPS on :443"
+    vm "curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1/" | grep -qx 301 \
+        || die "alpha-admin: :80 does not redirect to HTTPS"
     vm "ss -ltn | grep -q ':445 '" || die "smbd is not listening on 445"
     [[ "$(vm firewall-cmd --get-default-zone)" == home ]] || die "firewalld default zone is not home"
     vm "systemctl is-enabled bootc-fetch-apply-updates.timer | grep -qx masked" \
