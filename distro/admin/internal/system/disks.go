@@ -148,7 +148,8 @@ func (u *UDisks) List(ctx context.Context) (DiskReport, error) {
 			if slices.Contains(u.SystemUUIDs, b.UUID) && b.UUID != "" {
 				d.System = true
 			}
-		} else if strings.HasPrefix(b.Device, "/dev/md") || b.MountPoints != nil {
+		} else if b.isFS || strings.HasPrefix(b.Device, "/dev/md") {
+			// md arrays and file systems on devices without a drive object.
 			rep.Other = append(rep.Other, b)
 		}
 	}

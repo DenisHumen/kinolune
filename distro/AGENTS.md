@@ -12,6 +12,9 @@
 ```bash
 distro/scripts/build-image.sh localhost/alpha-os:dev   # сборка образа + bootc container lint
 distro/tests/vm-switch-rollback.sh                     # ~10 мин: switch → rollback → upgrade → digest-пин
+(cd distro/admin && go vet ./... && go test -race ./...) # alpha-admin: нужен dbus-daemon (иначе D-Bus-тесты пропускаются)
+distro/admin/tests/pam-container.sh                    # alpha-admin с настоящим PAM в контейнере Fedora
+distro/admin/tests/vm-admin-e2e.sh                     # ~15 мин: alpha-admin в QEMU против настоящих systemd/NM/firewalld/UDisks2/logind
 shellcheck distro/scripts/*.sh distro/tests/*.sh       # если установлен
 ```
 
