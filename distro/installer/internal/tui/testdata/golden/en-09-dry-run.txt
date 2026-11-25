@@ -1,0 +1,24 @@
+ Kinolune OS 0.1.0 - Installer
+
+ Dry run finished
+
+ The answers are valid, the disk was not changed.
+
+ Kinolune OS installation plan
+ Disk:     QEMU NVMe Ctrl, 21 GB
+ Dry run: nothing was written.
+
+ > Save an answer file for repeat installs
+   Text menu and command line
+   Reboot
+   Power off
+
+
+
+
+
+
+
+
+
+ Up/Down: select  Enter: run

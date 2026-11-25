@@ -22,10 +22,10 @@
 | `admin/` | `alpha-admin` (Go): бэкенд админки — вход пользователями ОС, REST поверх D-Bus, прокси к `alpha-updated`, самоподписанный TLS (DIST-013), см. [admin/README.md](admin/README.md) |
 | `installer/` | `alpha-installer` (Go): пока только обнаружение дисков (DIST-004), см. [installer/README.md](installer/README.md) |
 | `updated/` | `alpha-updated` (Go): агент обновлений — check, download-only, apply, rollback через bootc, API на unix-сокете, окно обслуживания (DIST-009), см. [updated/README.md](updated/README.md) |
-| `installer/` | `alpha-installer` (Go): обнаружение дисков (DIST-004), установка по файлу ответов (DIST-005), см. [installer/README.md](installer/README.md) |
-| `installer/Containerfile`, `installer/live/` | DIST-007: live-окружение установщика для ISO (меню на tty1 и последовательной консоли, `iso.yaml` для image-builder, dracut `dmsquash-live`) |
+| `installer/` | `alpha-installer` (Go): обнаружение дисков (DIST-004), установка по файлу ответов (DIST-005), полноэкранный установщик `alpha-installer tui` на Bubble Tea (DIST-006), см. [installer/README.md](installer/README.md) |
+| `installer/Containerfile`, `installer/live/` | DIST-007: live-окружение установщика для ISO (TUI DIST-006 на tty1 и последовательной консоли, текстовое меню — запасной путь, `iso.yaml` для image-builder, dracut `dmsquash-live`) |
 | `scripts/build-iso.sh` | DIST-007: ISO установщика — образ ОС + live-образ → `image-builder … generic-iso` с офлайн-payload, проверка размера < 1.9 GiB |
-| `tests/iso-boot.sh` | DIST-007: загрузка ISO в QEMU/OVMF до меню установщика, проверки на последовательной консоли |
+| `tests/iso-boot.sh` | DIST-007: загрузка ISO в QEMU/OVMF до установщика (TUI, затем текстовое меню), проверки на последовательной консоли, пробная установка через все экраны TUI |
 | `tests/build-iso-helper.sh` | DIST-007: `build-iso.sh` на фейковом движке контейнеров — helper, оставленный `KEEP=1`, переиспользуется только с теми же монтированиями, с другим `OUT_DIR` пересоздаётся (секунды, без контейнеров) |
 | `tests/vm-switch-rollback.sh` | сценарий фазы 0: switch → rollback → upgrade → rollback → digest-пин и возврат на тег |
 | `tests/vm-install.sh` | DIST-005: установка `alpha-installer` по файлу ответов на виртуальный NVMe (UEFI), загрузка установленной системы, проверки по SSH, `bootc upgrade --check` против реестра |

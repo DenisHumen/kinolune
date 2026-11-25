@@ -47,6 +47,11 @@ type Installer struct {
 	Out     io.Writer
 	Version string
 
+	// PasswordHash is the admin's yescrypt hash as written to the target's
+	// /etc/shadow; set by Run. The TUI saves it in a repeat-install answer
+	// file instead of the clear-text password.
+	PasswordHash string
+
 	// Hooks for tests.
 	Chown      func(path string, uid, gid int) error
 	Now        func() time.Time

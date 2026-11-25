@@ -11,21 +11,34 @@
 # Same pinned base as distro/Containerfile on purpose: squashfs stores identical files
 # once, so the payload's base layers cost (almost) nothing on top of this live system.
 # Keep the ARG in sync with distro/Containerfile (build-iso.sh passes the same value).
-ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:d440aea898005f376bbf0bbe06c216abdba68dcdb6dfa5cb0fa246cd03fa8d8a
+ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:2342f957281b061919c48a12227f9cd04f2d9825d17629fd914083aaa672002c
 
-# alpha-installer: static Go binary built with the Go toolchain of the same base;
-# the module has no third-party dependencies, so the build needs no module proxy.
+# alpha-installer: static Go binary built with the Go toolchain of the same base. The
+# TUI (DIST-006) uses Bubble Tea and friends (MIT/BSD, see ADR NNNN): modules come from
+# the Go module proxy and are verified against go.sum (Fedora's golang defaults to
+# GOPROXY=direct, which would need git).
 FROM ${BASE_IMAGE} AS go-build
 # hadolint ignore=DL3041
 RUN dnf -y install --setopt=install_weak_deps=False golang && dnf clean all
-COPY installer/go.mod /src/installer/go.mod
+ENV GOCACHE=/tmp/go-cache GOPATH=/tmp/go GOTOOLCHAIN=local \
+    GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org GOFLAGS=-mod=readonly
+COPY installer/go.mod installer/go.sum /src/installer/
+RUN cd /src/installer && go mod download
 COPY installer/cmd/ /src/installer/cmd/
 COPY installer/internal/ /src/installer/internal/
 ARG ALPHA_OS_VERSION=0.0.0-dev
-ENV GOCACHE=/tmp/go-cache GOPATH=/tmp/go
 RUN cd /src/installer && \
-    CGO_ENABLED=0 GOTOOLCHAIN=local GOFLAGS=-trimpath \
-    go build -ldflags="-s -X main.version=${ALPHA_OS_VERSION}" -o /out/alpha-installer ./cmd/alpha-installer
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -X main.version=${ALPHA_OS_VERSION}" \
+        -o /out/alpha-installer ./cmd/alpha-installer && \
+    # MIT/BSD notices of the Go modules linked into the binary go into the image.
+    go list -deps -f '{{if not .Standard}}{{with .Module}}{{.Path}} {{.Dir}}{{end}}{{end}}' \
+        ./cmd/alpha-installer | sort -u | grep -v '^github.com/DenisHumen/' | \
+    while read -r mod dir; do \
+        for f in "${dir}"/LICENSE* "${dir}"/COPYING* "${dir}"/NOTICE*; do \
+            [ -f "${f}" ] && install -D -m 0644 "${f}" "/out/licenses/${mod}/$(basename "${f}")"; \
+        done; \
+    done; \
+    test -f /out/licenses/github.com/charmbracelet/bubbletea/LICENSE
 
 FROM ${BASE_IMAGE}
 
@@ -54,6 +67,7 @@ RUN set -eux; \
     mkdir -p /boot/efi && cp -ra /usr/lib/efi/*/*/EFI /boot/efi
 
 COPY --from=go-build /out/alpha-installer /usr/bin/alpha-installer
+COPY --from=go-build /out/licenses/ /usr/share/licenses/alpha-installer/
 COPY installer/live/ /
 COPY installer/examples/answers.json /usr/share/alpha/installer/answers.example.json
 COPY rootfs/usr/libexec/alpha/alpha-branding /usr/libexec/alpha/alpha-branding

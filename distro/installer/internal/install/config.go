@@ -320,6 +320,7 @@ func (in *Installer) addUser(ctx context.Context, deploy string) ([]string, erro
 	for _, r := range recs {
 		if r[0] == u.Name && len(r) > 1 && strings.HasPrefix(r[1], "$y$") {
 			ok = true
+			in.PasswordHash = r[1]
 		}
 	}
 	if !ok {

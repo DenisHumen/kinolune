@@ -1,0 +1,24 @@
+ Kinolune OS 0.1.0 - Installer
+
+ Installing Kinolune OS
+
+ Installing containers-storage:ghcr.io/denishumen/alpha-os:stable
+ Elapsed 3m15s
+
+ ==> Partitioning /dev/nvme0n1 (QEMU NVMe Ctrl, 21 GB)
+ bold line
+ ==> Installing containers-storage:ghcr.io/denishumen/alpha-os:stable
+
+
+
+
+
+
+
+
+
+
+
+ Log: /run/alpha-installer/install.log
+
+ Please wait, do not power off the computer

@@ -1,0 +1,24 @@
+ Kinolune OS 0.1.0 - Встановлення                                    Крок 2 з 7
+
+ Диск для системи
+ Виберіть диск. УСЕ, ЩО НА НЬОМУ Є, БУДЕ СТЕРТО. Інші диски не змінюються.
+
+ >   Samsung 990 PRO 1TB  1.0 TB  NVMe      /dev/nvme0n1  S/N ...456X
+     Samsung 870 EVO 1TB  1.0 TB  SATA SSD  /dev/sda      S/N ...321A
+     WD WD40EFRX-68N32N0  4.0 TB  SATA HDD  /dev/sdb      S/N ...CDEF
+     WD WD40EFRX-68N32N0  4.0 TB  SATA HDD  /dev/sdc      S/N ...DCBA
+
+ диск порожній: /dev/nvme0n1
+
+ Не пропонуються:
+   - SanDisk Ultra 31 GB /dev/sdd: з нього завантажено інсталятор
+   - віртуальні пристрої (loop, zram): 4
+
+
+
+
+
+
+
+
+ Вгору/Вниз: диск  Enter: вибрати  R: оновити  Esc: назад  Ctrl+C: вихід

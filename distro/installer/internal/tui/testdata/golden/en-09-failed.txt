@@ -1,0 +1,24 @@
+ Kinolune OS 0.1.0 - Installer
+
+ The installation failed
+
+ partitioning /dev/nvme0n1: sfdisk: exit status 1
+
+ The disk may be partly written. Other disks were not touched.
+ ==> Partitioning /dev/nvme0n1
+ sfdisk: cannot open /dev/nvme0n1: Device or resource busy
+ Log: /run/alpha-installer/install.log
+
+ > Back to the confirmation
+   Text menu and command line
+   Reboot
+   Power off
+
+
+
+
+
+
+
+
+ Up/Down: select  Enter: run

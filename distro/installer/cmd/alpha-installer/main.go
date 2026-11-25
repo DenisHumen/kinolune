@@ -4,9 +4,11 @@
 //
 //	alpha-installer disks [--json] [--all] [--smart] [--from DIR] [--record DIR]
 //	alpha-installer install --answers FILE [--dry-run] [--yes] [--from DIR]
+//	alpha-installer tui [--dry-run] [--from DIR] [--answers FILE] [--lang uk|en|ru]
 //
 // `disks` is read-only (DIST-004). `install` wipes one disk and installs the
-// OS non-interactively from an answer file (DIST-005); the TUI comes in DIST-006.
+// OS non-interactively from an answer file (DIST-005). `tui` asks the same
+// questions on full-screen pages and runs the same installer (DIST-006).
 package main
 
 import (
@@ -33,7 +35,8 @@ var version = "dev"
 
 const usage = `usage:
   alpha-installer disks [--json] [--all] [--smart] [--from DIR] [--record DIR]
-  alpha-installer install --answers FILE [--dry-run] [--yes] [--from DIR]`
+  alpha-installer install --answers FILE [--dry-run] [--yes] [--from DIR]
+  alpha-installer tui [--dry-run] [--from DIR] [--answers FILE] [--lang uk|en|ru] [--action-file FILE]`
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -53,6 +56,8 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return runDisks(args[1:], stdout)
 	case "install":
 		return runInstall(ctx, args[1:], stdin, stdout, stderr, liveEnv())
+	case "tui":
+		return runTUI(args[1:], stdin, stdout, stderr, liveEnv())
 	case "version", "--version":
 		fmt.Fprintln(stdout, version)
 		return nil
@@ -131,7 +136,7 @@ func runInstall(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		return fmt.Errorf("unexpected argument %q", fs.Arg(0))
 	}
 	if answersPath == "" {
-		return errors.New("install needs --answers FILE (the interactive installer comes with DIST-006)")
+		return errors.New("install needs --answers FILE (or run the interactive installer: alpha-installer tui)")
 	}
 	if *from != "" && !*dryRun {
 		return errors.New("--from works only with --dry-run")

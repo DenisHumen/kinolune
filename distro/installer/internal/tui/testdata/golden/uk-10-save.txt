@@ -1,0 +1,24 @@
+ Kinolune OS 0.1.0 - Встановлення
+
+ Зберегти файл відповідей
+ Файл kinolune-answers.json дозволяє повторити встановлення: текстове меню
+ знайде його на флешці.
+ Пароль зберігається лише як хеш yescrypt.
+
+ > /dev/sdb1 "Backup" exfat 4.0 TB (WD Elements 2621)
+   /dev/sdd1 "MUSIC" vfat 16 GB (SanDisk Cruzer Blade)
+   У live-системі: /root/kinolune-answers.json (зникне після перезавантаження)
+
+
+
+
+
+
+
+
+
+
+
+
+
+ Вгору/Вниз: куди  Enter: зберегти  R: оновити  Esc: назад

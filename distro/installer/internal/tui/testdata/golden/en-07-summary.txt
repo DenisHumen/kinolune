@@ -1,0 +1,24 @@
+ Kinolune OS 0.1.0 - Installer                                      Step 7 of 7
+
+ Check and confirm
+
+ Disk      Samsung 990 PRO 1TB, 1.0 TB, /dev/nvme0n1, S/N ...456X
+ Layout    System: the whole disk (1.0 TB)
+ Name      kinolune
+ Admin     admin
+ Network   Automatic (DHCP); any wired
+ Updates   channel stable, from ghcr.io/denishumen/alpha-os:stable
+ Language  English
+
+ WARNING: all data on /dev/nvme0n1 will be destroyed and cannot be recovered.
+
+ To start, type the disk name nvme0n1:
+ > [                                         ]
+
+
+
+
+
+
+
+ Type the disk name and press Enter  Esc: back  Ctrl+C: exit
