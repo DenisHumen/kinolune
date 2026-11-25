@@ -334,7 +334,7 @@
           "sessions": {
             "type": "integer",
             "format": "int32",
-            "description": "Playback sessions: devices playing (`pb.update` `playing` within its\nTTL) or streams served by the server, whichever is more.",
+            "description": "Playback sessions: devices watching (last `pb.update` `playing` or\n`paused`, within its TTL) or streams served by the server, whichever\nis more.",
             "minimum": 0
           }
         }

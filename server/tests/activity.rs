@@ -150,7 +150,10 @@ async fn playing_heartbeat_is_busy_until_its_ttl() {
             .unwrap();
         wait_for(addr, &busy).await;
         let gone = wait_for(addr, &idle()).await;
-        assert!(gone >= Duration::from_millis(500), "idle too early: {gone:?}");
+        assert!(
+            gone >= Duration::from_millis(500),
+            "idle too early: {gone:?}"
+        );
 
         // Stopped ends the session at once, long before its TTL.
         ws.send(send(&pb(PlayState::Playing, 3_000, None)))
