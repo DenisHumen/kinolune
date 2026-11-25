@@ -1,0 +1,603 @@
+# SPDX-License-Identifier: MPL-2.0
+openapi: 3.1.0
+info:
+  title: Kinolune OS admin API (alpha-admin)
+  version: "1"
+  description: |
+    REST API of the NAS OS admin backend (DIST-013). HTTPS only, self-signed
+    certificate (fingerprint in /api/v1/info), reachable from the local
+    network only by default.
+
+    Authentication: log in with an OS user (POST /api/v1/session). The
+    session cookie `__Host-alpha_admin` is Secure, HttpOnly, SameSite=Strict.
+    Every changing request (POST, PUT, DELETE) needs the header
+    `X-CSRF-Token` with the `csrf_token` of the session, and a same-origin
+    `Origin` header when a browser sends one.
+
+    Roles: `admin` (members of `wheel` or `alpha-admin`) may change things;
+    `viewer` (other users with UID >= 1000) may only look.
+
+    Errors have the body `{"error": "<code>", "message": "<text>"}`.
+license:
+  name: MPL-2.0
+servers:
+  - url: https://kinolune.local
+security:
+  - session: []
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: __Host-alpha_admin
+    csrf:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+  parameters:
+    unit:
+      name: unit
+      in: path
+      required: true
+      schema: {type: string, example: alpha-media.service}
+    uuid:
+      name: uuid
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    device:
+      name: device
+      in: path
+      required: true
+      schema: {type: string, pattern: "^[a-z][a-z0-9]{1,31}$", example: sdb1}
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    Unauthorized:
+      description: Not logged in or the session expired (`unauthorized`).
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+    Forbidden:
+      description: Wrong role (`forbidden`), missing CSRF token or cross-origin (`csrf`), or refused by polkit.
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum: [bad_request, unauthorized, invalid_credentials, locked, csrf, forbidden, not_found,
+                 conflict, confirmation_invalid, method_not_allowed, unavailable, update_agent_unavailable,
+                 system, timeout]
+        message: {type: string}
+    Session:
+      type: object
+      properties:
+        user: {type: string}
+        role: {type: string, enum: [admin, viewer]}
+        csrf_token: {type: string}
+        created: {type: string, format: date-time}
+    System:
+      type: object
+      properties:
+        hostname: {type: string}
+        os_version: {type: string}
+        kernel: {type: string}
+        uptime_seconds: {type: integer}
+        load: {type: array, items: {type: number}, minItems: 3, maxItems: 3}
+        cpus: {type: integer}
+        memory_total: {type: integer, description: bytes}
+        memory_available: {type: integer, description: bytes}
+        tls_fingerprint: {type: string}
+        install:
+          type: object
+          properties:
+            installed_at: {type: string}
+            language: {type: string}
+            update_channel: {type: string}
+            data_pool: {type: string}
+            data_pool_path: {type: string}
+    UnitStatus:
+      type: object
+      properties:
+        name: {type: string}
+        title: {type: string}
+        restartable: {type: boolean}
+        description: {type: string}
+        load_state: {type: string}
+        active_state: {type: string, example: active}
+        sub_state: {type: string, example: running}
+        unit_file_state: {type: string, example: enabled}
+        since: {type: string, format: date-time}
+        main_pid: {type: integer}
+        restarts: {type: integer}
+        result: {type: string}
+    JournalEntry:
+      type: object
+      properties:
+        time: {type: string, format: date-time}
+        priority: {type: integer, description: "syslog priority, 0 (emerg) … 7 (debug)"}
+        pid: {type: integer}
+        message: {type: string}
+    NetworkStatus:
+      type: object
+      properties:
+        version: {type: string}
+        state: {type: string, example: connected-global}
+        connectivity: {type: string, enum: [none, portal, limited, full, unknown]}
+        networking_enabled: {type: boolean}
+        wireless_enabled: {type: boolean}
+        wireless_hardware_enabled: {type: boolean}
+        devices:
+          type: array
+          items:
+            type: object
+            properties:
+              interface: {type: string}
+              type: {type: string, example: ethernet}
+              state: {type: string, example: activated}
+              hw_address: {type: string}
+              connection: {type: string}
+              ipv4: {type: array, items: {type: string, example: 192.168.1.20/24}}
+              gateway4: {type: string}
+              dns4: {type: array, items: {type: string}}
+              ipv6: {type: array, items: {type: string}}
+    Connection:
+      type: object
+      properties:
+        uuid: {type: string}
+        id: {type: string}
+        type: {type: string, example: 802-3-ethernet}
+        autoconnect: {type: boolean}
+        ipv4_method: {type: string}
+        active: {type: boolean}
+        device: {type: string}
+    Firewall:
+      type: object
+      properties:
+        running: {type: boolean}
+        version: {type: string}
+        default_zone: {type: string}
+        zones:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              interfaces: {type: array, items: {type: string}}
+              sources: {type: array, items: {type: string}}
+              services: {type: array, items: {type: string}}
+              ports: {type: array, items: {type: string, example: 8487/tcp}}
+        openings:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string, enum: [media, smb, discovery, cockpit]}
+              title: {type: string}
+              services: {type: array, items: {type: string}}
+              ports: {type: array, items: {type: string}}
+              open: {type: boolean}
+    Disks:
+      type: object
+      properties:
+        drives:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: string}
+              vendor: {type: string}
+              model: {type: string}
+              serial: {type: string}
+              size: {type: integer}
+              bus: {type: string}
+              removable: {type: boolean}
+              rotation_rpm: {type: integer}
+              system: {type: boolean, description: holds the running OS}
+              health:
+                type: object
+                properties:
+                  status: {type: string, enum: [ok, warning, failing, unknown]}
+                  smart_supported: {type: boolean}
+                  smart_enabled: {type: boolean}
+                  temperature_c: {type: number}
+                  power_on_hours: {type: integer}
+                  bad_sectors: {type: integer}
+                  problems: {type: array, items: {type: string}}
+              blocks: {type: array, items: {$ref: "#/components/schemas/Block"}}
+        other: {type: array, items: {$ref: "#/components/schemas/Block"}}
+    Block:
+      type: object
+      properties:
+        device: {type: string}
+        size: {type: integer}
+        usage: {type: string}
+        fs_type: {type: string}
+        label: {type: string}
+        uuid: {type: string}
+        mount_points: {type: array, items: {type: string}}
+        read_only: {type: boolean}
+        mountable: {type: boolean}
+        unmountable: {type: boolean}
+    Inhibitor:
+      type: object
+      properties:
+        what: {type: string}
+        who: {type: string}
+        why: {type: string}
+        mode: {type: string, enum: [block, delay]}
+        uid: {type: integer}
+        pid: {type: integer}
+paths:
+  /healthz:
+    get:
+      security: []
+      summary: Liveness
+      responses:
+        "200": {description: OK}
+  /api/v1/info:
+    get:
+      security: []
+      summary: Version and TLS fingerprint (for pinning)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service: {type: string}
+                  api_version: {type: integer}
+                  os_version: {type: string}
+                  tls_fingerprint: {type: string, example: "ab:cd:…"}
+  /api/v1/openapi.yaml:
+    get:
+      security: []
+      summary: This document
+      responses:
+        "200": {description: OK}
+  /api/v1/session:
+    post:
+      security: []
+      summary: Log in with an OS user
+      description: |
+        Rate limited: 10 attempts a minute per address; 5 wrong passwords for
+        one account from one address lock that pair for 5 min (doubling up to
+        1 h); 20 wrong passwords from one address lock it for 15 min. Answers
+        429 `locked` with Retry-After.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string}
+                password: {type: string, format: password}
+      responses:
+        "200":
+          description: Logged in; sets the session cookie
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Session"}
+        "401": {$ref: "#/components/responses/Error"}
+        "429": {$ref: "#/components/responses/Error"}
+        "503": {$ref: "#/components/responses/Error"}
+    get:
+      summary: Current session (and its CSRF token)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Session"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+    delete:
+      security: [{session: [], csrf: []}]
+      summary: Log out
+      responses:
+        "204": {description: Logged out}
+  /api/v1/system:
+    get:
+      summary: Host name, OS version, uptime, load, memory, install info
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/System"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /api/v1/services:
+    get:
+      summary: Status of the OS services the admin UI knows
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  services: {type: array, items: {$ref: "#/components/schemas/UnitStatus"}}
+  /api/v1/services/{unit}:
+    parameters: [{$ref: "#/components/parameters/unit"}]
+    get:
+      summary: Status of one service
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/UnitStatus"}
+        "404": {$ref: "#/components/responses/Error"}
+  /api/v1/services/{unit}/restart:
+    parameters: [{$ref: "#/components/parameters/unit"}]
+    post:
+      security: [{session: [], csrf: []}]
+      summary: Restart a service (admin; only `restartable` ones)
+      responses:
+        "202": {description: Restart job queued}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/Error"}
+  /api/v1/services/{unit}/journal:
+    parameters:
+      - {$ref: "#/components/parameters/unit"}
+      - {name: lines, in: query, schema: {type: integer, minimum: 1, maximum: 1000, default: 100}}
+    get:
+      summary: Last journal lines of a service (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unit: {type: string}
+                  entries: {type: array, items: {$ref: "#/components/schemas/JournalEntry"}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /api/v1/network:
+    get:
+      summary: NetworkManager state, devices and addresses
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/NetworkStatus"}
+  /api/v1/network/connections:
+    get:
+      summary: Saved connection profiles (no secrets)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connections: {type: array, items: {$ref: "#/components/schemas/Connection"}}
+  /api/v1/network/connections/{uuid}/up:
+    parameters: [{$ref: "#/components/parameters/uuid"}]
+    post:
+      security: [{session: [], csrf: []}]
+      summary: Activate a saved connection (admin)
+      responses:
+        "202": {description: Activation started}
+        "404": {$ref: "#/components/responses/Error"}
+  /api/v1/network/connections/{uuid}/down:
+    parameters: [{$ref: "#/components/parameters/uuid"}]
+    post:
+      security: [{session: [], csrf: []}]
+      summary: Deactivate a connection (admin). Careful: this may be the connection the browser uses.
+      responses:
+        "202": {description: Deactivated}
+        "409": {$ref: "#/components/responses/Error"}
+  /api/v1/network/wireless:
+    put:
+      security: [{session: [], csrf: []}]
+      summary: Turn Wi-Fi on or off (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: {type: boolean}
+      responses:
+        "200": {description: OK}
+  /api/v1/firewall:
+    get:
+      summary: Firewall zones and our openings in the default zone
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Firewall"}
+  /api/v1/firewall/openings/{name}:
+    parameters:
+      - {name: name, in: path, required: true, schema: {type: string, enum: [media, smb, discovery, cockpit]}}
+    put:
+      security: [{session: [], csrf: []}]
+      summary: Open or close one of our ports, now and after reboot (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [open]
+              properties:
+                open: {type: boolean}
+      responses:
+        "200": {description: OK}
+        "404": {$ref: "#/components/responses/Error"}
+  /api/v1/disks:
+    get:
+      summary: Drives with SMART summary, partitions and file systems
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Disks"}
+  /api/v1/disks/{device}/mount:
+    parameters: [{$ref: "#/components/parameters/device"}]
+    post:
+      security: [{session: [], csrf: []}]
+      summary: Mount a data file system (admin; never the OS's own)
+      responses:
+        "200":
+          description: Mounted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device: {type: string}
+                  mount_point: {type: string}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Error"}
+  /api/v1/disks/{device}/unmount:
+    parameters: [{$ref: "#/components/parameters/device"}]
+    post:
+      security: [{session: [], csrf: []}]
+      summary: Unmount a data file system mounted under /var/srv, /srv, /run/media or /media (admin)
+      responses:
+        "200": {description: Unmounted}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Error"}
+  /api/v1/power:
+    get:
+      summary: What would delay or block a reboot (logind inhibitors)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inhibitors: {type: array, items: {$ref: "#/components/schemas/Inhibitor"}}
+  /api/v1/power/{action}:
+    parameters:
+      - {name: action, in: path, required: true, schema: {type: string, enum: [reboot, poweroff]}}
+    post:
+      security: [{session: [], csrf: []}]
+      summary: Reboot or power off, with confirmation (admin)
+      description: |
+        Two steps. Without a body (or without `confirm`) the answer is 409
+        `confirmation_required` with `confirm_token` (valid 60 s, one use,
+        bound to the session and the action) and the current inhibitors, so
+        the UI can warn ("a film is playing"). Repeat with
+        `{"confirm": "<token>"}` to do it.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confirm: {type: string}
+      responses:
+        "202": {description: Started}
+        "409":
+          description: Confirmation required or invalid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: {type: string, enum: [confirmation_required, confirmation_invalid]}
+                  action: {type: string}
+                  confirm_token: {type: string}
+                  expires_in: {type: integer}
+                  inhibitors: {type: array, items: {$ref: "#/components/schemas/Inhibitor"}}
+  /api/v1/system/update:
+    get:
+      summary: Update state (proxied to alpha-updated GET /v1/update)
+      description: Bodies and status codes of all /api/v1/system/update… endpoints are alpha-updated's, see distro/updated/README.md. 502 `update_agent_unavailable` when its socket does not answer.
+      responses:
+        "200": {description: OK}
+        "502": {$ref: "#/components/responses/Error"}
+  /api/v1/system/update/status:
+    get:
+      summary: Full status (alpha-updated GET /v1/status)
+      responses:
+        "200": {description: OK}
+  /api/v1/system/update/check:
+    post:
+      security: [{session: [], csrf: []}]
+      summary: Check for an update now (admin; POST /v1/update/check)
+      responses:
+        "202": {description: Started}
+        "409": {description: Another operation runs}
+  /api/v1/system/update/download:
+    post:
+      security: [{session: [], csrf: []}]
+      summary: Download without applying (admin; POST /v1/update/download)
+      responses:
+        "202": {description: Started}
+  /api/v1/system/update/apply:
+    post:
+      security: [{session: [], csrf: []}]
+      summary: 'Apply: {"when":"now"} reboots now, {"when":"maintenance"} in the window (admin)'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                when: {type: string, enum: [now, maintenance]}
+      responses:
+        "202": {description: Started or scheduled}
+    delete:
+      security: [{session: [], csrf: []}]
+      summary: Cancel "apply in the window" (admin)
+      responses:
+        "200": {description: Cancelled}
+  /api/v1/system/update/rollback:
+    post:
+      security: [{session: [], csrf: []}]
+      summary: 'Roll back to the previous OS; {"reboot": true} reboots now (admin)'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reboot: {type: boolean}
+      responses:
+        "202": {description: Started}
+  /api/v1/system/update/settings:
+    get:
+      summary: Update settings (channel, auto, window)
+      responses:
+        "200": {description: OK}
+    put:
+      security: [{session: [], csrf: []}]
+      summary: Change update settings (admin)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                channel: {type: string, enum: [stable, beta]}
+                auto: {type: string, enum: ["off", download, install]}
+                window: {type: string, example: "03:00-05:00"}
+      responses:
+        "200": {description: OK}
+        "400": {description: Invalid value}
