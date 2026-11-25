@@ -23,8 +23,10 @@ import 'package:kinolune/network/nm_backend.dart';
 
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {
-    stderr.writeln('usage: nm_probe status|scan|check|connect|hidden|forget|'
-        'autoconnect|wifi …');
+    stderr.writeln(
+      'usage: nm_probe status|scan|check|connect|hidden|forget|'
+      'autoconnect|wifi …',
+    );
     exit(64);
   }
   final nm = NmBackend.system();

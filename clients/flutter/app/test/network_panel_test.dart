@@ -79,6 +79,7 @@ void main() {
     expect(backend.scans, 1, reason: 'opening the panel looks for networks');
     expect(find.text('Wi-Fi: Home 5G'), findsWidgets);
     expect(find.text('IP-адрес: 192.168.1.42'), findsOneWidget);
+    expect(find.text('Кабель не вставлен'), findsOneWidget);
     for (final ssid in ['Home 5G', 'Cafe Free WiFi', 'Neighbours', 'Office']) {
       expect(_key('network-ap-$ssid'), findsOneWidget);
     }
@@ -194,6 +195,16 @@ void main() {
     await tester.tap(_key('network-ap-Cafe Free WiFi'));
     await settle(tester);
     expect(backend.activeSsid, 'Cafe Free WiFi');
+
+    // Wi-Fi off: the list goes; on again: it is back.
+    await tester.tap(_key('network-wifi-switch'));
+    await settle(tester);
+    expect(backend.log, contains('wifi false'));
+    expect(_key('network-ap-Home 5G'), findsNothing);
+    expect(find.text('Wi-Fi выключен'), findsOneWidget);
+    await tester.tap(_key('network-wifi-switch'));
+    await settle(tester);
+    expect(_key('network-ap-Home 5G'), findsOneWidget);
     await _done(tester, net);
   });
 
