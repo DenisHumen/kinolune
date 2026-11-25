@@ -888,8 +888,10 @@ PLAY-AND-005, ADR-0147. Нужны: ТВ-приставка с HDMI (Chromecast 
 | TWI-127 | Чат эфира со звуком сбоку (`twitch-multiview-chat-toggle` «Показать чат», клавиша C; только компьютер, окно от 1180 px) → панель чата (`twitch-multiview-chat`), при смене звука — чат другого канала | — | — | — | — | — | 🤖 | 🤖 | 🤖 |
 | TWI-128 | Где мультипросмотра нет: телефон → подсказка (`twitch-multiview-unavailable`) «…экран телефона для него слишком мал»; встроенный плеер Twitch там, где WebView показывает один плеер → «…показывает только один эфир за раз»; окно, где плееру Twitch меньше 400×300 → «Окно мало…» (`twitch-multiview-too-small`) | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | TWI-129 | Четыре эфира 720p на компьютере 30 мин: звук и картинка каждого не расходятся, все у края эфира, кадры не теряются (только full) | — | ⬜ | — | — | — | ⬜ | ⬜ | ⬜ |
+| TWI-135 | Эфир и VOD во встроенном плеере Twitch на macOS (`twitch-embed`) → плеер Twitch под шапкой с «Назад», а не серое окно на всё приложение (BUG-026) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-136 | Экран Twitch (нативный плеер, встроенный плеер, мультипросмотр) упал при построении → «На этом экране что-то пошло не так» (`screen-error`) вместо серого окна; «Повторить» (`screen-error-retry`) строит экран заново, «Назад» (`screen-error-back`) закрывает его; ошибка пишется в журнал (BUG-026) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 
-Автотесты: TWI-42, TWI-43, TWI-44, TWI-45, TWI-116, TWI-117 — `test/twitch_embed_test.dart` (desktop); TWI-46…TWI-54, TWI-56, TWI-57 — `test/twitch_player_test.dart` (desktop); TWI-110, TWI-111, TWI-113 — `test/twitch_skip_chatting_test.dart` (desktop); TWI-112 — `test/twitch_skip_chatting_test.dart` (desktop, tv).
+Автотесты: TWI-42, TWI-43, TWI-44, TWI-45, TWI-116, TWI-117 — `test/twitch_embed_test.dart` (desktop); TWI-46…TWI-54, TWI-56, TWI-57 — `test/twitch_player_test.dart` (desktop); TWI-110, TWI-111, TWI-113 — `test/twitch_skip_chatting_test.dart` (desktop); TWI-112 — `test/twitch_skip_chatting_test.dart` (desktop, tv). TWI-135, TWI-136 — `test/twitch_gray_screen_test.dart` (desktop).
 
 ### Чат
 
