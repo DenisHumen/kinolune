@@ -232,10 +232,11 @@ project_alpha/
   - Что: gitleaks (pre-commit и CI), GitHub secret scanning и push protection, `.env.example` со всеми переменными, документ «какие секреты где живут» (CI, окружения, OIDC).
   - deps: REPO-001 · size: S · parallel: yes · веха: M0 · ref: 04 §4.5, CLAUDE.md
   - done when: коммит с тестовым ключом блокируется локально и в CI.
-- [x] **REPO-010** release-please (manifest mode)
+- [ ] **REPO-010** release-please (manifest mode)
   - Что: компоненты `core`, `server`, `app`, `tvos`, `distro`; теги `app-vX.Y.Z`, `server-vX.Y.Z` и т. д.; build number для сторов — `github.run_number`; changelog по Conventional Commits.
   - deps: CI-001 · size: S · parallel: yes · веха: M0 · ref: S §7, 04 §4.2
   - done when: тестовый merge `feat:` создаёт release PR с корректным changelog.
+  - Сделано частично: `.github/release-please-config.json`, `.github/release-please-manifest.json` (alpha-серия от `app-v0.1.0-alpha.21`, без тегов и GitHub Release — выпуск по-прежнему вручную, `docs/dev/release.md`), `.github/workflows/release-please.yml`; dry run release-please 17.6.0 на реальной истории main даёт корректные release PR (`chore(release): release app 0.1.0-alpha.21` от alpha.20 с разделами feat/fix). Осталось для галочки: владелец включает «Allow GitHub Actions to create and approve pull requests» (сейчас выключено, без неё workflow не может открыть PR), первый настоящий прогон на main открывает release PR.
 - [ ] **REPO-011** (owner) Подготовка и переключение репо в публичный режим
   - Что: скан всей истории gitleaks, проверка на приватные ссылки и чужие ассеты, переключение видимости, судьба `project_alpha-releases` по DEC-001, редиректы в README.
   - deps: DEC-001, REPO-002, REPO-009 · size: S · parallel: yes · веха: M0 · ref: S §7

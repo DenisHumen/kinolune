@@ -4,9 +4,9 @@
 
 ## 0. Release PR: версия и changelog (release-please, REPO-010)
 
-`.github/workflows/release-please.yml` на каждом push в main открывает или обновляет по одному release PR на компоненту: `app` (`clients/flutter/app`), `core`, `server`, `tvos` (`clients/apple/TVApp`), `distro`. Настройки — `release-please-config.json`, текущие версии — `.release-please-manifest.json`.
+`.github/workflows/release-please.yml` на каждом push в main открывает или обновляет по одному release PR на компоненту: `app` (`clients/flutter/app`), `core`, `server`, `tvos` (`clients/apple/TVApp`), `distro`. Настройки — `.github/release-please-config.json`, текущие версии — `.github/release-please-manifest.json`.
 
-- Заголовок: `chore(release): release app 0.1.0-alpha.22`. В PR — новая версия в манифесте и раздел в `CHANGELOG.md` компоненты (`clients/flutter/app/CHANGELOG.md` и т. д.).
+- Заголовок: `chore(release): release app 0.1.0-alpha.22`. В PR — новая версия в манифесте, `version.txt` и раздел в `CHANGELOG.md` компоненты (`clients/flutter/app/CHANGELOG.md` и т. д.). `pubspec.yaml` и `MARKETING_VERSION` tvOS release PR не трогает: `release-app.yml` берёт версию из тега (`--build-name`), build number — `github.run_number`, а в версию App Store суффикс `-alpha.N` не помещается.
 - Версии — alpha-серия (`versioning: prerelease`, `prerelease: true`, `prerelease-type: alpha`): `feat`, `fix` и даже breaking change на 0.x увеличивают только номер alpha (`0.1.0-alpha.21` → `0.1.0-alpha.22`). Другую версию задаёт строка `Release-As: 0.1.0-beta.1` в теле коммита или правка манифеста.
 - В changelog попадают `feat`, `fix`, `perf`, `revert` (по коммитам на main, то есть по заголовкам смёрженных PR); `docs`, `ci`, `chore`, `test`, `refactor`, `build`, `style` скрыты. Коммит идёт в changelog той компоненты, чьи файлы он меняет: изменения ядра — в `core/CHANGELOG.md`, не в `app`.
 - **Тег и GitHub Release release-please не создаёт** (`skip-github-release`), поэтому merge release PR ничего не собирает и не публикует: `release-app.yml` запускается только тегом `app-v*`, который ставит владелец (шаг 3).
@@ -21,7 +21,7 @@
 
 Пока смёрженный release PR не помечен как выпущенный (`autorelease: tagged`), release-please не открывает новые release PR. Workflow сам переставляет метку `autorelease: pending` → `autorelease: tagged`, как только на origin появляется тег из заголовка PR. Если тег не будет ставиться, снять метку вручную: `gh pr edit <N> --remove-label "autorelease: pending" --add-label "autorelease: tagged"`.
 
-Выпуск без release PR (тег прямо с main) сбивает манифест: следующий release PR снова предложит ту же версию. Тогда поправить версию в `.release-please-manifest.json` отдельным PR.
+Выпуск без release PR (тег прямо с main) сбивает манифест: следующий release PR снова предложит ту же версию. Тогда поправить версию в `.github/release-please-manifest.json` отдельным PR.
 
 ## 1. precheck на сервере сборки (10–20 минут)
 
