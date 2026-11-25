@@ -30,7 +30,10 @@ void main() {
     );
     await nm.addAp(FakeAp('Office', strength: 20, enterprise: true));
     await nm.addAp(FakeAp('Attic', password: 'attic-secret', hidden: true));
-    backend = NmBackend(nm.client(), connectTimeout: const Duration(seconds: 5));
+    backend = NmBackend(
+      nm.client(),
+      connectTimeout: const Duration(seconds: 5),
+    );
   });
 
   tearDown(() async {
@@ -54,24 +57,32 @@ void main() {
     expect((await backend.read()).available, isFalse);
   });
 
-  test('lists networks with signal and security, hidden ones left out', () async {
-    final s = await backend.read();
-    expect(s.available, isTrue);
-    expect(s.wifiEnabled, isTrue);
-    expect(s.networks.map((n) => n.ssid), ['Home', 'Cafe', 'Modern', 'Office']);
-    final by = {for (final n in s.networks) n.ssid: n};
-    expect(by['Home']!.security, WifiSecurity.wpaPersonal);
-    expect(by['Home']!.strength, 80);
-    expect(by['Cafe']!.security, WifiSecurity.open);
-    expect(by['Modern']!.security, WifiSecurity.wpa3);
-    expect(by['Office']!.security, WifiSecurity.enterprise);
-    expect(s.active, isNull);
-    expect(s.connectivity, NetConnectivity.none);
-    expect(s.wired.present, isTrue);
-    expect(s.wired.cable, isTrue);
-    expect(s.wired.connected, isFalse);
-    expect(s.portalUrl, 'http://check.example/hotspot.txt');
-  });
+  test(
+    'lists networks with signal and security, hidden ones left out',
+    () async {
+      final s = await backend.read();
+      expect(s.available, isTrue);
+      expect(s.wifiEnabled, isTrue);
+      expect(s.networks.map((n) => n.ssid), [
+        'Home',
+        'Cafe',
+        'Modern',
+        'Office',
+      ]);
+      final by = {for (final n in s.networks) n.ssid: n};
+      expect(by['Home']!.security, WifiSecurity.wpaPersonal);
+      expect(by['Home']!.strength, 80);
+      expect(by['Cafe']!.security, WifiSecurity.open);
+      expect(by['Modern']!.security, WifiSecurity.wpa3);
+      expect(by['Office']!.security, WifiSecurity.enterprise);
+      expect(s.active, isNull);
+      expect(s.connectivity, NetConnectivity.none);
+      expect(s.wired.present, isTrue);
+      expect(s.wired.cable, isTrue);
+      expect(s.wired.connected, isFalse);
+      expect(s.portalUrl, 'http://check.example/hotspot.txt');
+    },
+  );
 
   test('joins an open network without a password', () async {
     final s0 = await backend.read();
@@ -87,25 +98,28 @@ void main() {
     expect(nm.secretsReceived, isEmpty);
   });
 
-  test('a wrong password is refused and not kept; the right one joins', () async {
-    final home = (await backend.read()).networks.first;
-    expect(
-      await backend.connect(home, password: 'wrong-password'),
-      ConnectResult.wrongPassword,
-    );
-    expect(nm.savedSsids, isEmpty, reason: 'failed profile removed');
-    expect((await backend.read()).active, isNull);
+  test(
+    'a wrong password is refused and not kept; the right one joins',
+    () async {
+      final home = (await backend.read()).networks.first;
+      expect(
+        await backend.connect(home, password: 'wrong-password'),
+        ConnectResult.wrongPassword,
+      );
+      expect(nm.savedSsids, isEmpty, reason: 'failed profile removed');
+      expect((await backend.read()).active, isNull);
 
-    expect(
-      await backend.connect(home, password: 'kinolune123'),
-      ConnectResult.ok,
-    );
-    final s = await backend.read();
-    expect(s.active?.ssid, 'Home');
-    expect(s.connectivity, NetConnectivity.full);
-    expect(nm.savedSsids, {'Home'});
-    expect(nm.secretsReceived, ['wrong-password', 'kinolune123']);
-  });
+      expect(
+        await backend.connect(home, password: 'kinolune123'),
+        ConnectResult.ok,
+      );
+      final s = await backend.read();
+      expect(s.active?.ssid, 'Home');
+      expect(s.connectivity, NetConnectivity.full);
+      expect(nm.savedSsids, {'Home'});
+      expect(nm.secretsReceived, ['wrong-password', 'kinolune123']);
+    },
+  );
 
   test('a too short WPA password is a wrong password', () async {
     final home = (await backend.read()).networks.first;
@@ -235,10 +249,7 @@ void main() {
     await c.start();
     expect(c.visible, isTrue);
     final home = c.snapshot.networks.first;
-    expect(
-      await c.connect(home, password: 'kinolune123'),
-      ConnectResult.ok,
-    );
+    expect(await c.connect(home, password: 'kinolune123'), ConnectResult.ok);
     expect(c.snapshot.active?.ssid, 'Home');
     nm.wifiAdapter = false;
     await c.refresh();

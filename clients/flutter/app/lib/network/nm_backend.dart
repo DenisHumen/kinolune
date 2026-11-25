@@ -260,9 +260,8 @@ class NmBackend implements NetworkBackend {
   Future<List<_Saved>> _savedProfiles() async {
     final DBusMethodSuccessResponse list;
     try {
-      list = await _obj(
-        _settingsPath,
-      ).callMethod(_settings, 'ListConnections', const []);
+      list = await _obj(_settingsPath)
+          .callMethod(_settings, 'ListConnections', const []);
     } on DBusMethodResponseException {
       return const [];
     }
@@ -340,9 +339,8 @@ class NmBackend implements NetworkBackend {
             network.security,
             password,
           );
-          await _obj(
-            saved.path,
-          ).callMethod(_connection, 'Update', [_toDBus(s)]);
+          await _obj(saved.path)
+              .callMethod(_connection, 'Update', [_toDBus(s)]);
         }
         final r = await _root.callMethod(_nm, 'ActivateConnection', [
           DBusObjectPath(saved.path),
@@ -491,9 +489,7 @@ class NmBackend implements NetworkBackend {
       if (settings == null) continue;
       (settings['connection'] ??= {})['autoconnect'] = DBusBoolean(on);
       // Update keeps the stored secrets when the new settings have none.
-      await _obj(
-        s.path,
-      ).callMethod(_connection, 'Update', [_toDBus(settings)]);
+      await _obj(s.path).callMethod(_connection, 'Update', [_toDBus(settings)]);
     }
   }
 
@@ -636,11 +632,8 @@ Map<String, Map<String, DBusValue>> _fromDBus(DBusValue v) => {
     },
 };
 
-DBusDict _toDBus(Map<String, Map<String, DBusValue>> s) => DBusDict(
-  DBusSignature('s'),
-  DBusSignature('a{sv}'),
-  {
-    for (final e in s.entries)
-      DBusString(e.key): DBusDict.stringVariant(e.value),
-  },
-);
+DBusDict _toDBus(Map<String, Map<String, DBusValue>> s) =>
+    DBusDict(DBusSignature('s'), DBusSignature('a{sv}'), {
+      for (final e in s.entries)
+        DBusString(e.key): DBusDict.stringVariant(e.value),
+    });

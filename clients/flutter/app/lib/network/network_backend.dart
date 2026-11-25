@@ -247,8 +247,10 @@ class NoNetworkBackend implements NetworkBackend {
   Future<void> scan() async {}
 
   @override
-  Future<ConnectResult> connect(WifiNetwork network, {String? password}) async =>
-      ConnectResult.failed;
+  Future<ConnectResult> connect(
+    WifiNetwork network, {
+    String? password,
+  }) async => ConnectResult.failed;
 
   @override
   Future<ConnectResult> connectHidden(

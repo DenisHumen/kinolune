@@ -99,7 +99,10 @@ class FakeNetworkManager {
       _Obj('/org/freedesktop/NetworkManager/Devices/2', nm._ethDev),
     );
     await nm._register(
-      _Obj('/org/freedesktop/NetworkManager/IP4Config/1', nm._ip4('192.168.50.23')),
+      _Obj(
+        '/org/freedesktop/NetworkManager/IP4Config/1',
+        nm._ip4('192.168.50.23'),
+      ),
     );
     await nm._register(
       _Obj('/org/freedesktop/NetworkManager/IP4Config/2', nm._ip4('10.0.0.5')),
@@ -211,7 +214,9 @@ class FakeNetworkManager {
     },
   );
 
-  Future<_Saved> _addProfile(Map<String, Map<String, DBusValue>> settings) async {
+  Future<_Saved> _addProfile(
+    Map<String, Map<String, DBusValue>> settings,
+  ) async {
     final path = '/org/freedesktop/NetworkManager/Settings/${_next++}';
     final s = _Saved(path, settings);
     _saved[path] = s;
@@ -317,9 +322,14 @@ class FakeNetworkManager {
         'Interface': const DBusString('wlan0'),
         'Managed': const DBusBoolean(true),
         'State': DBusUint32(_wifiState),
-        'StateReason': DBusStruct([DBusUint32(_reason.$1), DBusUint32(_reason.$2)]),
+        'StateReason': DBusStruct([
+          DBusUint32(_reason.$1),
+          DBusUint32(_reason.$2),
+        ]),
         'Ip4Config': DBusObjectPath(
-          _wifiState == 100 ? '/org/freedesktop/NetworkManager/IP4Config/1' : '/',
+          _wifiState == 100
+              ? '/org/freedesktop/NetworkManager/IP4Config/1'
+              : '/',
         ),
         'ActiveConnection': DBusObjectPath(_activePath ?? '/'),
       },

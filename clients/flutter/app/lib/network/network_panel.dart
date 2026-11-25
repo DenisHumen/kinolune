@@ -42,13 +42,13 @@ import 'network_controller.dart';
     );
   }
   if (s.connecting case final ssid?) {
-    return (icon: Icons.wifi_find_rounded, label: l.networkStatusConnecting(ssid));
+    return (
+      icon: Icons.wifi_find_rounded,
+      label: l.networkStatusConnecting(ssid),
+    );
   }
   if (s.wired.connected) {
-    return (
-      icon: Icons.settings_ethernet_rounded,
-      label: l.networkStatusWired,
-    );
+    return (icon: Icons.settings_ethernet_rounded, label: l.networkStatusWired);
   }
   return (icon: Icons.wifi_off_rounded, label: l.networkStatusNone);
 }
@@ -241,8 +241,9 @@ class _NetworkPanelState extends State<NetworkPanel> {
       builder: (_) => _DetailsDialog(net: net, ssid: n.ssid),
     );
     if (forget == true && mounted) {
+      final done = context.l10n.networkForgotten(n.ssid);
       await net.forget(n.ssid);
-      _say(context.l10n.networkForgotten(n.ssid));
+      _say(done);
     }
   }
 
@@ -690,9 +691,8 @@ class _HiddenDialogState extends State<_HiddenDialog> {
     if (ssid.isEmpty) return;
     final needs = _security.needsPassword;
     if (needs && _password.text.isEmpty) return;
-    Navigator.of(
-      context,
-    ).pop(_HiddenRequest(ssid, _security, needs ? _password.text : null));
+    Navigator.of(context)
+        .pop(_HiddenRequest(ssid, _security, needs ? _password.text : null));
   }
 
   @override
@@ -719,7 +719,10 @@ class _HiddenDialogState extends State<_HiddenDialog> {
               decoration: InputDecoration(labelText: l.networkHiddenName),
             ),
             const SizedBox(height: 14),
-            Text(l.networkSecurity, style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              l.networkSecurity,
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             const SizedBox(height: 6),
             Wrap(
               spacing: 8,
