@@ -2336,5 +2336,8 @@
   "commonScreenErrorTitle": "[Šóɱéţĥíñĝ ŵéñţ ŵŕóñĝ óñ ţĥíš šçŕééñ··············]",
   "commonScreenErrorMessage": "[Ţĥé éŕŕóŕ íš šáṽéð íñ ţĥé áþþ ļóĝ. Ţŕý áĝáíñ óŕ ĝó ƀáçķ.·······················]",
   "commonScreenErrorRetry": "[Ţŕý áĝáíñ····]",
-  "commonScreenErrorBack": "[Ɓáçķ··]"
+  "commonScreenErrorBack": "[Ɓáçķ··]",
+  "reviewWhyYearOff": "[ýéáŕ ðíƒƒéŕš ƀý······ {years} ({delta}%)]",
+  "reviewWhyRemake": "[ɱáýƀé á ŕéɱáķé (·······{delta}%)]",
+  "reviewWhyKindOff": "[ţýþé ðíƒƒéŕš (······{delta}%)]"
 }

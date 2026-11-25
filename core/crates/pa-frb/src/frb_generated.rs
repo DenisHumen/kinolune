@@ -29527,6 +29527,10 @@ impl SseDecode for crate::api::review::CoreMatchSignals {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_provider = <String>::sse_decode(deserializer);
         let mut var_title = <f64>::sse_decode(deserializer);
+        let mut var_titleSimilarity = <Option<f64>>::sse_decode(deserializer);
+        let mut var_yearAdjust = <Option<f64>>::sse_decode(deserializer);
+        let mut var_remakeAdjust = <Option<f64>>::sse_decode(deserializer);
+        let mut var_kindAdjust = <Option<f64>>::sse_decode(deserializer);
         let mut var_tier = <String>::sse_decode(deserializer);
         let mut var_matchedTitle = <Option<String>>::sse_decode(deserializer);
         let mut var_fileYear = <Option<i32>>::sse_decode(deserializer);
@@ -29542,6 +29546,10 @@ impl SseDecode for crate::api::review::CoreMatchSignals {
         return crate::api::review::CoreMatchSignals {
             provider: var_provider,
             title: var_title,
+            title_similarity: var_titleSimilarity,
+            year_adjust: var_yearAdjust,
+            remake_adjust: var_remakeAdjust,
+            kind_adjust: var_kindAdjust,
             tier: var_tier,
             matched_title: var_matchedTitle,
             file_year: var_fileYear,
@@ -40244,6 +40252,10 @@ impl flutter_rust_bridge::IntoDart for crate::api::review::CoreMatchSignals {
         [
             self.provider.into_into_dart().into_dart(),
             self.title.into_into_dart().into_dart(),
+            self.title_similarity.into_into_dart().into_dart(),
+            self.year_adjust.into_into_dart().into_dart(),
+            self.remake_adjust.into_into_dart().into_dart(),
+            self.kind_adjust.into_into_dart().into_dart(),
             self.tier.into_into_dart().into_dart(),
             self.matched_title.into_into_dart().into_dart(),
             self.file_year.into_into_dart().into_dart(),
@@ -46416,6 +46428,10 @@ impl SseEncode for crate::api::review::CoreMatchSignals {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.provider, serializer);
         <f64>::sse_encode(self.title, serializer);
+        <Option<f64>>::sse_encode(self.title_similarity, serializer);
+        <Option<f64>>::sse_encode(self.year_adjust, serializer);
+        <Option<f64>>::sse_encode(self.remake_adjust, serializer);
+        <Option<f64>>::sse_encode(self.kind_adjust, serializer);
         <String>::sse_encode(self.tier, serializer);
         <Option<String>>::sse_encode(self.matched_title, serializer);
         <Option<i32>>::sse_encode(self.file_year, serializer);
