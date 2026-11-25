@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Accounts, sign-in and tokens of the server (SRV-003, ADR-NNNN). Fully
+//! Accounts, sign-in and tokens of the server (SRV-003, ADR-0162). Fully
 //! offline: no cloud account, everything lives in the data directory.
 //!
 //! - **Accounts** ([`store`]): local users, an administrator and household

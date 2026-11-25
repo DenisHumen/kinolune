@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-//! Who may connect (owner decision 2026-11-25, ADR-NNNN): the server
+//! Who may connect (owner decision 2026-11-25, ADR-0162): the server
 //! listens on every interface, but by default accepts TCP connections only
 //! from the home network, never from the internet. No UPnP, no port
 //! forwarding: the server never opens itself to the WAN.
