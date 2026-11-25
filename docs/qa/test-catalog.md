@@ -166,7 +166,7 @@ python3 tools/roadmap/roadmap.py progress --platforms
 | HOME-22 | Переключатель Wi-Fi (`network-wifi-switch`) → «Wi-Fi выключен», список сетей скрыт; включение возвращает список | — | — | — | — | — | — | — | 🤖 |
 | HOME-23 | «Проверить интернет» (`network-check`) → «Интернет работает» / «Нет подключения к сети» / «Сеть есть, а интернета нет» / «Сеть просит войти…»; при captive portal «Открыть страницу входа» (`network-portal`) открывает в браузере адрес проверки, заданный в системе | — | — | — | — | — | — | — | 🤖 |
 | HOME-24 | «Кабель» в панели: «Подключён» с IP-адресом / «Кабель не вставлен» / «Кабель вставлен, адреса пока нет» | — | — | — | — | — | — | — | 🤖 |
-| HOME-25 | Kinolune OS: пользователь из группы kinolune подключает, забывает сеть и выключает Wi-Fi без root и без запроса пароля (polkit-правило образа); проверяется в VM с виртуальным Wi-Fi mac80211_hwsim, точки WPA2 и открытая (distro/tests/wifi-hwsim-vm.sh) | — | — | — | — | — | — | — | ⬜ |
+| HOME-25 | Kinolune OS: пользователь из группы kinolune подключает, забывает сеть и выключает Wi-Fi без root и без запроса пароля (polkit-правило образа); проверяется в VM с виртуальным Wi-Fi mac80211_hwsim, точки WPA2 и открытая (distro/tests/wifi-hwsim-vm.sh) | — | — | — | — | — | — | — | 🤖 |
 
 Автотесты: HOME-15…HOME-24 — `test/network_panel_test.dart` (компьютер, телефон, ТВ; ru, en, uk) и `test/network_nm_test.dart` (клиент NetworkManager против поддельного NetworkManager на своей шине D-Bus); HOME-25 — `distro/tests/wifi-hwsim.sh` (живой NetworkManager в VM).
 
