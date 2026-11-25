@@ -310,6 +310,9 @@ func TestRunFullInstall(t *testing.T) {
 	if err := s.in.Run(context.Background()); err != nil {
 		t.Fatalf("%v\n%s", err, s.log)
 	}
+	if !strings.HasPrefix(s.in.PasswordHash, "$y$") {
+		t.Errorf("PasswordHash after chpasswd: %q", s.in.PasswordHash)
+	}
 
 	// Only the chosen disk and its partitions are ever named.
 	allowed := map[string]bool{"/dev/nvme0n1": true, "/dev/nvme0n1p1": true, "/dev/nvme0n1p2": true, "/dev/nvme0n1p3": true}
@@ -452,6 +455,10 @@ func TestRunDataPartitionHostRunnerHashedPassword(t *testing.T) {
 	s := newSetup(t, "04-qemu-ci", js)
 	if err := s.in.Run(context.Background()); err != nil {
 		t.Fatalf("%v\n%s", err, s.log)
+	}
+	// The TUI saves this hash in a repeat-install answer file.
+	if s.in.PasswordHash != "$y$j9T$7nVyZ3WBHdkfQ8WaD9Xgd.$Dn3Cl9mI6/ybf8z7FNnUW2ePrCVc6kB8BDu7Rbq3wf4" {
+		t.Errorf("PasswordHash %q", s.in.PasswordHash)
 	}
 	var bootc Cmd
 	for _, c := range s.fake.cmds {

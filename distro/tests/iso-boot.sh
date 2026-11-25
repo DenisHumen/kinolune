@@ -6,9 +6,11 @@
 #   distro/tests/iso-boot.sh ISO [LOG]        # LOG: serial transcript (default next to ISO)
 #
 # Checks: the GRUB menu shows "Install Kinolune OS"; the live system boots to the
-# installer prompt (and owns tty1, not kmscon); the menu lists the disks (the empty NVMe is offered, the ISO drive is
-# excluded); in its shell the live system is Kinolune OS and the offline OS image
-# (payload) is in containers-storage; the installer passes a dry run on the NVMe.
+# full-screen installer (TUI, DIST-006; it owns tty1, not kmscon), which offers the empty
+# NVMe and explains why the ISO drive is not offered; Ctrl+C leads to the text menu; the
+# menu lists the disks; in its shell the live system is Kinolune OS and the offline OS
+# image (payload) is in containers-storage; the installer passes a dry run on the NVMe,
+# from an answer file and through every TUI screen (wrong disk name refused).
 #
 # Requirements: qemu-system-x86_64, OVMF, /dev/kvm, python3. ~3-5 minutes with KVM.
 # Env: QEMU_EXEC  prefix for qemu and kill, e.g. "docker exec my-qemu" (container on the
@@ -116,14 +118,27 @@ def send(text):
     time.sleep(0.5)
     s.sendall(text.encode())
 
+DOWN, ENTER, CTRL_C = "\x1b[B", "\r", "\x03"
+
 wait(r"Install Kinolune OS", 120, "GRUB menu shows 'Install Kinolune OS'")
-wait(r"Language / Мова / Язык", boot_timeout, "live system booted to the installer prompt")
-send("1\r")
-wait(r"Choose an action \[1-8\]", 60, "installer menu (English)")
+# The full-screen installer (DIST-006) owns the console: language first, Ukrainian on top.
+wait(r"Мова / Language / Язык", boot_timeout, "live system booted to the full-screen installer")
+wait(r"Українська", 30, "language list")
+send(DOWN)
+send(ENTER)
+wait(r"System disk", 60, "TUI disk screen (English)")
+wait(r"/dev/nvme0n1", 30, "TUI offers the empty NVMe")
+wait(r"/dev/sr0: (optical drive|the installer boots from it)", 30, "TUI explains why the ISO drive is not offered")
+# Leave the TUI for the text menu (its fallback), as a user would with Ctrl+C.
+send(CTRL_C)
+wait(r"Leave the installer\?", 30, "TUI exit dialog")
+send(DOWN)
+send(ENTER)
+wait(r"Choose an action \[1-9\]", 60, "text menu (English, language taken from the TUI)")
 send("1\r")
 m = wait(r"Press Enter to go back to the menu", 120, "disk list printed")
 send("\r")
-wait(r"Choose an action \[1-8\]", 60, "back in the menu")
+wait(r"Choose an action \[1-9\]", 60, "back in the menu")
 send("6\r")
 time.sleep(2)
 # Markers are typed as O""SR= etc.: the echoed command line never matches the pattern.
@@ -161,6 +176,30 @@ send("printf '%s' '{\"version\":1,\"disk\":{\"path\":\"/dev/nvme0n1\"},\"user\":
 m = wait(r"DRYRUN=(\d+)\r?\n", 120, "installer dry run finished")
 if m.group(1) != "0":
     errors.append("alpha-installer --dry-run failed in the live system")
+# The same dry run through every screen of the TUI, on this serial console (80x24).
+send("alpha-installer tui --dry-run --lang en --action-file /tmp/tui-action; "
+     "echo TUI\"\"EXIT=$?:$(cat /tmp/tui-action)\r")
+wait(r"Мова / Language / Язык", 60, "TUI started from the shell")
+send(ENTER)
+wait(r"System disk", 60, "TUI: disk")
+send(ENTER)
+wait(r"Disk layout", 30, "TUI: layout")
+send(ENTER)
+wait(r"Computer name", 30, "TUI: host name")
+send(ENTER)
+wait(r"Administrator", 30, "TUI: user")
+send(DOWN); send(DOWN); send("smoke-test-pw"); send(DOWN); send("smoke-test-pw"); send(ENTER)
+wait(r"Network", 30, "TUI: network")
+send(ENTER); send(ENTER)
+wait(r"To start, type the disk name nvme0n1", 30, "TUI: summary asks for the disk name")
+send("sda" + ENTER)
+wait(r"The name does not match", 30, "TUI: a wrong disk name is refused")
+send("\x15nvme0n1" + ENTER)
+wait(r"Dry run finished", 120, "TUI: dry run through the installer finished")
+send(DOWN); send(ENTER)
+m = wait(r"TUIEXIT=(\d+):(\w*)", 60, "TUI exited")
+if m.group(1) != "0" or m.group(2) != "menu":
+    errors.append(f"TUI dry run: exit {m.group(1)}, action {m.group(2)!r}")
 if errors:
     sys.exit("FAILED:\n  " + "\n  ".join(errors))
 print(f"==> live system: {osr}; payload: {images.strip()}", flush=True)
@@ -176,7 +215,7 @@ if install:
     send("systemctl poweroff\r")
 else:
     send("exit\r")
-    wait(r"Choose an action \[1-8\]", 60, "back in the menu after the shell")
+    wait(r"Choose an action \[1-9\]", 60, "back in the menu after the shell")
 EOF
 
 if [[ "${INSTALL}" == 1 ]]; then

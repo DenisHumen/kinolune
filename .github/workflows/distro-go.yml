@@ -42,11 +42,11 @@ jobs:
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: distro/installer/go.mod
-          cache-dependency-path: distro/installer/go.mod
+          cache-dependency-path: distro/installer/go.sum
       - name: gofmt
         run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - run: go vet ./...
-      - run: go test ./...
+      - run: go test -race ./...
 
   updated:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}

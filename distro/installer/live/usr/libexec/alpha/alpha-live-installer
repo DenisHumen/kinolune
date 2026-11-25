@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MPL-2.0
-# Text-mode entry of the Kinolune OS installer ISO (DIST-007). Runs on tty1 (and on the
-# serial console) instead of a login prompt, see alpha-live-installer@.service.
+# Entry of the Kinolune OS installer ISO (DIST-007). Runs on tty1 (and on the serial
+# console) instead of a login prompt, see alpha-live-installer@.service.
 #
-# Until the full-screen installer (TUI, DIST-006) exists, this menu drives
-# `alpha-installer` with an answer file: show disks, find or write the file, check the
-# plan, install. Everything else (shell, reboot) is one key away.
+# First the full-screen installer (`alpha-installer tui`, DIST-006). This text menu is
+# its fallback (the TUI did not start, or the user left it): it drives `alpha-installer`
+# with an answer file: show disks, find or write the file, check the plan, install.
+# Everything else (shell, reboot, back to the full-screen installer) is one key away.
+# ALPHA_TEXT_MENU=1 skips the full-screen installer.
 set -uo pipefail
 
 VERSION="$(sed -n 's/^ALPHA_OS_VERSION=//p' /usr/share/alpha/installer/version 2>/dev/null)"
@@ -15,6 +17,7 @@ ANSWERS="${ALPHA_ANSWERS:-/root/answers.json}"
 MEDIA_DIR=/run/alpha-live/media
 LOCK=/run/alpha-live/install.lock
 LANG_FILE=/run/alpha-live/language
+ACTION_FILE="/run/alpha-live/action-$(basename "$(tty 2>/dev/null || echo console)")"
 mkdir -p /run/alpha-live "$(realpath /root 2>/dev/null || echo /root)"
 export LANG=C.UTF-8
 
@@ -22,17 +25,14 @@ export LANG=C.UTF-8
 declare -A T
 t() { printf '%s' "${T[${UI_LANG}.$1]:-${T[en.$1]}}"; }
 
-T[en.intro]="The full-screen installer is coming in the next version. For now Kinolune OS is
-installed from an answer file: a small JSON file with the disk, host name, user and
-network. Example: ${EXAMPLE}
+T[en.intro]="Text menu: Kinolune OS is installed from an answer file, a small JSON file with
+the disk, host name, user and network. Example: ${EXAMPLE}
 Field reference: ${DOCS}"
-T[uk.intro]="Повноекранний інсталятор з'явиться в наступній версії. Поки що Kinolune OS
-встановлюється за файлом відповідей: невеликий JSON із диском, ім'ям хоста, користувачем
-і мережею. Приклад: ${EXAMPLE}
+T[uk.intro]="Текстове меню: Kinolune OS встановлюється за файлом відповідей, невеликим JSON
+із диском, ім'ям хоста, користувачем і мережею. Приклад: ${EXAMPLE}
 Опис полів: ${DOCS}"
-T[ru.intro]="Полноэкранный установщик появится в следующей версии. Пока Kinolune OS
-ставится по файлу ответов: небольшой JSON с диском, именем хоста, пользователем и сетью.
-Пример: ${EXAMPLE}
+T[ru.intro]="Текстовое меню: Kinolune OS ставится по файлу ответов, небольшому JSON с диском,
+именем хоста, пользователем и сетью. Пример: ${EXAMPLE}
 Описание полей: ${DOCS}"
 T[en.title]="installer"; T[uk.title]="інсталятор"; T[ru.title]="установщик"
 T[en.answers]="Answer file"; T[uk.answers]="Файл відповідей"; T[ru.answers]="Файл ответов"
@@ -55,9 +55,10 @@ T[uk.m6]="Командний рядок (exit — повернутися)"
 T[ru.m6]="Командная строка (exit — вернуться)"
 T[en.m7]="Reboot"; T[uk.m7]="Перезавантажити"; T[ru.m7]="Перезагрузить"
 T[en.m8]="Power off"; T[uk.m8]="Вимкнути"; T[ru.m8]="Выключить"
-T[en.choose]="Choose an action [1-8]: "
-T[uk.choose]="Виберіть дію [1-8]: "
-T[ru.choose]="Выберите действие [1-8]: "
+T[en.m9]="Full-screen installer"; T[uk.m9]="Повноекранний інсталятор"; T[ru.m9]="Полноэкранный установщик"
+T[en.choose]="Choose an action [1-9]: "
+T[uk.choose]="Виберіть дію [1-9]: "
+T[ru.choose]="Выберите действие [1-9]: "
 T[en.enter]="Press Enter to go back to the menu"
 T[uk.enter]="Натисніть Enter, щоб повернутися до меню"
 T[ru.enter]="Нажмите Enter, чтобы вернуться в меню"
@@ -83,6 +84,10 @@ T[ru.failed]="Установка не завершилась, см. сообще
 T[en.payload]="Warning: the OS image is missing from this ISO, offline installation is impossible."
 T[uk.payload]="Увага: образу ОС немає на цьому ISO, офлайн-встановлення неможливе."
 T[ru.payload]="Внимание: образа ОС нет на этом ISO, офлайн-установка невозможна."
+
+T[en.tuifail]="The full-screen installer did not start, switching to the text menu."
+T[uk.tuifail]="Повноекранний інсталятор не запустився, відкриваю текстове меню."
+T[ru.tuifail]="Полноэкранный установщик не запустился, открываю текстовое меню."
 
 say() { t "$1"; echo; }
 pause() { printf '\n%s ' "$(t enter)"; read -r _ || true; }
@@ -162,11 +167,35 @@ do_install() {
     exec 9>&-
 }
 
+# The full-screen installer (DIST-006). Returns 1 when it could not run: the caller
+# falls back to the text menu. Its last screen hands back an action.
+run_tui() {
+    [[ "${ALPHA_TEXT_MENU:-0}" != 1 ]] || return 1
+    command -v alpha-installer >/dev/null 2>&1 || return 1
+    local args=(tui --lang-file "${LANG_FILE}" --action-file "${ACTION_FILE}")
+    # An answer file found on a USB stick (menu item 2) pre-fills the screens.
+    [[ -s "${ANSWERS}" ]] && args+=(--answers "${ANSWERS}")
+    rm -f "${ACTION_FILE}"
+    if ! alpha-installer "${args[@]}"; then
+        UI_LANG="$(cat "${LANG_FILE}" 2>/dev/null || echo en)"
+        echo
+        say tuifail
+        sleep 3
+        return 1
+    fi
+    case "$(cat "${ACTION_FILE}" 2>/dev/null)" in
+        reboot) systemctl reboot; sleep 60 ;;
+        poweroff) systemctl poweroff; sleep 60 ;;
+    esac
+    return 0
+}
+
 payload_check() {
     # The offline OS image (--bootc-installer-payload-ref) lives in containers-storage.
     [[ -n "$(podman images -q 2>/dev/null)" ]] || say payload
 }
 
+run_tui || true
 choose_language
 while true; do
     clear 2>/dev/null || true
@@ -175,7 +204,7 @@ while true; do
     payload_check
     if [[ -s "${ANSWERS}" ]]; then a="${ANSWERS}"; else a="$(t none)"; fi
     printf '%s: %s\n\n' "$(t answers)" "${a}"
-    for i in 1 2 3 4 5 6 7 8; do printf '  %d) %s\n' "${i}" "$(t "m${i}")"; done
+    for i in 1 2 3 4 5 6 7 8 9; do printf '  %d) %s\n' "${i}" "$(t "m${i}")"; done
     printf '\n%s' "$(t choose)"
     read -r choice || { sleep 1; continue; }
     echo
@@ -189,5 +218,7 @@ while true; do
         6) bash -l || true ;;
         7) systemctl reboot ;;
         8) systemctl poweroff ;;
+        9) run_tui || pause
+           [[ -s "${LANG_FILE}" ]] && UI_LANG="$(cat "${LANG_FILE}")" ;;
     esac
 done

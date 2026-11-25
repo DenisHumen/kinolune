@@ -1,0 +1,24 @@
+ Kinolune OS 0.1.0 - Installer                                      Step 2 of 7
+
+ System disk
+ Choose a disk. EVERYTHING ON IT WILL BE ERASED. Other disks are not touched.
+
+ > ! Kingston SNV2S1000G         1.0 TB  NVMe      /dev/nvme0n1  S/N ...CDEF
+   ! Seagate ST4000VN008-2DR166  4.0 TB  SATA HDD  /dev/sda      S/N ...ABCD
+   ! Seagate ST4000VN008-2DR166  4.0 TB  SATA HDD  /dev/sdb      S/N ...EFGH
+   ! Toshiba MG08ACA16TE          16 TB  SATA HDD  /dev/sdc      S/N ...FVGG
+
+ Will be erased: /dev/nvme0n1
+   - GPT partition table, 3 partition(s)
+   - boot partition of another OS (/dev/nvme0n1p1)
+   - ext4 "boot" on /dev/nvme0n1p2
+     and 1 more
+
+ Not offered:
+   - Kingston DataTraveler 3.0 31 GB /dev/sde: the installer boots from it
+
+
+
+
+
+ Up/Down: disk  Enter: choose  R: rescan  Esc: back  Ctrl+C: exit
