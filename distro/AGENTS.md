@@ -17,6 +17,7 @@ distro/tests/vm-switch-rollback.sh                     # ~10 мин: switch → 
 distro/admin/tests/pam-container.sh                    # alpha-admin с настоящим PAM в контейнере Fedora
 distro/admin/tests/vm-admin-e2e.sh                     # ~15 мин: alpha-admin в QEMU против настоящих systemd/NM/firewalld/UDisks2/logind
 distro/tests/vm-install.sh                             # ~20 мин: установщик по файлу ответов (OVMF, NVMe)
+distro/tests/wifi-hwsim-vm.sh FEDORA_CLOUD.qcow2 nm_probe  # ~10 мин: Wi-Fi приложения в VM с mac80211_hwsim (DIST-032)
 shellcheck distro/scripts/*.sh distro/tests/*.sh       # если установлен
 just distro::installer-test                            # Go: установщик (DIST-004)
 just distro::updated-test                              # Go: агент обновлений alpha-updated на fake bootc (DIST-009)

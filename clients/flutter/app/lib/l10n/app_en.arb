@@ -7470,6 +7470,276 @@
   "@familyJoinKindServer": {
     "description": "SYNC-015: device kind."
   },
+  "networkTitle": "Network",
+  "@networkTitle": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkStatusWifi": "Wi-Fi: {ssid}",
+  "@networkStatusWifi": {
+    "description": "DIST-032: Wi-Fi and network panel from Home.",
+    "placeholders": {
+      "ssid": {
+        "type": "String"
+      }
+    }
+  },
+  "networkStatusWired": "Wired network",
+  "@networkStatusWired": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkStatusNone": "No network",
+  "@networkStatusNone": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkStatusPortal": "Sign-in to the network needed",
+  "@networkStatusPortal": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkStatusLimited": "No internet",
+  "@networkStatusLimited": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkStatusConnecting": "Connecting to “{ssid}”…",
+  "@networkStatusConnecting": {
+    "description": "DIST-032: Wi-Fi and network panel from Home.",
+    "placeholders": {
+      "ssid": {
+        "type": "String"
+      }
+    }
+  },
+  "networkWifi": "Wi-Fi",
+  "@networkWifi": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkWifiOff": "Wi-Fi is off",
+  "@networkWifiOff": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkAddress": "IP address: {address}",
+  "@networkAddress": {
+    "description": "DIST-032: Wi-Fi and network panel from Home.",
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "networkWired": "Cable",
+  "@networkWired": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkWiredConnected": "Connected",
+  "@networkWiredConnected": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkWiredNoCable": "No cable plugged in",
+  "@networkWiredNoCable": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkWiredNoAddress": "Cable plugged in, no address yet",
+  "@networkWiredNoAddress": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkCheckInternet": "Check internet",
+  "@networkCheckInternet": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkChecking": "Checking…",
+  "@networkChecking": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkInternetFull": "Internet works",
+  "@networkInternetFull": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkInternetNone": "Not connected to a network",
+  "@networkInternetNone": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkInternetLimited": "There is a network but no internet",
+  "@networkInternetLimited": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkInternetPortal": "The network asks you to sign in on its page",
+  "@networkInternetPortal": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkInternetUnknown": "Could not check",
+  "@networkInternetUnknown": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkOpenPortal": "Open the sign-in page",
+  "@networkOpenPortal": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkNetworks": "Wi-Fi networks",
+  "@networkNetworks": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkScan": "Look for networks",
+  "@networkScan": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkScanning": "Looking for networks…",
+  "@networkScanning": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkNoNetworks": "No networks in sight. Check that the router is on.",
+  "@networkNoNetworks": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkConnected": "Connected",
+  "@networkConnected": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkSaved": "Saved",
+  "@networkSaved": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkOpen": "Open, no password",
+  "@networkOpen": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkSecured": "Password protected",
+  "@networkSecured": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkEnterprise": "Company network: set it up in the system settings",
+  "@networkEnterprise": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkSignal": "Signal {percent}%",
+  "@networkSignal": {
+    "description": "DIST-032: Wi-Fi and network panel from Home.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "networkHidden": "Hidden network…",
+  "@networkHidden": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkHiddenTitle": "Hidden network",
+  "@networkHiddenTitle": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkHiddenName": "Network name (SSID)",
+  "@networkHiddenName": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkSecurity": "Security",
+  "@networkSecurity": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkSecurityOpen": "None",
+  "@networkSecurityOpen": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkSecurityWpa": "WPA/WPA2 Personal",
+  "@networkSecurityWpa": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkSecurityWpa3": "WPA3 Personal",
+  "@networkSecurityWpa3": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkPassword": "Password",
+  "@networkPassword": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkPasswordTitle": "Password for “{ssid}”",
+  "@networkPasswordTitle": {
+    "description": "DIST-032: Wi-Fi and network panel from Home.",
+    "placeholders": {
+      "ssid": {
+        "type": "String"
+      }
+    }
+  },
+  "networkConnect": "Connect",
+  "@networkConnect": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkConnecting": "Connecting…",
+  "@networkConnecting": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkConnectedTo": "Connected to “{ssid}”",
+  "@networkConnectedTo": {
+    "description": "DIST-032: Wi-Fi and network panel from Home.",
+    "placeholders": {
+      "ssid": {
+        "type": "String"
+      }
+    }
+  },
+  "networkWrongPassword": "Wrong password. Try again.",
+  "@networkWrongPassword": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkNotFound": "“{ssid}” is not in range",
+  "@networkNotFound": {
+    "description": "DIST-032: Wi-Fi and network panel from Home.",
+    "placeholders": {
+      "ssid": {
+        "type": "String"
+      }
+    }
+  },
+  "networkUnsupported": "This network can only be set up in the system settings",
+  "@networkUnsupported": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkFailed": "Could not connect to “{ssid}”",
+  "@networkFailed": {
+    "description": "DIST-032: Wi-Fi and network panel from Home.",
+    "placeholders": {
+      "ssid": {
+        "type": "String"
+      }
+    }
+  },
+  "networkForget": "Forget network",
+  "@networkForget": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkForgotten": "“{ssid}” forgotten",
+  "@networkForgotten": {
+    "description": "DIST-032: Wi-Fi and network panel from Home.",
+    "placeholders": {
+      "ssid": {
+        "type": "String"
+      }
+    }
+  },
+  "networkForgetConfirm": "Forget “{ssid}”? You will need to enter its password again.",
+  "@networkForgetConfirm": {
+    "description": "DIST-032: Wi-Fi and network panel from Home.",
+    "placeholders": {
+      "ssid": {
+        "type": "String"
+      }
+    }
+  },
+  "networkAutoconnect": "Connect automatically",
+  "@networkAutoconnect": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkDetails": "Network settings",
+  "@networkDetails": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkPasswordNote": "The password is kept only by the system (NetworkManager), not by Kinolune.",
+  "@networkPasswordNote": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
+  "networkClose": "Close",
+  "@networkClose": {
+    "description": "DIST-032: Wi-Fi and network panel from Home."
+  },
   "settingsAudioOutput": "Sound",
   "@settingsAudioOutput": {
     "description": "Playback settings on Android: passthrough of Dolby/DTS to a receiver or always decode (PLAY-AND-004), a choice of two."

@@ -28,6 +28,7 @@ import 'integration/library.dart';
 import 'integration/player.dart';
 import 'l10n/l10n.dart';
 import 'licenses.dart';
+import 'network/network_setup.dart';
 import 'offline/background_downloads.dart';
 import 'offline/network_watch.dart';
 import 'offline/offline_downloads.dart';
@@ -377,6 +378,8 @@ Future<void> main(List<String> args) async {
     scrobbleBackend: AppConfig.demo || buildInfo.coreVersion == null
         ? null
         : CoreScrobbleBackend.open('${dir.path}/scrobble'),
+    // DIST-032: Wi-Fi and network from Home, Linux with NetworkManager only.
+    network: openNetwork(demo: AppConfig.demo),
     liveNotifier: PluginLiveNotifier(
       l10n: () => lookupAppLocalizations(
         services.locale.value ?? services.systemLocale(),

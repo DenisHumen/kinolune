@@ -26,6 +26,7 @@ import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../network/network_controller.dart';
 import '../notices/in_app_notices.dart';
 import '../offline/offline_downloads.dart';
 import '../profiles/profile_controller.dart';
@@ -93,6 +94,7 @@ class AppServices extends ChangeNotifier {
     SourceFiles? files,
     this.deviceFolder,
     this.scrobbleBackend,
+    this.network,
   }) : personal =
            personal ??
            (library is RustLibrary ? RustPersonalMedia(library) : null),
@@ -141,6 +143,10 @@ class AppServices extends ChangeNotifier {
   /// Trakt (SYNC-011): sign-in, scrobbles, sync, watchlist; null without
   /// the Rust core.
   final TraktLink? trakt;
+
+  /// Wi-Fi and network from Home (DIST-032): NetworkManager on Linux;
+  /// null elsewhere (the system settings handle it).
+  final NetworkController? network;
 
   /// The periodic Trakt sync; null without [trakt].
   TraktAutoSync? traktSync;
@@ -1676,6 +1682,7 @@ class AppServices extends ChangeNotifier {
     recognitionStatus.dispose();
     handoff.dispose();
     musicHandoff.dispose();
+    network?.dispose();
     unawaited(library.stopWatching());
     locale.dispose();
     showTwitch.dispose();

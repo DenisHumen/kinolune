@@ -209,6 +209,8 @@ void main() {
         'family',
         // UI-053: the availability indicator and «Состояние подключений».
         'availability',
+        // DIST-032: Wi-Fi and network from Home.
+        'network',
       ];
       for (final k in _keys(en)) {
         expect(

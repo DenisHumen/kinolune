@@ -25,6 +25,7 @@
 | `installer/` | `alpha-installer` (Go): обнаружение дисков (DIST-004), установка по файлу ответов (DIST-005), см. [installer/README.md](installer/README.md) |
 | `tests/vm-switch-rollback.sh` | сценарий фазы 0: switch → rollback → upgrade → rollback → digest-пин и возврат на тег |
 | `tests/vm-install.sh` | DIST-005: установка `alpha-installer` по файлу ответов на виртуальный NVMe (UEFI), загрузка установленной системы, проверки по SSH, `bootc upgrade --check` против реестра |
+| `tests/wifi-hwsim.sh`, `tests/wifi-hwsim-vm.sh` | DIST-032: Wi-Fi приложения (клиент NetworkManager, `tool/nm_probe.dart`) в VM Fedora Cloud с `mac80211_hwsim` — точки WPA2 и открытая, пользователь группы `kinolune` без root |
 | `.work/` | локальные артефакты (диски, ключи SSH, логи); в git не попадает |
 
 ## Что в образе
@@ -35,6 +36,7 @@
 - **`alpha-admin`** (DIST-013) — настоящий бэкенд админки: HTTPS на :443 с самоподписанным сертификатом, :80 перенаправляет и отвечает `/health`; только LAN; работает от пользователя `alpha-admin`, права на D-Bus — через polkit-правило, пароли проверяет PAM-помощник `alpha-admin-auth`. Подробно — [admin/README.md](admin/README.md).
 - **Samba**: SMB3, `vfs_fruit` для macOS, шара `Media` → `/var/srv/media` (гостевое чтение). **wsdd** (Windows), **Avahi** + nss-mdns (`<hostname>.local`).
 - **firewalld**: зона по умолчанию `home`; открыты samba, mdns, ws-discovery, http, https, 8487/tcp. (ssh и dhcpv6-client остаются из стандартной зоны `home` — на прототипе SSH нужен для тестов; выключение по умолчанию — в DIST-013.)
+- **NetworkManager** с Wi-Fi (`NetworkManager-wifi`, `wpa_supplicant`): группа `kinolune` (`sysusers.d`) по polkit-правилу `50-kinolune-network.rules` подключает сети, сканирует, включает и выключает Wi-Fi, сохраняет и забывает профили без root — для панели «Сеть» на главной Kinolune (DIST-032, ADR-0167).
 - **smartd**, **chronyd**, **greenboot** (проверки появятся в DIST-011), **Cockpit** установлен, `cockpit.socket` выключен.
 - `bootc-fetch-apply-updates.timer` и его `.service` **замаскированы**: обновлениями управляет `alpha-updated` (DIST-009) — скачивает в фоне, ставит в окне обслуживания и не перезагружает NAS во время просмотра.
 - Версия образа — `/usr/share/alpha/version` (`ALPHA_OS_VERSION`, build-arg).

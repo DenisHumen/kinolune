@@ -115,3 +115,8 @@ connection-status-folder-outbox  # UI-053: folder outbox count text, cited as SR
 connection-status-channel-*  # UI-053: sync channel status text
 connection-status-details-*  # UI-053: target details text (kind, RTT, last answer)
 settings-section-connections  # UI-053: settings section container
+network-panel  # container of the Wi-Fi and network panel (DIST-032); its controls cited as HOME-15 – HOME-24
+network-status  # status text of the network panel (Wi-Fi name, address)
+network-wired  # cable status text of the network panel
+network-message  # outcome text of the network panel
+network-icon-*  # the icon glyph inside the network button (HOME-15)
