@@ -32,7 +32,7 @@ aes = "0.9"
 apple-native-keyring-store = { version = "1.0.2", default-features = false, features = ["keychain"] }
 argon2 = { version = "0.6", default-features = false, features = ["alloc"] }
 axum = { version = "0.8.9", default-features = false }
-base64 = "0.22"
+base64 = "0.23"
 blake2 = "0.11"
 chacha20poly1305 = { version = "0.11", default-features = false, features = ["alloc"] }
 # NaCl secretbox (XSalsa20-Poly1305) of the E2E container of synced source
