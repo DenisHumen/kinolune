@@ -2337,8 +2337,7 @@
   "commonScreenErrorMessage": "[Ţĥé éŕŕóŕ íš šáṽéð íñ ţĥé áþþ ļóĝ. Ţŕý áĝáíñ óŕ ĝó ƀáçķ.·······················]",
   "commonScreenErrorRetry": "[Ţŕý áĝáíñ····]",
   "commonScreenErrorBack": "[Ɓáçķ··]",
-  "formatTotal": "[{time} ţóţáļ··]",
-  "formatLeft": "[{time} ļéƒţ··]",
-  "formatAllWatched": "[ŵáţçĥéð···]",
-  "formatHours": "{hours, plural, one{{hours} ĥ·} other{{hours} ĥ·}}"
+  "reviewWhyYearOff": "[ýéáŕ ðíƒƒéŕš ƀý······ {years} ({delta}%)]",
+  "reviewWhyRemake": "[ɱáýƀé á ŕéɱáķé (·······{delta}%)]",
+  "reviewWhyKindOff": "[ţýþé ðíƒƒéŕš (······{delta}%)]"
 }

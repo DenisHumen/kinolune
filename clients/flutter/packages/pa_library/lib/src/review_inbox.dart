@@ -28,6 +28,10 @@ class MatchSignals {
   const MatchSignals({
     this.provider = 'tmdb',
     this.title = 0,
+    this.titleSimilarity,
+    this.yearAdjust,
+    this.remakeAdjust,
+    this.kindAdjust,
     this.tier = '',
     this.matchedTitle,
     this.fileYear,
@@ -45,8 +49,18 @@ class MatchSignals {
   /// `tmdb`, `anime_offline_database`, `anilist`.
   final String provider;
 
-  /// Title similarity, 0..1.
+  /// Title score with the year, remake and type adjustments, 0..1.
   final double title;
+
+  /// Similarity of the titles alone, 0..1 (META-036); null for matches
+  /// stored before it, where [title] is all there is.
+  final double? titleSimilarity;
+
+  /// What the years (±1 or further apart), the remake rule (a movie of
+  /// another year) and the type added to [title], e.g. −0.08 (META-036).
+  final double? yearAdjust;
+  final double? remakeAdjust;
+  final double? kindAdjust;
 
   /// `exact`, `loose`, `compact`, `base`, `head`, `fuzzy`.
   final String tier;
@@ -422,6 +436,10 @@ class RustReviewInbox implements ReviewInbox {
   static MatchSignals _signals(CoreMatchSignals s) => MatchSignals(
     provider: s.provider,
     title: s.title,
+    titleSimilarity: s.titleSimilarity,
+    yearAdjust: s.yearAdjust,
+    remakeAdjust: s.remakeAdjust,
+    kindAdjust: s.kindAdjust,
     tier: s.tier,
     matchedTitle: s.matchedTitle,
     fileYear: s.fileYear,

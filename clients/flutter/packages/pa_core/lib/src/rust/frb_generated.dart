@@ -25838,23 +25838,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreMatchSignals dco_decode_core_match_signals(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 14)
-      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    if (arr.length != 18)
+      throw Exception('unexpected arr length: expect 18 but see ${arr.length}');
     return CoreMatchSignals(
       provider: dco_decode_String(arr[0]),
       title: dco_decode_f_64(arr[1]),
-      tier: dco_decode_String(arr[2]),
-      matchedTitle: dco_decode_opt_String(arr[3]),
-      fileYear: dco_decode_opt_box_autoadd_i_32(arr[4]),
-      year: dco_decode_opt_box_autoadd_i_32(arr[5]),
-      fileKind: dco_decode_String(arr[6]),
-      kind: dco_decode_String(arr[7]),
-      durationError: dco_decode_opt_box_autoadd_f_64(arr[8]),
-      episodesOk: dco_decode_u_32(arr[9]),
-      episodesBad: dco_decode_u_32(arr[10]),
-      language: dco_decode_opt_box_autoadd_bool(arr[11]),
-      tied: dco_decode_bool(arr[12]),
-      lostMarker: dco_decode_opt_String(arr[13]),
+      titleSimilarity: dco_decode_opt_box_autoadd_f_64(arr[2]),
+      yearAdjust: dco_decode_opt_box_autoadd_f_64(arr[3]),
+      remakeAdjust: dco_decode_opt_box_autoadd_f_64(arr[4]),
+      kindAdjust: dco_decode_opt_box_autoadd_f_64(arr[5]),
+      tier: dco_decode_String(arr[6]),
+      matchedTitle: dco_decode_opt_String(arr[7]),
+      fileYear: dco_decode_opt_box_autoadd_i_32(arr[8]),
+      year: dco_decode_opt_box_autoadd_i_32(arr[9]),
+      fileKind: dco_decode_String(arr[10]),
+      kind: dco_decode_String(arr[11]),
+      durationError: dco_decode_opt_box_autoadd_f_64(arr[12]),
+      episodesOk: dco_decode_u_32(arr[13]),
+      episodesBad: dco_decode_u_32(arr[14]),
+      language: dco_decode_opt_box_autoadd_bool(arr[15]),
+      tied: dco_decode_bool(arr[16]),
+      lostMarker: dco_decode_opt_String(arr[17]),
     );
   }
 
@@ -32849,6 +32853,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_provider = sse_decode_String(deserializer);
     var var_title = sse_decode_f_64(deserializer);
+    var var_titleSimilarity = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_yearAdjust = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_remakeAdjust = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_kindAdjust = sse_decode_opt_box_autoadd_f_64(deserializer);
     var var_tier = sse_decode_String(deserializer);
     var var_matchedTitle = sse_decode_opt_String(deserializer);
     var var_fileYear = sse_decode_opt_box_autoadd_i_32(deserializer);
@@ -32864,6 +32872,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return CoreMatchSignals(
       provider: var_provider,
       title: var_title,
+      titleSimilarity: var_titleSimilarity,
+      yearAdjust: var_yearAdjust,
+      remakeAdjust: var_remakeAdjust,
+      kindAdjust: var_kindAdjust,
       tier: var_tier,
       matchedTitle: var_matchedTitle,
       fileYear: var_fileYear,
@@ -41441,6 +41453,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.provider, serializer);
     sse_encode_f_64(self.title, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.titleSimilarity, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.yearAdjust, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.remakeAdjust, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.kindAdjust, serializer);
     sse_encode_String(self.tier, serializer);
     sse_encode_opt_String(self.matchedTitle, serializer);
     sse_encode_opt_box_autoadd_i_32(self.fileYear, serializer);
