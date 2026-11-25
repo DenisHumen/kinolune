@@ -1407,6 +1407,10 @@ project_alpha/
   - Что: бинарники для linux gnu и musl (x64, arm64), служба Windows, launchd на macOS, systemd unit, Docker multi-arch (amd64 и arm64) в GHCR с cosign; примеры с `/dev/dri` и NVIDIA CDI.
   - deps: SRV-001, CI-011 · size: M · parallel: yes · веха: M4 · ref: 04 §4.4, 05 §4.3
   - done when: `docker run` и `systemctl start` поднимают сервер; образ подписан.
+- [ ] **SRV-019** Сервер сообщает «идёт просмотр» (для обновлений ОС)
+  - Что: `GET /api/v1/system/activity` → `{busy, sessions, reason}`: сервер сам знает, что сейчас нельзя перезагружаться — идёт просмотр (отдаваемые потоки direct play/HLS/транскод и heartbeat-ы `pb.update` `playing` от клиентов через хаб синхронизации в пределах TTL), запись или загрузка Twitch, сканирование; `reason` — `playback`, `recording` или `scan`. Агент обновлений ОС (DIST-009) спрашивает его перед применением обновления и перед перезагрузкой и откладывает, пока занято. Доступен только с самой машины (loopback) без токена пользователя, с других адресов — отказ.
+  - deps: SRV-001 · size: S · parallel: yes · веха: M8 · ref: DIST-009
+  - done when: тесты: простой → не занят; heartbeat `playing` → занят до истечения TTL; запрос не с loopback → отказ; эндпоинт в `docs/api/openapi.json` с контракт-тестом.
 
 ### 3.15. MUS — музыкальный плеер
 
@@ -2593,7 +2597,7 @@ project_alpha/
 | G | Flutter UI | UI-002 (серийно) → UI-003, UI-005, UI-008, UI-011, UI-020, UI-022 | UI-007, UI-009, UI-010, UI-013…017 | 2–4 |
 | H | TV | TV-002 → TV-003, TV-004 | TV-005 | 1 |
 | I | Синхронизация | SYNC-001 (после LIB-001) → SYNC-002, SYNC-004, SYNC-005 | SYNC-006…012 | 1–2 |
-| J | Сервер | SRV-001 (после LIB-001) → SRV-002, SRV-004 | SRV-003, SRV-005…018 | 1–2 |
+| J | Сервер | SRV-001 (после LIB-001) → SRV-002, SRV-004 | SRV-003, SRV-005…019 | 1–2 |
 | K | Twitch-ядро | TWI-001 → TWI-002, TWI-004, TWI-007 | TWI-008…012, TWI-017 | 1–2 |
 | L | NAS-ОС (Go, podman) | DIST-002, DIST-004, DIST-013 | DIST-005…018 | 2–3 |
 | M | Apple (нужен macOS) | PLAY-APL-001 (после PLAY-003), TV-006 | PLAY-APL-002…011, TV-007…011 | 1–2 |
@@ -2646,7 +2650,7 @@ project_alpha/
 | Workstream | Задач | Workstream | Задач |
 |---|---|---|---|
 | DEC | 8 | SYNC | 20 |
-| REPO | 15 | SRV | 18 |
+| REPO | 15 | SRV | 19 |
 | CI | 12 | MUS | 20 |
 | CORE | 16 | TWI | 30 |
 | NET | 24 | DIST | 33 |
@@ -2662,4 +2666,4 @@ project_alpha/
 | | | SOC | 7 |
 | | | ECO | 9 |
 | | | BUG | 25 |
-| | | **Всего** | **552** (544 задачи + 8 решений владельца) |
+| | | **Всего** | **553** (545 задач + 8 решений владельца) |
