@@ -880,7 +880,7 @@ class RustLibrary
           ],
           // UI-056: summed by the core in one query.
           runtime: ShowRuntime(
-            show: _runtimeTotal(s.runtime.show),
+            show: _runtimeTotal(s.runtime.show_),
             seasons: {
               for (final r in s.runtime.seasons)
                 r.season: _runtimeTotal(r.total),

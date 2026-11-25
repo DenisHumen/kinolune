@@ -10,7 +10,7 @@
 // tests/runtime_totals.rs); the demo library adds up the episodes the same
 // way (ShowRuntime.of), which is checked here too.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/integration/library.dart';
