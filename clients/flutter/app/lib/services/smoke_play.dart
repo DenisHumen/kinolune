@@ -48,6 +48,7 @@ void armSmokePlay(
               subtitleSettings: s.subtitleSettings,
               subtitleLanguages: s.subtitleLanguages,
               seekStep: Duration(seconds: s.skipSeconds.value),
+              sleepTimer: s.sleepTimer,
             ),
           ),
         ),
