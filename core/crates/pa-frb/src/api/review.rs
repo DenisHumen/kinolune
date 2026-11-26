@@ -336,7 +336,7 @@ impl From<c::FixReport> for CoreFixReport {
 /// Providers of the manual search and the lookup: TMDB, AniList and
 /// Shikimori with the provider cache, the anime database and the
 /// Anime-Lists list the device has (no update here).
-fn review_providers(settings: &CoreMetadataSettings) -> Result<c::MetadataProviders> {
+pub(crate) fn review_providers(settings: &CoreMetadataSettings) -> Result<c::MetadataProviders> {
     let cache_dir = PathBuf::from(&settings.cache_dir);
     std::fs::create_dir_all(&cache_dir)
         .map_err(|e| LibraryError::new("io", format!("provider cache: {e}")))?;

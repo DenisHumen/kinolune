@@ -25,6 +25,7 @@ import 'api/library.dart';
 import 'api/library_labels.dart';
 import 'api/library_lists.dart';
 import 'api/library_query.dart';
+import 'api/live_uploads.dart';
 import 'api/lyrics.dart';
 import 'api/music.dart';
 import 'api/offline.dart';
@@ -1250,6 +1251,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLiveStatus dco_decode_core_live_status(dynamic raw);
 
   @protected
+  CoreLiveUpload dco_decode_core_live_upload(dynamic raw);
+
+  @protected
   CoreLyricLine dco_decode_core_lyric_line(dynamic raw);
 
   @protected
@@ -1677,6 +1681,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTxtEntry dco_decode_core_txt_entry(dynamic raw);
 
   @protected
+  CoreUploadGuess dco_decode_core_upload_guess(dynamic raw);
+
+  @protected
+  CoreUploadPhase dco_decode_core_upload_phase(dynamic raw);
+
+  @protected
+  CoreUploadState dco_decode_core_upload_state(dynamic raw);
+
+  @protected
+  CoreUploadTick dco_decode_core_upload_tick(dynamic raw);
+
+  @protected
   CoreV0Source dco_decode_core_v_0_source(dynamic raw);
 
   @protected
@@ -1875,6 +1891,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreLiveChannel> dco_decode_list_core_live_channel(dynamic raw);
 
   @protected
+  List<CoreLiveUpload> dco_decode_list_core_live_upload(dynamic raw);
+
+  @protected
   List<CoreLyricLine> dco_decode_list_core_lyric_line(dynamic raw);
 
   @protected
@@ -2067,6 +2086,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreTxtEntry> dco_decode_list_core_txt_entry(dynamic raw);
+
+  @protected
+  List<CoreUploadTick> dco_decode_list_core_upload_tick(dynamic raw);
 
   @protected
   List<CoreV0Source> dco_decode_list_core_v_0_source(dynamic raw);
@@ -3651,6 +3673,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreLiveStatus sse_decode_core_live_status(SseDeserializer deserializer);
 
   @protected
+  CoreLiveUpload sse_decode_core_live_upload(SseDeserializer deserializer);
+
+  @protected
   CoreLyricLine sse_decode_core_lyric_line(SseDeserializer deserializer);
 
   @protected
@@ -4194,6 +4219,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTxtEntry sse_decode_core_txt_entry(SseDeserializer deserializer);
 
   @protected
+  CoreUploadGuess sse_decode_core_upload_guess(SseDeserializer deserializer);
+
+  @protected
+  CoreUploadPhase sse_decode_core_upload_phase(SseDeserializer deserializer);
+
+  @protected
+  CoreUploadState sse_decode_core_upload_state(SseDeserializer deserializer);
+
+  @protected
+  CoreUploadTick sse_decode_core_upload_tick(SseDeserializer deserializer);
+
+  @protected
   CoreV0Source sse_decode_core_v_0_source(SseDeserializer deserializer);
 
   @protected
@@ -4456,6 +4493,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreLiveChannel> sse_decode_list_core_live_channel(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreLiveUpload> sse_decode_list_core_live_upload(
     SseDeserializer deserializer,
   );
 
@@ -4766,6 +4808,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreTxtEntry> sse_decode_list_core_txt_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreUploadTick> sse_decode_list_core_upload_tick(
     SseDeserializer deserializer,
   );
 
@@ -6780,6 +6827,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_live_upload(
+    CoreLiveUpload self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_lyric_line(CoreLyricLine self, SseSerializer serializer);
 
   @protected
@@ -7530,6 +7583,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_txt_entry(CoreTxtEntry self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_upload_guess(
+    CoreUploadGuess self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_upload_phase(
+    CoreUploadPhase self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_upload_state(
+    CoreUploadState self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_upload_tick(
+    CoreUploadTick self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_v_0_source(CoreV0Source self, SseSerializer serializer);
 
   @protected
@@ -7859,6 +7936,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_live_channel(
     List<CoreLiveChannel> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_live_upload(
+    List<CoreLiveUpload> self,
     SseSerializer serializer,
   );
 
@@ -8240,6 +8323,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_txt_entry(
     List<CoreTxtEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_upload_tick(
+    List<CoreUploadTick> self,
     SseSerializer serializer,
   );
 
