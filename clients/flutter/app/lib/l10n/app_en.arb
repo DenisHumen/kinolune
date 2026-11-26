@@ -629,8 +629,12 @@
   "@showEpisodesAllTitle": {
     "description": "UI-055: title of the «All episodes» screen: the show and the season tab.",
     "placeholders": {
-      "show": {"type": "String"},
-      "season": {"type": "String"}
+      "show": {
+        "type": "String"
+      },
+      "season": {
+        "type": "String"
+      }
     }
   },
   "showEpisodesPrevious": "Previous episodes",
@@ -645,16 +649,24 @@
   "@showEpisodeRange": {
     "description": "UI-055: chip above the row of a long season that jumps to a range of episodes, e.g. «151–200».",
     "placeholders": {
-      "from": {"type": "int"},
-      "to": {"type": "int"}
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      }
     }
   },
   "showEpisodeRangeLabel": "Episodes {from} to {to}",
   "@showEpisodeRangeLabel": {
     "description": "UI-055: screen-reader label of a range chip.",
     "placeholders": {
-      "from": {"type": "int"},
-      "to": {"type": "int"}
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      }
     }
   },
   "showMarkedWatched": "{count, plural, =1{1 episode marked as watched} other{{count} episodes marked as watched}}",
@@ -8652,6 +8664,125 @@
   },
   "libraryUnplayableProtectedDisc": "This disc is copy-protected (AACS, BD+ or CSS). Kinolune doesn't remove protection, so it can't play it. Discs and images without protection play by themselves.",
   "detailExtraDiscTitle": "From the disc",
+  "airingNextOn": "Episode {episode} — {when}",
+  "@airingNextOn": {
+    "description": "Show page (UI-057): when the next episode airs; {when} is a date like «Thu, Dec 4», «today» or «tomorrow».",
+    "placeholders": {
+      "episode": {
+        "type": "int"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "airingNextIn": "Episode {episode} — {when} · in {left}",
+  "@airingNextIn": {
+    "description": "Show page (UI-057), anime: the next episode with its local date and time and a countdown like «2d 5h».",
+    "placeholders": {
+      "episode": {
+        "type": "int"
+      },
+      "when": {
+        "type": "String"
+      },
+      "left": {
+        "type": "String"
+      }
+    }
+  },
+  "airingLeftDaysHours": "{days}d {hours}h",
+  "@airingLeftDaysHours": {
+    "description": "Countdown to the next episode (UI-057): days and hours.",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "airingLeftHours": "{hours}h",
+  "@airingLeftHours": {
+    "description": "Countdown to the next episode (UI-057): hours.",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "airingLeftSoon": "less than an hour",
+  "@airingLeftSoon": {
+    "description": "Countdown to the next episode (UI-057): under an hour."
+  },
+  "airingToday": "today",
+  "@airingToday": {
+    "description": "The next episode airs today (UI-057)."
+  },
+  "airingTomorrow": "tomorrow",
+  "@airingTomorrow": {
+    "description": "The next episode airs tomorrow (UI-057)."
+  },
+  "airingNoDate": "More episodes are coming, no date yet",
+  "@airingNoDate": {
+    "description": "Show page (UI-057): an ongoing show on a break without a known date."
+  },
+  "airingEnded": "Series ended",
+  "@airingEnded": {
+    "description": "Show page and poster label (UI-057): the show is finished or cancelled."
+  },
+  "airingOffline": "offline · as of {date}",
+  "@airingOffline": {
+    "description": "Show page (UI-057): the airing date could not be refreshed; {date} is when it was last fetched.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "airingBadgeNext": "{weekday, select, mon{New episode Mon} tue{New episode Tue} wed{New episode Wed} thu{New episode Thu} fri{New episode Fri} sat{New episode Sat} sun{New episode Sun} other{New episode soon}}",
+  "@airingBadgeNext": {
+    "description": "Poster label (UI-057): the next episode airs this week on {weekday} (mon…sun).",
+    "placeholders": {
+      "weekday": {
+        "type": "String"
+      }
+    }
+  },
+  "airingBadgeToday": "New episode today",
+  "@airingBadgeToday": {
+    "description": "Poster label (UI-057)."
+  },
+  "airingBadgeTomorrow": "New episode tomorrow",
+  "@airingBadgeTomorrow": {
+    "description": "Poster label (UI-057)."
+  },
+  "airingBadgeOn": "New episode {date}",
+  "@airingBadgeOn": {
+    "description": "Poster label (UI-057): the next episode airs in more than a week; {date} like «Dec 4».",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "airingCardTitle": "Not out yet",
+  "@airingCardTitle": {
+    "description": "Card of the episode still to come at the end of the episode row (UI-057)."
+  },
+  "airingCardLabel": "{code}, airs {when}",
+  "@airingCardLabel": {
+    "description": "Screen reader label of the card of the episode still to come (UI-057).",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "twitchClip": "Clip",
   "@twitchClip": {
     "description": "Button on the live player that makes a Twitch clip (TWI-040)."

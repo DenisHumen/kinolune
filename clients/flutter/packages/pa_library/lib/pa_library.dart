@@ -5,6 +5,7 @@
 /// See docs/dev/release-0.1-contract.md.
 library;
 
+export 'src/airing.dart';
 export 'src/anime_db.dart';
 export 'src/audiobooks.dart';
 export 'src/content_kinds.dart';
