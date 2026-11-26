@@ -46,12 +46,12 @@ void main() {
         return false;
       },
       onUpdated: () => fail('nothing new'),
-      firstDelay: Duration.zero,
+      firstDelay: const Duration(seconds: 1),
       every: const Duration(minutes: 1),
       watchLifecycle: false,
     )..start();
     addTearDown(r.dispose);
-    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
     expect(checks, 1);
     await tester.pump(const Duration(minutes: 1));
     expect(checks, 2);
