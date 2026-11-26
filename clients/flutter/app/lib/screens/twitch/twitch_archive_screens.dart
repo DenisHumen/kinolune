@@ -23,6 +23,7 @@ import '../../widgets/cards.dart';
 import '../../widgets/settings_tiles.dart';
 import '../../widgets/undo_snack.dart';
 import '../library_grid_screen.dart' show FilterPill;
+import 'twitch_archive_library_view.dart';
 
 String archiveSize(int bytes) {
   const units = ['B', 'KB', 'MB', 'GB', 'TB']; // l10n-ignore
@@ -51,7 +52,7 @@ const _amber = Color(0xFFF2B84B);
 
 // ------------------------------------------------------------ the library
 
-enum _Tab { recordings, downloads }
+enum _Tab { library, recordings, downloads }
 
 /// Recordings (active ones with their indicators, then saved) and saved
 /// downloads and imports.
@@ -68,7 +69,7 @@ class TwitchArchiveScreen extends StatefulWidget {
 }
 
 class _TwitchArchiveScreenState extends State<TwitchArchiveScreen> {
-  _Tab _tab = _Tab.recordings;
+  _Tab _tab = _Tab.library;
   List<TwitchRecordingItem>? _jobs;
   List<TwitchSavedFile>? _saved;
   Timer? _timer;
@@ -186,6 +187,12 @@ class _TwitchArchiveScreenState extends State<TwitchArchiveScreen> {
               spacing: 8,
               children: [
                 FilterPill(
+                  key: const ValueKey('twitch-archive-tab-library'),
+                  label: l.twitchArchiveLibrary,
+                  selected: _tab == _Tab.library,
+                  onTap: () => setState(() => _tab = _Tab.library),
+                ),
+                FilterPill(
                   key: const ValueKey('twitch-archive-tab-recordings'),
                   label: l.twitchArchiveRecordings,
                   selected: _tab == _Tab.recordings,
@@ -201,7 +208,10 @@ class _TwitchArchiveScreenState extends State<TwitchArchiveScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          if (_tab == _Tab.recordings) ...[
+          // TWI-026: streamer → game → parts.
+          if (_tab == _Tab.library)
+            TwitchArchiveLibraryView(files: saved, loaded: loaded)
+          else if (_tab == _Tab.recordings) ...[
             if (jobs.isNotEmpty) ...[
               _Heading(l.twitchArchiveNow),
               for (final j in jobs)

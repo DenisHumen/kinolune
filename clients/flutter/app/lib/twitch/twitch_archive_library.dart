@@ -23,6 +23,7 @@
 // Search and filters ([TwitchArchiveFilter]) pick parts; part numbers
 // always come from the whole library, so a found part keeps its number.
 
+import '../integration/library.dart' show Progress;
 import 'twitch_archive.dart';
 import 'twitch_skip_chatting.dart';
 
@@ -406,4 +407,20 @@ bool _better(TwitchSavedFile a, TwitchSavedFile b) {
   final y = b.duration ?? Duration.zero;
   if (x != y) return x > y;
   return a.kind == TwitchSavedKind.vod && b.kind != TwitchSavedKind.vod;
+}
+
+/// Where to go on in [parts] with their [progress] (by
+/// [TwitchSavedFile.progressKey]): the last part started, or the one after
+/// it once it is watched; the first part when none was started.
+int nextPartIndex(
+  List<TwitchArchivePart> parts,
+  Map<String, Progress> progress,
+) {
+  for (var i = parts.length - 1; i >= 0; i--) {
+    final p = progress[parts[i].file.progressKey];
+    if (p == null) continue;
+    if (!p.watched) return i;
+    return i + 1 < parts.length ? i + 1 : i;
+  }
+  return 0;
 }

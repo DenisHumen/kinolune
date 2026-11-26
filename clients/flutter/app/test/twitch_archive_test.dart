@@ -41,6 +41,9 @@ void main() {
     await settle(t);
     await _push(t, const TwitchArchiveScreen(refresh: Duration(hours: 1)));
     expect(find.byKey(const ValueKey('twitch-archive-page')), findsOneWidget);
+    // TWI-026: the archive opens on «Медиатека».
+    await t.tap(find.byKey(const ValueKey('twitch-archive-tab-recordings')));
+    await settle(t);
     await capture(t, 'twi-019/02-recordings-desktop');
 
     // Running: "Recording"; paused by the space monitor, with a gap.

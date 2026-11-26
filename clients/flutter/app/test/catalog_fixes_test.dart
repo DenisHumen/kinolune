@@ -223,6 +223,8 @@ void main() {
       await t.pumpWidget(testApp(s, section: Section.twitch));
       await settle(t);
       await _push(t, const TwitchArchiveScreen(refresh: Duration(hours: 1)));
+      await t.tap(_key('twitch-archive-tab-recordings'));
+      await settle(t);
       await t.tap(_key('twitch-recording-50-remove'));
       await settle(t, 4);
       expect(_key('twitch-recording-50'), findsNothing);

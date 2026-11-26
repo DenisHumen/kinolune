@@ -8475,5 +8475,99 @@
   "twitchRecordDiskFullBody": "What was recorded is kept as is, without conversion (a .ts file).",
   "@twitchRecordDiskFullBody": {
     "description": "Body of the disk-full notification of a recording (TWI-035)."
-  }
+  },
+  "twitchArchiveLibrary": "Library",
+  "@twitchArchiveLibrary": {
+    "description": "Tab of the Twitch archive: saved streams as streamer → game → parts (TWI-026)."
+  },
+  "twitchArchiveSearchHint": "Streamer, game, date or title",
+  "twitchArchiveCalendar": "Stream calendar",
+  "twitchArchiveAllStreamers": "All streamers",
+  "twitchArchiveAllGames": "All games",
+  "twitchArchivePlaythrough": "{game} playthrough",
+  "@twitchArchivePlaythrough": {
+    "description": "A game's saved streams of one streamer as a series (TWI-026).",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "twitchArchivePlaythroughRun": "{game} playthrough ({run})",
+  "@twitchArchivePlaythroughRun": {
+    "description": "A later playthrough of the same game, after a long break (TWI-026).",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      },
+      "run": {
+        "type": "int"
+      }
+    }
+  },
+  "twitchArchiveParts": "{count, plural, one{{count} part} other{{count} parts}}",
+  "@twitchArchiveParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "twitchArchivePart": "Part {number}",
+  "@twitchArchivePart": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "twitchArchivePartOf": "Part {number} of {count}",
+  "@twitchArchivePartOf": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "twitchArchiveContinuePart": "Continue · part {number}",
+  "@twitchArchiveContinuePart": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "twitchArchiveStartPart": "Watch · part {number}",
+  "@twitchArchiveStartPart": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "twitchArchiveGameTime": "{hours} h in the game",
+  "@twitchArchiveGameTime": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "twitchArchiveOtherStreams": "Other streams",
+  "@twitchArchiveOtherStreams": {
+    "description": "Saved streams of a streamer with no game (talk only or no chapters)."
+  },
+  "twitchArchiveUnknownGame": "Category {id}",
+  "@twitchArchiveUnknownGame": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "twitchArchiveNoMatches": "Nothing found",
+  "twitchArchiveEmptyLibrary": "Saved streams will be here: streamer → game → parts. Record a stream, download a VOD or import a folder."
 }
