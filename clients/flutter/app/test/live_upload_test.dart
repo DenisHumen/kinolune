@@ -297,11 +297,11 @@ void main() {
           final l = lookupAppLocalizations(Locale(lang));
           await open(t, formFactor: factor, size: size, lang: lang);
           expect(_key('live-upload-u1'), findsOneWidget);
+          expect(find.text(l.liveUploadFrom('Desktop', '41')), findsOneWidget);
           expect(
-            find.text(l.liveUploadFrom('Desktop', '41')),
+            find.textContaining(l.liveUploadEtaSeconds(20)),
             findsOneWidget,
           );
-          expect(find.textContaining(l.liveUploadEtaSeconds(20)), findsOneWidget);
           expect(find.text('Dune: Part Two'), findsWidgets);
           // Grey and see-through while it is copied.
           final grey = t.widget<AnimatedOpacity>(
@@ -468,10 +468,7 @@ void main() {
       await settle(t, 4);
       expect(card.info.value.guess.title, 'Дюна: Часть вторая');
       expect(card.info.value.guess.picked, isTrue);
-      expect(
-        (await link.records()).single.phase,
-        LiveUploadPhase.recognized,
-      );
+      expect((await link.records()).single.phase, LiveUploadPhase.recognized);
       expect(find.text('Дюна: Часть вторая'), findsWidgets);
       hold.complete();
       files.holdUploads = null;

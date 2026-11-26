@@ -196,7 +196,10 @@ class LiveUploadCard extends StatelessWidget {
                                 gradient: LinearGradient(
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
-                                  colors: [Color(0x00000000), Color(0xD9000000)],
+                                  colors: [
+                                    Color(0x00000000),
+                                    Color(0xD9000000),
+                                  ],
                                 ),
                               ),
                               child: Column(

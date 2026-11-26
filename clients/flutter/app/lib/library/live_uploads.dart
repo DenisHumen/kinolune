@@ -1089,8 +1089,7 @@ class MemoryLiveUploadLink implements LiveUploadLink {
     int? year,
   ) async => [
     for (final c in candidates)
-      if (c.title.toLowerCase().contains(title.toLowerCase()) ||
-          title.isEmpty)
+      if (c.title.toLowerCase().contains(title.toLowerCase()) || title.isEmpty)
         c,
   ];
 }
