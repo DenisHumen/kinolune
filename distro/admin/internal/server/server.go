@@ -24,6 +24,7 @@ import (
 	"github.com/DenisHumen/kinolune/distro/admin/internal/authhelper"
 	"github.com/DenisHumen/kinolune/distro/admin/internal/system"
 	"github.com/DenisHumen/kinolune/distro/admin/internal/updproxy"
+	"github.com/DenisHumen/kinolune/distro/admin/internal/webui"
 )
 
 //go:embed openapi.yaml
@@ -160,7 +161,8 @@ func (s *Server) routes() {
 	m := http.NewServeMux()
 	m.HandleFunc("GET /health", s.health)
 	m.HandleFunc("GET /healthz", s.health)
-	m.HandleFunc("GET /{$}", s.index)
+	m.HandleFunc("GET /{$}", webui.Index)
+	m.HandleFunc("GET "+webui.Prefix, webui.Static)
 	m.HandleFunc("GET /api/v1/info", s.info)
 	m.HandleFunc("GET /api/v1/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml; charset=utf-8")

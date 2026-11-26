@@ -17,21 +17,6 @@ import (
 	"github.com/DenisHumen/kinolune/distro/admin/internal/updproxy"
 )
 
-const indexHTML = `<!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Kinolune OS</title></head>
-<body style="font-family:system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem">
-<h1>Kinolune OS</h1>
-<p>Сервис администрирования работает. Веб-интерфейс появится в следующем обновлении; API описан в
-<a href="/api/v1/openapi.yaml">/api/v1/openapi.yaml</a>.</p>
-</body></html>
-`
-
-func (s *Server) index(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(indexHTML))
-}
-
 func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"service":         "alpha-admin",
