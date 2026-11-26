@@ -79,10 +79,13 @@ void main() {
     final run = me.playthroughs.firstWhere((p) => p.gameId == _game.id);
     expect(run.gameName, 'Made-Up Quest');
     expect(run.parts, hasLength(12));
-    expect([for (final p in run.parts) p.number], List.generate(12, (i) => i + 1));
-    expect([for (final p in run.parts) p.file.assetId], [
-      for (var i = 0; i < 12; i++) 100 + i,
-    ]);
+    expect([
+      for (final p in run.parts) p.number,
+    ], List.generate(12, (i) => i + 1));
+    expect(
+      [for (final p in run.parts) p.file.assetId],
+      [for (var i = 0; i < 12; i++) 100 + i],
+    );
     final dates = [for (final p in run.parts) p.file.recordedAt!];
     for (var i = 1; i < dates.length; i++) {
       expect(dates[i].isAfter(dates[i - 1]), isTrue);
@@ -150,10 +153,11 @@ void main() {
       path: '/b.mp4',
       games: const [_game],
     );
-    final run = TwitchArchiveLibrary.build([
-      rec,
-      vod,
-    ]).streamers.single.playthroughs.single;
+    final run = TwitchArchiveLibrary.build([rec, vod])
+        .streamers
+        .single
+        .playthroughs
+        .single;
     expect(run.parts.single.file.assetId, 2);
   });
 
@@ -169,10 +173,10 @@ void main() {
 
     test('by game keeps the part numbers', () {
       final r = lib.search(const TwitchArchiveFilter(query: 'tiny'));
-      expect([for (final (_, p) in r.parts) (p.file.assetId, p.number)], [
-        (202, 2),
-        (200, 1),
-      ]);
+      expect(
+        [for (final (_, p) in r.parts) (p.file.assetId, p.number)],
+        [(202, 2), (200, 1)],
+      );
       expect(ids(const TwitchArchiveFilter(gameId: '512953')), [200, 202]);
     });
 

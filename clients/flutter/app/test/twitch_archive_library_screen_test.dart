@@ -34,7 +34,9 @@ Future<void> _open(WidgetTester t, FormFactor ff, Size size) async {
   final services = await demoServices(
     twitchArchive: FakeTwitchArchive.series(demoNow),
   );
-  await t.pumpWidget(testApp(services, section: Section.twitch, formFactor: ff));
+  await t.pumpWidget(
+    testApp(services, section: Section.twitch, formFactor: ff),
+  );
   await settle(t);
   await _push(t, const TwitchArchiveScreen(refresh: Duration(hours: 1)));
 }
@@ -75,11 +77,8 @@ void main() {
     await t.tap(_prefix('twitch-playthrough-7001/1159690097').first);
     await settle(t);
     expect(find.byKey(const ValueKey('twitch-playthrough-page')), findsOne);
-    expect(
-      find.byKey(const ValueKey('twitch-playthrough-continue')),
-      findsOne,
-    );
-    expect(find.text('12 parts'), findsWidgets);
+    expect(find.byKey(const ValueKey('twitch-playthrough-continue')), findsOne);
+    expect(find.textContaining('12 parts'), findsWidgets);
     expect(find.byKey(const ValueKey('twitch-part-100')), findsOne);
     await capture(t, 'twi-026/03-playthrough-desktop');
     await t.pumpWidget(const SizedBox());

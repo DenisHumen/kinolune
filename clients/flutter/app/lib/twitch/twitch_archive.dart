@@ -152,7 +152,8 @@ class TwitchSavedFile {
   String? get progressKey => switch ((kind, videoId, streamId)) {
     (TwitchSavedKind.vod, final v?, _) => 'twitch:vod:$v', // l10n-ignore
     (TwitchSavedKind.recording, _, final s?) => 'twitch:rec:$s', // l10n-ignore
-    (TwitchSavedKind.recording, final v?, null) => 'twitch:vod:$v', // l10n-ignore
+    (TwitchSavedKind.recording, final v?, null) =>
+      'twitch:vod:$v', // l10n-ignore
     _ => null,
   };
 }

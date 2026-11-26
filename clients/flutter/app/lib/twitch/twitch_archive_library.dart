@@ -287,7 +287,9 @@ class TwitchArchiveLibrary {
         other.addAll(s.other.where((f) => filter.matches(f, games: const [])));
       }
     }
-    parts.sort((a, b) => _laterFirst(a.$2.file.recordedAt, b.$2.file.recordedAt));
+    parts.sort(
+      (a, b) => _laterFirst(a.$2.file.recordedAt, b.$2.file.recordedAt),
+    );
     other.sort((a, b) => _laterFirst(a.recordedAt, b.recordedAt));
     return (parts: parts, other: other);
   }
@@ -347,10 +349,9 @@ TwitchPlaythrough _playthrough(
   int run,
   List<(TwitchSavedFile, TwitchSavedGame)> list,
 ) {
-  final named = list.map((e) => e.$2).firstWhere(
-    (g) => g.name != null,
-    orElse: () => list.first.$2,
-  );
+  final named = list
+      .map((e) => e.$2)
+      .firstWhere((g) => g.name != null, orElse: () => list.first.$2);
   final art = list.map((e) => e.$2.boxArtUrl).whereType<String>();
   return TwitchPlaythrough(
     userId: userId,

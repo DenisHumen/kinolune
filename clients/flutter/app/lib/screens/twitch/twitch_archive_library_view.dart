@@ -199,8 +199,9 @@ class _TwitchArchiveLibraryViewState extends State<TwitchArchiveLibraryView> {
                   label: _day(context, day),
                   icon: Icons.close_rounded,
                   selected: true,
-                  onTap: () =>
-                      setState(() => _filter = _filter.copyWith(day: () => null)),
+                  onTap: () => setState(
+                    () => _filter = _filter.copyWith(day: () => null),
+                  ),
                 ),
               if (lib.streamers.length > 1) ...[
                 FilterPill(
@@ -236,16 +237,18 @@ class _TwitchArchiveLibraryViewState extends State<TwitchArchiveLibraryView> {
                 key: const ValueKey('twitch-archive-game-all'),
                 label: l.twitchArchiveAllGames,
                 selected: f.gameId == null,
-                onTap: () =>
-                    setState(() => _filter = _filter.copyWith(gameId: () => null)),
+                onTap: () => setState(
+                  () => _filter = _filter.copyWith(gameId: () => null),
+                ),
               ),
               for (final (id, name) in games)
                 FilterPill(
                   key: ValueKey('twitch-archive-game-$id'),
                   label: name ?? l.twitchArchiveUnknownGame(id),
                   selected: f.gameId == id,
-                  onTap: () =>
-                      setState(() => _filter = _filter.copyWith(gameId: () => id)),
+                  onTap: () => setState(
+                    () => _filter = _filter.copyWith(gameId: () => id),
+                  ),
                 ),
             ],
           ),
@@ -254,8 +257,7 @@ class _TwitchArchiveLibraryViewState extends State<TwitchArchiveLibraryView> {
           ..._results(context, lib.search(f))
         else
           for (final s in lib.streamers)
-            if (f.userId == null || f.userId == s.userId)
-              ..._shelf(context, s),
+            if (f.userId == null || f.userId == s.userId) ..._shelf(context, s),
       ],
     );
   }
@@ -691,9 +693,7 @@ class _TwitchPlaythroughScreenState extends State<TwitchPlaythroughScreen> {
       _day(context, run.firstAt),
       if (run.parts.length > 1) _day(context, run.lastAt),
     ].where((s) => s.isNotEmpty).join(' – ');
-    final cardWidth = d.isPhone
-        ? 260.0
-        : (d.isTv ? 260.0 : 280.0);
+    final cardWidth = d.isPhone ? 260.0 : (d.isTv ? 260.0 : 280.0);
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     return Scaffold(
       key: const ValueKey('twitch-playthrough-page'),
@@ -897,9 +897,10 @@ class _PartCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  [label, _day(context, f.recordedAt)]
-                      .where((s) => s.isNotEmpty)
-                      .join(' · '),
+                  [
+                    label,
+                    _day(context, f.recordedAt),
+                  ].where((s) => s.isNotEmpty).join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelMedium,
@@ -940,8 +941,10 @@ PlayRequest _request(
   startPositionMs: _startMs(p, gameStart),
 );
 
+typedef _OnProgress = void Function(int positionMs, int durationMs);
+
 /// Saves the positions of [f] under its progress key.
-ProgressCallback _saver(AppServices services, TwitchSavedFile f) {
+_OnProgress _saver(AppServices services, TwitchSavedFile f) {
   final key = f.progressKey;
   if (key == null) return (_, _) {};
   final writer = ProgressWriter(services.library.saveProgress);
@@ -1013,7 +1016,7 @@ Future<void> _openPlayer(
   BuildContext context,
   AppServices services,
   PlayRequest request, {
-  required ProgressCallback onProgress,
+  required _OnProgress onProgress,
   Future<UpNextItem?> Function()? loadNext,
 }) async {
   services.music.pause();

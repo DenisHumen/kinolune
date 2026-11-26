@@ -135,9 +135,12 @@ class FakeTwitchArchive implements TwitchArchive {
       name: 'Neon Drift',
       duration: Duration(hours: 2, minutes: 40),
     );
-    final start = DateTime(now.year, now.month, now.day, 19).subtract(
-      const Duration(days: 40),
-    );
+    final start = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      19,
+    ).subtract(const Duration(days: 40));
     const gaps = [0, 1, 3, 4, 8, 9, 15, 16, 20, 27, 30, 36];
     TwitchSavedFile file(
       int id,

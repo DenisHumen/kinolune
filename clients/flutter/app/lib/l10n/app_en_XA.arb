@@ -2423,5 +2423,22 @@
   "liveUploadNoResults": "[Ñóţĥíñĝ ƒóúñð. Çĥéçķ ţĥé ţíţļé óŕ ļéáṽé íţ áš íţ íš.·····················]",
   "liveUploadEpisode": "[Šéášóñ··· {season}, éþíšóðé···· {episode}]",
   "liveUploadSection": "[Çóþýíñĝ ñóŵ·····]",
-  "liveUploadThisDevice": "[ţĥíš ðéṽíçé·····]"
+  "liveUploadThisDevice": "[ţĥíš ðéṽíçé·····]",
+  "twitchArchiveLibrary": "[Ļíƀŕáŕý···]",
+  "twitchArchiveSearchHint": "[Šţŕéáɱéŕ, ĝáɱé, ðáţé óŕ ţíţļé············]",
+  "twitchArchiveCalendar": "[Šţŕéáɱ çáļéñðáŕ······]",
+  "twitchArchiveAllStreamers": "[Åļļ šţŕéáɱéŕš······]",
+  "twitchArchiveAllGames": "[Åļļ ĝáɱéš····]",
+  "twitchArchivePlaythrough": "[{game} þļáýţĥŕóúĝĥ·····]",
+  "twitchArchivePlaythroughRun": "[{game} þļáýţĥŕóúĝĥ (······{run})]",
+  "twitchArchiveParts": "{count, plural, one{{count} þáŕţ··} other{{count} þáŕţš··}}",
+  "twitchArchivePart": "[Þáŕţ·· {number}]",
+  "twitchArchivePartOf": "[Þáŕţ·· {number} óƒ· {count}]",
+  "twitchArchiveContinuePart": "[Çóñţíñúé · þáŕţ······ {number}]",
+  "twitchArchiveStartPart": "[Ŵáţçĥ · þáŕţ····· {number}]",
+  "twitchArchiveGameTime": "[{hours} ĥ íñ ţĥé ĝáɱé······]",
+  "twitchArchiveOtherStreams": "[Óţĥéŕ šţŕéáɱš······]",
+  "twitchArchiveUnknownGame": "[Çáţéĝóŕý···· {id}]",
+  "twitchArchiveNoMatches": "[Ñóţĥíñĝ ƒóúñð······]",
+  "twitchArchiveEmptyLibrary": "[Šáṽéð šţŕéáɱš ŵíļļ ƀé ĥéŕé: šţŕéáɱéŕ → ĝáɱé → þáŕţš. Ŕéçóŕð á šţŕéáɱ, ðóŵñļóáð á ṼÓÐ óŕ íɱþóŕţ á ƒóļðéŕ.··········································]"
 }

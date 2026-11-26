@@ -37,7 +37,8 @@ const kNonGameCategoryNames = {
 };
 
 /// The chapter is talk, not a game.
-bool isNonGameChapter(TwitchChapter c) => isNonGameCategory(c.gameId, c.gameName);
+bool isNonGameChapter(TwitchChapter c) =>
+    isNonGameCategory(c.gameId, c.gameName);
 
 /// The category ([id], English [name]) is talk, not a game.
 bool isNonGameCategory(String? id, String? name) =>
