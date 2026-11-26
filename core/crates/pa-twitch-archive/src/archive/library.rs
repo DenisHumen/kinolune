@@ -546,6 +546,80 @@ pub struct Entry {
     pub chapters: usize,
     pub has_ads_marked: bool,
     pub created_at_ms: i64,
+    /// The categories on air in the file (TWI-026), the longest first:
+    /// from the chapters of its VOD, else of its live session; a clip has
+    /// its own category. Empty when nothing is known.
+    pub games: Vec<EntryGame>,
+}
+
+/// A category of a saved file: what the archive library groups by
+/// (streamer → game → parts, TWI-026).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryGame {
+    pub game_id: String,
+    /// From `twitch_categories`; `None` when the category is not cached.
+    pub name: Option<String>,
+    pub box_art_url: Option<String>,
+    /// Time on air in this category, all its chapters together.
+    pub duration_ms: u64,
+    /// Where its first chapter starts in the file.
+    pub start_ms: u64,
+}
+
+/// The categories of a saved file, the longest first (ties: the earlier).
+fn entry_games(conn: &Connection, e: &Entry) -> Result<Vec<EntryGame>, LibraryError> {
+    if let Some(slug) = e.clip_slug.as_deref().filter(|_| e.kind == AssetKind::Clip) {
+        let Some(game_id) = lib::clip(conn, slug)?.and_then(|c| c.game_id) else {
+            return Ok(Vec::new());
+        };
+        let known = lib::category(conn, &game_id)?;
+        return Ok(vec![EntryGame {
+            game_id,
+            name: known.as_ref().map(|k| k.name.clone()),
+            box_art_url: known.and_then(|k| k.box_art_url),
+            duration_ms: e.duration_ms.unwrap_or(0),
+            start_ms: 0,
+        }]);
+    }
+    let mut segments = Vec::new();
+    if let Some(v) = &e.video_id {
+        segments = lib::segments(conn, &SegmentOwner::Video(v.clone()))?;
+    }
+    if segments.is_empty()
+        && let Some(s) = &e.stream_id
+    {
+        segments = lib::segments(conn, &SegmentOwner::Stream(s.clone()))?;
+    }
+    let mut games: Vec<EntryGame> = Vec::new();
+    for s in segments {
+        // An open chapter (still on air when saved) runs to the end.
+        let end = s.end_ms.or(e.duration_ms).unwrap_or(s.start_ms);
+        let length = end.saturating_sub(s.start_ms);
+        if let Some(g) = games.iter_mut().find(|g| g.game_id == s.game_id) {
+            g.duration_ms = g.duration_ms.saturating_add(length);
+            g.start_ms = g.start_ms.min(s.start_ms);
+        } else {
+            games.push(EntryGame {
+                game_id: s.game_id,
+                name: None,
+                box_art_url: None,
+                duration_ms: length,
+                start_ms: s.start_ms,
+            });
+        }
+    }
+    for g in &mut games {
+        if let Some(k) = lib::category(conn, &g.game_id)? {
+            g.name = Some(k.name);
+            g.box_art_url = k.box_art_url;
+        }
+    }
+    games.sort_by(|a, b| {
+        b.duration_ms
+            .cmp(&a.duration_ms)
+            .then(a.start_ms.cmp(&b.start_ms))
+    });
+    Ok(games)
 }
 
 /// Saved files, newest first; `kind` filters, files gone from disk
@@ -596,6 +670,7 @@ pub fn entries(conn: &Connection, kind: Option<AssetKind>) -> Result<Vec<Entry>,
                 chapters: usize::try_from(r.get::<_, i64>(16)?).unwrap_or(0),
                 has_ads_marked: r.get(17)?,
                 created_at_ms: r.get(18)?,
+                games: Vec::new(),
             },
         ))
     })?;
@@ -614,6 +689,9 @@ pub fn entries(conn: &Connection, kind: Option<AssetKind>) -> Result<Vec<Entry>,
         if e.path.is_file() {
             out.push(e);
         }
+    }
+    for e in &mut out {
+        e.games = entry_games(conn, e)?;
     }
     Ok(out)
 }
