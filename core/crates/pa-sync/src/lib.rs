@@ -24,6 +24,9 @@
 //!   message, its text sealed with the family key.
 //! - [`music`]: music continues on another device (MUS-015): the `music`
 //!   message, the queue sealed with the family key.
+//! - [`upload`]: live progress of library uploads on every device
+//!   (LIB-028): the ephemeral `up` message, its pace and the receivers'
+//!   board.
 //! - [`matching`]: the keys of one item across devices (SYNC-004): the
 //!   `key` and `aliases` of ops and `pb.*` messages, when a position
 //!   carries over to another version.
@@ -81,9 +84,10 @@ pub mod proto;
 pub mod seal;
 pub mod setup;
 mod state;
+pub mod upload;
 
 pub use hlc::{Hlc, HlcClock};
-pub use op::{Op, OpBody, OpId};
+pub use op::{Op, OpBody, OpId, UploadPhase};
 pub use state::{LabelKey, PlaylistMeta, Position, ProfileKey, Reg, Stamp, SyncState};
 
 use pa_library::rusqlite::{self, Connection};
