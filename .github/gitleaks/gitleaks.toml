@@ -38,5 +38,12 @@ regexTarget = "match"
 regexes = ['''RW[A-Za-z0-9+/]{54}''']
 
 [[allowlists]]
+description = "Twitch GQL persisted-query hashes in the signed remote config: public SHA-256 ids of Twitch's own queries, not secrets"
+paths = ['''(^|/)remote-config(\.next)?\.json$''']
+regexTarget = "line"
+regexes = ['''^\s*"[A-Za-z_]+": "[0-9a-f]{64}",?\s*$''']
+condition = "AND"
+
+[[allowlists]]
 description = "Detached minisign signatures of config files"
 paths = ['''^config/.*\.minisig$''']
