@@ -2143,11 +2143,9 @@ class _SleepTimerLayer extends StatelessWidget {
           ),
         ),
         Center(
-          child: FocusScope(
-            child: StillWatchingPrompt(
-              controller: sleep,
-              onPause: state.stillWatchingPause,
-            ),
+          child: StillWatchingPrompt(
+            controller: sleep,
+            onPause: state.stillWatchingPause,
           ),
         ),
       ],
