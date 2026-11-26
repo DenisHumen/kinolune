@@ -32028,6 +32028,7 @@ impl SseDecode for crate::api::twitch_archive::CoreTwitchDownload {
         let mut var_mediaMs = <i64>::sse_decode(deserializer);
         let mut var_profileId = <Option<i64>>::sse_decode(deserializer);
         let mut var_createdAtMs = <i64>::sse_decode(deserializer);
+        let mut var_end = <Option<String>>::sse_decode(deserializer);
         return crate::api::twitch_archive::CoreTwitchDownload {
             job_id: var_jobId,
             kind: var_kind,
@@ -32048,6 +32049,7 @@ impl SseDecode for crate::api::twitch_archive::CoreTwitchDownload {
             media_ms: var_mediaMs,
             profile_id: var_profileId,
             created_at_ms: var_createdAtMs,
+            end: var_end,
         };
     }
 }
@@ -43534,6 +43536,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::twitch_archive::CoreTwitchDow
             self.media_ms.into_into_dart().into_dart(),
             self.profile_id.into_into_dart().into_dart(),
             self.created_at_ms.into_into_dart().into_dart(),
+            self.end.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -48317,6 +48320,7 @@ impl SseEncode for crate::api::twitch_archive::CoreTwitchDownload {
         <i64>::sse_encode(self.media_ms, serializer);
         <Option<i64>>::sse_encode(self.profile_id, serializer);
         <i64>::sse_encode(self.created_at_ms, serializer);
+        <Option<String>>::sse_encode(self.end, serializer);
     }
 }
 

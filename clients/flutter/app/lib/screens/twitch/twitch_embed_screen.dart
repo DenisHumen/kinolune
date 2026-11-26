@@ -26,12 +26,21 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:pa_player/pa_player.dart'
+    show
+        SleepTimerController,
+        SleepTimerHost,
+        SleepTimerMenu,
+        SleepTimerStrings,
+        SleepTimerWarning,
+        formatSleepRemaining;
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 import '../../features/twitch/chat/chat_host.dart';
 import '../../features/twitch/chat/chat_model.dart';
+import '../../flavor.dart';
 import '../../integration/player.dart' show setWindowFullscreen;
 import '../../l10n/l10n.dart';
 import '../../platform/form_factor.dart';
@@ -54,6 +63,7 @@ import 'twitch_player_screen.dart'
         saveTwitchChatWidth,
         twitchSideChatWidth,
         twitchWideLayout;
+import 'twitch_record_live.dart';
 import 'twitch_widgets.dart';
 
 /// Twitch: the embed is at least 400×300.
@@ -176,7 +186,8 @@ class TwitchEmbedScreen extends StatefulWidget {
   State<TwitchEmbedScreen> createState() => TwitchEmbedScreenState();
 }
 
-class TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
+class TwitchEmbedScreenState extends State<TwitchEmbedScreen>
+    implements SleepTimerHost {
   late TwitchEmbedSession _session;
   late TwitchEmbedSurface _surface;
   late AppServices _services;
@@ -215,6 +226,7 @@ class TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
     super.initState();
     _services = Services.read(context);
     _start();
+    _services.sleepTimer.attach(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // Twitch: the embed is at least 400×300; a phone shows it landscape.
@@ -346,6 +358,74 @@ class TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
     unawaited(Navigator.of(context).maybePop());
   }
 
+  // ---- PLAY-022: the sleep timer through the embed's JS API ---------------
+
+  SleepTimerController get sleepTimer => _services.sleepTimer;
+
+  /// The timer ran out: the embed pauses (Twitch keeps the VOD position;
+  /// the session saves ours on the pause event).
+  @override
+  void sleepPause() {
+    if (!mounted) return;
+    unawaited(_surface.runJavaScript('window.kinolune.pause();'));
+  }
+
+  /// The fade of the last 30 s: the embed's volume (`setVolume`).
+  @override
+  void sleepFade(double factor) {
+    if (!mounted) return;
+    final f = factor.clamp(0.0, 1.0).toStringAsFixed(3);
+    unawaited(
+      _surface.runJavaScript('window.kinolune.fade($f);'), // l10n-ignore
+    );
+  }
+
+  /// The menu: a dialog (a native web view lies over Flutter and hides
+  /// while it is open). No «в конце серии» on Twitch.
+  Future<void> openSleepTimer() async {
+    twitchEmbedCovered.value++;
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => Dialog(
+          key: const ValueKey('twitch-embed-sleep-dialog'),
+          backgroundColor: const Color(0xFF202029),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                    child: Text(
+                      SleepTimerStrings.of(context).sleepTimer,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  SleepTimerMenu(
+                    controller: sleepTimer,
+                    endOfItem: false,
+                    stillWatching: false,
+                    onPicked: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    } finally {
+      twitchEmbedCovered.value--;
+    }
+  }
+
   void _togglePause() {
     final playing = _session.state.value == TwitchEmbedState.playing;
     final call = playing ? 'pause' : 'play'; // l10n-ignore
@@ -371,6 +451,7 @@ class TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    sleepTimer.userInput();
     final key = event.logicalKey;
     final vod = !widget.target.isLive;
     if (_typing) {
@@ -405,6 +486,10 @@ class TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
 
   @override
   void dispose() {
+    // PLAY-022: the timer belongs to this viewing.
+    _services.sleepTimer
+      ..detach(this)
+      ..cancel();
     final twitch = _services.twitch;
     unawaited(_session.close().then((_) => twitch.progressChanged()));
     _surface.dispose();
@@ -510,6 +595,36 @@ class TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 actions: [
+                  // TWI-035: record this broadcast (full builds).
+                  if (AppFlavor.twitchArchive &&
+                      widget.target.isLive &&
+                      login != null &&
+                      login.isNotEmpty &&
+                      _services.visibleArchive != null)
+                    TwitchRecordLiveButton(
+                      login: login,
+                      userId: _services.twitch.channelOf(login).userId,
+                      compact: _phone,
+                    ),
+                  ListenableBuilder(
+                    listenable: sleepTimer,
+                    builder: (context, _) {
+                      final name = SleepTimerStrings.of(context).sleepTimer;
+                      final left = sleepTimer.remaining;
+                      return IconButton(
+                        key: const ValueKey('twitch-embed-sleep'),
+                        tooltip: sleepTimer.active && left != null
+                            ? '$name · ${formatSleepRemaining(left)}'
+                            : name,
+                        icon: Icon(
+                          sleepTimer.active
+                              ? Icons.bedtime
+                              : Icons.bedtime_outlined,
+                        ),
+                        onPressed: openSleepTimer,
+                      );
+                    },
+                  ),
                   if (chatToggle)
                     IconButton(
                       key: const ValueKey('twitch-embed-chat-toggle'),
@@ -538,7 +653,28 @@ class TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
                   ),
                 ],
               ),
-        body: SafeArea(top: false, child: LayoutBuilder(builder: _layout)),
+        body: SafeArea(
+          top: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // PLAY-022: «Пауза через 30 с — Продлить» above the embed
+              // (nothing may cover it).
+              ListenableBuilder(
+                listenable: sleepTimer,
+                builder: (context, _) => sleepTimer.warning
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Center(
+                          child: SleepTimerWarning(controller: sleepTimer),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              Expanded(child: LayoutBuilder(builder: _layout)),
+            ],
+          ),
+        ),
       ),
     );
   }

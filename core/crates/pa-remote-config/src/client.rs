@@ -108,6 +108,10 @@ struct State {
     entry: Option<CacheEntry>,
     checked_at: Option<u64>,
     failed_at: Option<u64>,
+    /// A refresh was attempted in this run (BUG-030). Until then a refresh
+    /// is due even if the disk cache was checked recently: a start always
+    /// asks once (a `304` with the cached `ETag` when nothing changed).
+    attempted: bool,
 }
 
 /// Remote config client. Cheap to share (`Arc`); every method is blocking
@@ -149,6 +153,7 @@ impl RemoteConfigClient {
             entry: None,
             checked_at: None,
             failed_at: None,
+            attempted: false,
         };
         if let Some(key) = &key
             && let Some(entry) = cache.load()
@@ -194,11 +199,19 @@ impl RemoteConfigClient {
 
     /// Is a refresh due at `now` (unix seconds) under the current
     /// document's [`RefreshPolicy`](crate::RefreshPolicy)?
+    ///
+    /// The first call of a run is always due (BUG-030): the check time
+    /// restored from the disk cache only schedules later checks, otherwise a
+    /// fresh publication could stay unseen for up to `interval_secs` after
+    /// every restart. That first check costs one conditional `GET`.
     pub fn refresh_due(&self, now: u64) -> bool {
         if self.key.is_none() {
             return false;
         }
         let s = self.lock();
+        if !s.attempted {
+            return true;
+        }
         let policy = s.current.refresh;
         match (s.checked_at, s.failed_at) {
             (_, Some(failed)) => now >= failed.saturating_add(policy.retry()),
@@ -231,6 +244,7 @@ impl RemoteConfigClient {
             .refreshing
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
+        self.lock().attempted = true;
         let mut last_error = Error::Offline("no endpoints configured".into());
         for endpoint in &self.options.endpoints {
             match self.try_endpoint(key, endpoint, now) {

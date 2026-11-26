@@ -68,6 +68,7 @@ import '../../twitch/twitch_native.dart';
 import '../../twitch/twitch_service.dart';
 import '../../twitch/twitch_skip_chatting.dart';
 import '../../widgets/error_boundary.dart';
+import 'twitch_record_live.dart';
 import 'twitch_widgets.dart';
 
 /// Creates the player engine: [live] is the latency mode of a live stream,
@@ -533,6 +534,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
 
   @override
   void dispose() {
+    _services.sleepTimer.cancel();
     _unfollowEngine();
     _replay?.close();
     _detachOsd();
@@ -909,6 +911,10 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
               : null,
           onLiveSeek: isLive ? liveSeekBy : null,
           onGoLive: isLive ? () => unawaited(goToLive()) : null,
+          // PLAY-022: the app's timer; it goes on over a quality switch
+          // (a new player), «в конце серии» is not offered on Twitch.
+          sleepTimer: _services.sleepTimer,
+          sleepEndOfItem: false,
           arrowChapters:
               !isLive &&
               _chapters.length > 1 &&
@@ -927,6 +933,14 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
         ),
         if (q.audioOnly) const _AudioOnlyNote(),
         if (playingLive) _AdBadgeLayer(state: this),
+        // TWI-035: «● REC» stays on the video with the OSD hidden.
+        if (AppFlavor.twitchArchive &&
+            isLive &&
+            (widget.target.login ?? '').isNotEmpty)
+          TwitchRecordingBadge(
+            login: widget.target.login!,
+            userId: _services.twitch.channelOf(widget.target.login!).userId,
+          ),
       ],
     );
   }
@@ -1023,6 +1037,16 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
           tooltip: l.twitchDownload,
           icon: const Icon(Icons.download_rounded),
           onPressed: () => unawaited(_download(context)),
+        ),
+      // TWI-035: record this broadcast (full builds, archive open).
+      if (AppFlavor.twitchArchive &&
+          isLive &&
+          (widget.target.login ?? '').isNotEmpty &&
+          _services.visibleArchive != null)
+        TwitchRecordLiveButton(
+          login: widget.target.login!,
+          userId: _services.twitch.channelOf(widget.target.login!).userId,
+          compact: compact,
         ),
       if ((isLive && _chat != null) || _replay != null) ...[
         if (wide && (_chatOn ?? true))

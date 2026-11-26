@@ -205,7 +205,7 @@ fn now_ms() -> i64 {
         .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX))
 }
 
-fn image_mime(data: &[u8]) -> Option<(&'static str, &'static str)> {
+pub(crate) fn image_mime(data: &[u8]) -> Option<(&'static str, &'static str)> {
     if data.starts_with(&[0xFF, 0xD8]) {
         Some(("image/jpeg", "jpg"))
     } else if data.starts_with(b"\x89PNG") {

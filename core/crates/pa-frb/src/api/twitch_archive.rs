@@ -111,6 +111,11 @@ pub struct CoreTwitchDownload {
     /// Recordings: the profile whose rule started it.
     pub profile_id: Option<i64>,
     pub created_at_ms: i64,
+    /// Finished recordings: why they ended — `offline`, `endlist`,
+    /// `new_broadcast`, `network`, `archive_disabled`, `usher_403`,
+    /// `stopped` (the user's "Stop", TWI-035) or `disk_full` (kept as
+    /// MPEG-TS without a remux).
+    pub end: Option<String>,
 }
 
 /// Folders, quotas and name templates of downloads and recordings.
@@ -344,8 +349,8 @@ impl CoreTwitchDownloads {
 
     /// `pause`, `resume`, `cancel`, `retry` or `remove` (finished only) of
     /// a download or a recording. A recording that is cancelled while it
-    /// runs is not finalised: `stop` instead ends it and keeps what was
-    /// recorded.
+    /// runs is not finalised: `stop` (recordings only, TWI-035) instead ends
+    /// it and keeps what was recorded; a paused one is resumed to finalise.
     pub fn control(&self, job_id: i64, action: String) -> Result<(), CoreDownloadError> {
         full_only!(self.inner.control(job_id, &action), {
             let _ = (job_id, action);
@@ -355,7 +360,8 @@ impl CoreTwitchDownloads {
 
     /// Starts recording a channel now (the profile's rule settings, if
     /// any). Returns the job id; an active recording of the channel is
-    /// returned as is.
+    /// returned as is. An empty `user_id` is looked up by `login` in Helix
+    /// (TWI-035: the live player may know the login only).
     pub fn record_now(
         &self,
         profile_id: i64,
@@ -502,8 +508,8 @@ mod imp {
     use pa_twitch_archive::import::FoundKind;
     use pa_twitch_archive::library::{self as alib, UserLookup};
     use pa_twitch_archive::live::{
-        AutoDecision, AutoRecord, LiveRecorder, LiveRequest, TWITCH_LIVE_RECORD, TwitchLiveSource,
-        quality_of,
+        AutoDecision, AutoRecord, LiveRecorder, LiveRequest, LiveStops, TWITCH_LIVE_RECORD,
+        TwitchLiveSource, quality_of,
     };
     use pa_twitch_archive::{
         Container, DownloadRequest, FfmpegMuxer, Naming, Quality, TimeRange, TwitchSource,
@@ -543,6 +549,8 @@ mod imp {
         source: Arc<TwitchSource>,
         auto: AutoRecord,
         naming: Mutex<Naming>,
+        /// "Stop" of recordings (TWI-035).
+        stops: LiveStops,
     }
 
     /// Pages a downloaded VOD's chat may take (a long, busy VOD has a few
@@ -711,12 +719,13 @@ mod imp {
                         .map(|s| Arc::new(s) as Arc<dyn pa_twitch_chat::ChatSource>)
                     })),
             );
-            LiveRecorder::new(
+            let recorder = LiveRecorder::new(
                 Arc::clone(&live_source) as Arc<dyn pa_twitch_archive::live::LiveSource>,
                 storage.clone(),
                 Arc::new(FfmpegMuxer),
-            )
-            .register(&queue);
+            );
+            let stops = recorder.stops();
+            recorder.register(&queue);
             let auto = AutoRecord::new(live_source, storage.clone(), queue.clone(), LIVE_TARGET);
 
             let this = Arc::new(Self {
@@ -726,6 +735,7 @@ mod imp {
                 source,
                 auto,
                 naming: Mutex::new(Naming::default()),
+                stops,
             });
             let _ = this.apply_retention();
             Ok(this)
@@ -906,6 +916,7 @@ mod imp {
                     .unwrap_or(0),
                 profile_id: j.owner_profile_id,
                 created_at_ms: j.created_at_ms,
+                end: live.then(|| r.and_then(|r| s(&r["end"]))).flatten(),
             }
         }
 
@@ -935,6 +946,20 @@ mod imp {
                 return Err(CoreDownloadError::new("invalid", "not a download"));
             }
             match action {
+                // TWI-035: end a recording now and keep it. Never started:
+                // nothing to keep. Paused: resumed, it finalises at once.
+                "stop" if job.kind == TWITCH_LIVE_RECORD => match job.state {
+                    JobState::Queued => self.queue.cancel(id).map(|_| ()),
+                    JobState::Paused => {
+                        self.stops.request(id);
+                        self.queue.resume(id).map(|_| ())
+                    }
+                    s if s.is_terminal() => Ok(()),
+                    _ => {
+                        self.stops.request(id);
+                        Ok(())
+                    }
+                },
                 "pause" => self.queue.pause(id).map(|_| ()),
                 "resume" => self.queue.resume(id).map(|_| ()),
                 "cancel" => self.queue.cancel(id).map(|_| ()),
@@ -951,6 +976,22 @@ mod imp {
             user_id: &str,
             login: Option<String>,
         ) -> Result<i64, CoreDownloadError> {
+            let looked_up;
+            let user_id = if user_id.trim().is_empty() {
+                let login = login.as_deref().map(str::trim).unwrap_or_default();
+                if login.is_empty() {
+                    return Err(CoreDownloadError::new("invalid", "no channel"));
+                }
+                looked_up = self
+                    .source
+                    .user_by_login(login)
+                    .map_err(|e| CoreDownloadError::new(e.code, e.message))?
+                    .map(|(id, _)| id)
+                    .ok_or_else(|| CoreDownloadError::new("not_found", "no such channel"))?;
+                looked_up.as_str()
+            } else {
+                user_id
+            };
             if let Some(id) = self
                 .auto
                 .active(user_id)

@@ -293,7 +293,8 @@ class _Badge extends StatelessWidget {
     Icons.play_arrow_rounded,
     l.twitchDownloadResume,
   ),
-  TwitchDownloadAction.cancel => (Icons.stop_rounded, l.twitchRecordingStop),
+  TwitchDownloadAction.cancel => (Icons.close_rounded, l.twitchDownloadCancel),
+  TwitchDownloadAction.stop => (Icons.stop_rounded, l.twitchRecordingStop),
   TwitchDownloadAction.retry => (Icons.refresh_rounded, l.twitchDownloadRetry),
   TwitchDownloadAction.remove => (
     Icons.delete_outline_rounded,

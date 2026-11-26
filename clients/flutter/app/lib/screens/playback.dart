@@ -157,6 +157,7 @@ Future<void> playVideo(
           onAudioProcessing: services.setAudioProcessing,
           seekStep: Duration(seconds: services.skipSeconds.value),
           skipMode: services.skipMode.value,
+          sleepTimer: services.sleepTimer,
           tvLayout: tv,
         ),
       ),

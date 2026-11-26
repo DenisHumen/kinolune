@@ -69,6 +69,7 @@ final Set<String> setupSettingKeys = {
   Preferences.continuousPlayback,
   Preferences.skipSeconds,
   Preferences.skipMode,
+  Preferences.stillWatchingAfter,
   Preferences.trickplayGenerate,
   Preferences.animeDataUpdates,
   Preferences.defaultEpisodeOrder,

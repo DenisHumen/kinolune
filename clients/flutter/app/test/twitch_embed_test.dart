@@ -31,6 +31,7 @@ import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/twitch/twitch_embed.dart';
 import 'package:kinolune/twitch/twitch_service.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:pa_player/pa_player.dart' show SleepTimerOption;
 
 import 'support/test_app.dart';
 
@@ -964,5 +965,76 @@ void main() {
       await t.pumpWidget(const SizedBox());
       await settle(t, 2);
     });
+  });
+
+  // PLAY-022: the sleep timer of the embed: a dialog without «в конце
+  // серии», the fade and the pause through the embed's JS API.
+  group('sleep timer', () {
+    setUp(FakeEmbedSurface.created.clear);
+    const cases = [
+      (FormFactor.desktop, Size(1280, 800), 'en', '15 min', 'At the end'),
+      (FormFactor.phone, Size(844, 390), 'ru', '15 мин', 'В конце'),
+      (FormFactor.tv, Size(1920, 1080), 'uk', '15 хв', 'Наприкінці'),
+    ];
+    for (final (form, size, lang, m15, end) in cases) {
+      testWidgets('${form.name} ($lang): dialog, warning, fade, pause', (
+        t,
+      ) async {
+        setSurface(t, size);
+        final services = await twitchServices();
+        await services.setLocale(Locale(lang));
+        services.twitch.embedPlayer = (context, target) =>
+            openTwitchEmbed(context, target, surface: FakeEmbedSurface.factory);
+        await t.pumpWidget(
+          testApp(services, section: Section.twitch, formFactor: form),
+        );
+        await settle(t);
+        final context = t.element(find.byType(Scaffold).first);
+        // ignore: unawaited_futures
+        services.twitch.embedPlayer!(
+          context,
+          const TwitchPlayTarget.vod('9101', login: 'pixelheron'),
+        );
+        await settle(t);
+        final page = FakeEmbedSurface.created.single;
+        expect(page.html, contains('fade: function (f)'));
+        await _tap(t, find.byKey(const ValueKey('twitch-embed-sleep')));
+        expect(
+          find.byKey(const ValueKey('twitch-embed-sleep-dialog')),
+          findsOneWidget,
+        );
+        expect(find.textContaining(end), findsNothing);
+        await _tap(t, find.text(m15));
+        final sleep = services.sleepTimer;
+        expect(sleep.option, SleepTimerOption.minutes15);
+        expect(
+          find.byKey(const ValueKey('twitch-embed-sleep-dialog')),
+          findsNothing,
+        );
+        // The last 30 s: the row above the embed, the fade by JS.
+        sleep
+          ..set(SleepTimerOption.endOfItem)
+          ..itemProgress(const Duration(seconds: 15), playing: true);
+        await settle(t, 2);
+        expect(find.byKey(const ValueKey('sleep-warning')), findsOneWidget);
+        expect(page.scripts.last, 'window.kinolune.fade(0.500);');
+        // The embed is not covered: the row sits above it.
+        final row = t.getRect(find.byKey(const ValueKey('sleep-warning')));
+        final embed = t.getRect(
+          find.byKey(const ValueKey('fake-embed-webview')),
+        );
+        expect(row.bottom, lessThanOrEqualTo(embed.top));
+        expect(sleep.itemEnded(), isTrue);
+        expect(page.scripts, contains('window.kinolune.pause();'));
+        expect(page.scripts.last, 'window.kinolune.fade(1.000);');
+        await settle(t, 2);
+        expect(find.byKey(const ValueKey('sleep-warning')), findsNothing);
+        expect(t.takeException(), isNull);
+        sleep.set(SleepTimerOption.minutes60);
+        await t.pumpWidget(const SizedBox());
+        await settle(t, 2);
+        expect(sleep.active, isFalse);
+      });
+    }
   });
 }
