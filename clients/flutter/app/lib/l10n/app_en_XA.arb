@@ -2465,5 +2465,22 @@
   "twitchClipNotReady": "[Ţŵíţçĥ ĥáš ñóţ ƒíñíšĥéð ţĥé çļíþ ýéţ. Íţ ŵíļļ šĥóŵ úþ áɱóñĝ ţĥé çĥáññéļ'š çļíþš ļáţéŕ.···································]",
   "twitchClipRateLimited": "[Ţóó ɱáñý çļíþš íñ á ŕóŵ. Ţŕý áĝáíñ íñ··············· {seconds} š.·]",
   "twitchClipFailed": "[Çóúļð ñóţ ɱáķé ţĥé çļíþ. Ţŕý áĝáíñ.··············]",
-  "twitchSignInClipsNote": "[Ţŵíţçĥ ŵíļļ áļšó ášķ ţó ļéţ Ķíñóļúñé ɱáķé çļíþš.····················]"
+  "twitchSignInClipsNote": "[Ţŵíţçĥ ŵíļļ áļšó ášķ ţó ļéţ Ķíñóļúñé ɱáķé çļíþš.····················]",
+  "twitchArchiveLibrary": "[Ļíƀŕáŕý···]",
+  "twitchArchiveSearchHint": "[Šţŕéáɱéŕ, ĝáɱé, ðáţé óŕ ţíţļé············]",
+  "twitchArchiveCalendar": "[Šţŕéáɱ çáļéñðáŕ······]",
+  "twitchArchiveAllStreamers": "[Åļļ šţŕéáɱéŕš······]",
+  "twitchArchiveAllGames": "[Åļļ ĝáɱéš····]",
+  "twitchArchivePlaythrough": "[{game} þļáýţĥŕóúĝĥ·····]",
+  "twitchArchivePlaythroughRun": "[{game} þļáýţĥŕóúĝĥ (······{run})]",
+  "twitchArchiveParts": "{count, plural, one{{count} þáŕţ··} other{{count} þáŕţš··}}",
+  "twitchArchivePart": "[Þáŕţ·· {number}]",
+  "twitchArchivePartOf": "[Þáŕţ·· {number} óƒ· {count}]",
+  "twitchArchiveContinuePart": "[Çóñţíñúé · þáŕţ······ {number}]",
+  "twitchArchiveStartPart": "[Ŵáţçĥ · þáŕţ····· {number}]",
+  "twitchArchiveGameTime": "[{hours} ĥ íñ ţĥé ĝáɱé······]",
+  "twitchArchiveOtherStreams": "[Óţĥéŕ šţŕéáɱš······]",
+  "twitchArchiveUnknownGame": "[Çáţéĝóŕý···· {id}]",
+  "twitchArchiveNoMatches": "[Ñóţĥíñĝ ƒóúñð······]",
+  "twitchArchiveEmptyLibrary": "[Šáṽéð šţŕéáɱš ŵíļļ ƀé ĥéŕé: šţŕéáɱéŕ → ĝáɱé → þáŕţš. Ŕéçóŕð á šţŕéáɱ, ðóŵñļóáð á ṼÓÐ óŕ íɱþóŕţ á ƒóļðéŕ.··········································]"
 }
