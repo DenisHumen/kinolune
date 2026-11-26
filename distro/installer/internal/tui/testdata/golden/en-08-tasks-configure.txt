@@ -1,0 +1,24 @@
+ Kinolune OS 0.1.0 - Installer
+
+ Installing Kinolune OS
+
+      Total                      [###################-]  96%  ~1s left
+      Elapsed 30s
+
+ [ok] Partitioning the disk      [####################] 100%     0s
+ [ok] Creating file systems      [####################] 100%     0s
+ [ok] Copying the system image   [####################] 100%    29s
+ [ok] Installing the bootloader  [####################] 100%     1s
+ [>>] User and network           [##########----------]  50%     0s
+ [  ] Finishing
+
+
+
+
+
+
+
+
+ Log: /run/alpha-installer/install.log
+
+ L: command log  Please wait, do not power off the computer
