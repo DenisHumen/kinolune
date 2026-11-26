@@ -272,9 +272,11 @@ class TwitchService extends ChangeNotifier {
     required this.preferences,
     DateTime Function()? clock,
     this.fullBuild = false,
-    this.nativeAllowedByConfig = false,
-    this.nativeKilledByConfig = false,
-  }) : clock = clock ?? DateTime.now;
+    bool nativeAllowedByConfig = false,
+    bool nativeKilledByConfig = false,
+  }) : clock = clock ?? DateTime.now,
+       _nativeAllowedByConfig = nativeAllowedByConfig,
+       _nativeKilledByConfig = nativeKilledByConfig;
 
   final TwitchBackend backend;
   final Preferences preferences;
@@ -285,11 +287,24 @@ class TwitchService extends ChangeNotifier {
 
   /// The signed remote config allows native playback (`twitch.gql_playback`,
   /// `player = native`, no kill-switch).
-  final bool nativeAllowedByConfig;
+  bool get nativeAllowedByConfig => _nativeAllowedByConfig;
+  bool _nativeAllowedByConfig;
 
   /// A kill-switch of the config turns native playback off for this app
   /// version and platform (TWI-030): the embed plays instead.
-  final bool nativeKilledByConfig;
+  bool get nativeKilledByConfig => _nativeKilledByConfig;
+  bool _nativeKilledByConfig;
+
+  /// BUG-030: a newer signed config arrived while the app runs; the next
+  /// player opened takes the route it decides, without a restart.
+  void applyNativeConfig({required bool allowed, required bool killed}) {
+    if (allowed == _nativeAllowedByConfig && killed == _nativeKilledByConfig) {
+      return;
+    }
+    _nativeAllowedByConfig = allowed;
+    _nativeKilledByConfig = killed;
+    notifyListeners();
+  }
 
   /// Players registered by TWI-014 (native) and TWI-005 (embed).
   TwitchPlayerHook? nativePlayer;

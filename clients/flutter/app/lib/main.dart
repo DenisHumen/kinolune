@@ -64,6 +64,7 @@ import 'twitch/core_twitch_backend.dart';
 import 'twitch/core_twitch_native.dart';
 import 'twitch/live_notifications.dart';
 import 'twitch/live_notifications_platform.dart';
+import 'twitch/remote_config_refresh.dart';
 import 'twitch/twitch_archive.dart';
 import 'twitch/twitch_backend.dart';
 import 'twitch/twitch_downloads.dart';
@@ -110,6 +111,8 @@ Future<void> main(List<String> args) async {
   TwitchNativeSource? twitchNativeSource;
   // TWI-016: the VOD chat replay of the native player (full builds).
   TwitchReplayFactory? twitchReplay;
+  // BUG-030: the remote config the Twitch route reads, refreshed after start.
+  core.CoreRemoteConfig? twitchConfig;
   if (AppConfig.demo) {
     library = FakeLibrary.demo();
     sourceManager = FakeSourceManager(library);
@@ -259,6 +262,7 @@ Future<void> main(List<String> args) async {
         );
         twitchNativeSource = source;
         if (config != null) twitchReplay = coreTwitchReplay(config);
+        twitchConfig = config;
         twitchNative = source != null;
         twitchNativeKilled = killed;
       }
@@ -422,6 +426,12 @@ Future<void> main(List<String> args) async {
     // TWI-022: the multiview's native tiles use the same source.
     registerTwitchMultiview(services.twitch, twitchNativeSource);
   }
+  // BUG-030: the signed config is checked soon after start (not on the
+  // first-frame path) and then periodically; a newer one changes the
+  // Twitch route without a restart.
+  if (twitchConfig != null) {
+    _refreshRemoteConfig(twitchConfig, services.twitch, twitchReplay);
+  }
   if (AppConfig.demo) {
     await seedDemoTwitchFavorites(services.twitch);
   } else {
@@ -549,6 +559,40 @@ Future<CoreTwitchDownloadsSource?> _twitchDownloads(
   }
 }
 
+/// BUG-030: checks [config] after start, on a timer and on resume; a newer
+/// document re-decides the native Twitch route for the next player opened.
+void _refreshRemoteConfig(
+  core.CoreRemoteConfig config,
+  TwitchService twitch,
+  TwitchReplayFactory? replay,
+) {
+  RemoteConfigRefresher(
+    check: () async {
+      final result = await config.refreshIfDue();
+      if (result != core.RemoteConfigRefresh.notDue) {
+        final s = config.status();
+        debugPrint(
+          'Remote config: ${result.name}, serial ${s.serial} '
+          '(${s.source.name})',
+        );
+      }
+      return result == core.RemoteConfigRefresh.updated;
+    },
+    onUpdated: () {
+      final killed =
+          config.isKilled(feature: 'twitch.gql_playback') ||
+          config.isKilled(feature: 'twitch.native_player');
+      final source = CoreTwitchNativeSource.open(config);
+      if (source != null) {
+        registerTwitchNativePlayer(twitch, source, replay: replay);
+        registerTwitchMultiview(twitch, source);
+      }
+      twitch.applyNativeConfig(allowed: source != null, killed: killed);
+      debugPrint('Remote config: native Twitch ${source != null}');
+    },
+  ).start();
+}
+
 /// TWI-004/TWI-014: the native playback path when the signed remote
 /// config allows it (`twitch.gql_playback`, `player = native`, a GQL client
 /// id and query hash, no kill-switch); else null. Reads the cached or
@@ -568,6 +612,10 @@ Future<CoreTwitchDownloadsSource?> _twitchDownloads(
     final killed =
         config.isKilled(feature: 'twitch.gql_playback') ||
         config.isKilled(feature: 'twitch.native_player');
+    final status = config.status();
+    debugPrint(
+      'Remote config: serial ${status.serial} (${status.source.name})',
+    );
     return (CoreTwitchNativeSource.open(config), killed, config);
   } catch (e) {
     debugPrint('Remote config unavailable: $e');
