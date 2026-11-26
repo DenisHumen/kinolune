@@ -6,14 +6,17 @@
 #   package.sh <bundle-dir> <version> <out-dir>
 #
 # Writes to <out-dir>:
-#   kinolune-<version>-linux-x86_64.tar.gz   the bundle plus licences
-#   kinolune-<version>-x86_64.AppImage       the same bundle as an AppImage
+#   kinolune-<version>-linux-<arch>.tar.gz   the bundle plus licences
+#   kinolune-<version>-<arch>.AppImage       the same bundle as an AppImage
+#
+# <arch> is x86_64 or aarch64 (PKG-026), read from the bundle's executable;
+# the matching appimagetool must run on this host (build arm64 on arm64).
 #
 # libmpv is NOT bundled by default: media_kit on Linux links the system libmpv
-# (see packaging/app/README.md). With PA_LIBMPV_DIR=<libmpv-linux-x86_64
+# (see packaging/app/README.md). With PA_LIBMPV_DIR=<libmpv-linux-x86_64 (or -arm64)
 # artifact> (tools/mpv, PLAY-002) our LGPL libmpv + FFmpeg go into lib/ via
 # tools/mpv/bundle.sh (needs patchelf), with their licences.
-# With PA_LIBSMB2_DIR=<libsmb2-linux-x86_64 artifact> (tools/libsmb2, LIB-019)
+# With PA_LIBSMB2_DIR=<libsmb2-linux-x86_64 (-arm64) artifact> (tools/libsmb2, LIB-019)
 # our LGPL libsmb2 goes into lib/libsmb2.so.1 the same way
 # (tools/libsmb2/bundle.sh), with its licences.
 #
@@ -22,10 +25,12 @@
 # directory with PA_APPIMAGE_TOOLS).
 set -euo pipefail
 
-APPIMAGETOOL_URL="https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage"
-APPIMAGETOOL_SHA256="ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
-RUNTIME_URL="https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64"
-RUNTIME_SHA256="2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d"
+APPIMAGETOOL_BASE="https://github.com/AppImage/appimagetool/releases/download/1.9.1"
+APPIMAGETOOL_SHA256_x86_64="ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
+APPIMAGETOOL_SHA256_aarch64="f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158"
+RUNTIME_BASE="https://github.com/AppImage/type2-runtime/releases/download/20251108"
+RUNTIME_SHA256_x86_64="2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d"
+RUNTIME_SHA256_aarch64="00cbdfcf917cc6c0ff6d3347d59e0ca1f7f45a6df1a428a0d6d8a78664d87444"
 
 APP_ID="app.kinolune"
 APP_NAME="Kinolune"
@@ -36,7 +41,7 @@ repo_root="$(cd "$app_pkg/../.." && pwd)"
 
 die() { printf 'package.sh: %s\n' "$*" >&2; exit 1; }
 
-[ $# -eq 3 ] || { sed -n '4,22p' "$0"; exit 2; }
+[ $# -eq 3 ] || { sed -n '4,25p' "$0"; exit 2; }
 bundle="$(cd "$1" && pwd)"
 version="$2"
 mkdir -p "$3"
@@ -49,6 +54,15 @@ out="$(cd "$3" && pwd)"
 mapfile -t exes < <(find "$bundle" -maxdepth 1 -type f -perm -u+x -printf '%f\n')
 [ "${#exes[@]}" -eq 1 ] || die "expected one executable in $bundle, found: ${exes[*]:-none}"
 exe="${exes[0]}"
+
+# The architecture from the executable's ELF header (e_machine), not the host:
+# a mismatched libmpv or appimagetool fails below instead of shipping.
+case "$(od -An -tx1 -j18 -N2 "$bundle/$exe" | tr -d ' \n')" in
+    3e00) arch=x86_64 ;;
+    b700) arch=aarch64 ;;
+    *) die "$bundle/$exe is neither an x86_64 nor an aarch64 ELF executable" ;;
+esac
+appimagetool_sha="APPIMAGETOOL_SHA256_$arch" runtime_sha="RUNTIME_SHA256_$arch"
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -90,7 +104,7 @@ add_docs() { # dest-dir
 }
 
 # --- tar.gz ------------------------------------------------------------------
-name="kinolune-${version}-linux-x86_64"
+name="kinolune-${version}-linux-${arch}"
 stage="$work/$name"
 mkdir -p "$stage"
 cp -a "$bundle/." "$stage/"
@@ -102,9 +116,9 @@ printf 'wrote %s\n' "$out/$name.tar.gz"
 # --- AppImage ----------------------------------------------------------------
 tools="${PA_APPIMAGE_TOOLS:-$work/tools}"
 mkdir -p "$tools"
-fetch "$APPIMAGETOOL_URL" "$APPIMAGETOOL_SHA256" "$tools/appimagetool"
-fetch "$RUNTIME_URL" "$RUNTIME_SHA256" "$tools/runtime-x86_64"
-chmod +x "$tools/appimagetool"
+fetch "$APPIMAGETOOL_BASE/appimagetool-$arch.AppImage" "${!appimagetool_sha}" "$tools/appimagetool-$arch"
+fetch "$RUNTIME_BASE/runtime-$arch" "${!runtime_sha}" "$tools/runtime-$arch"
+chmod +x "$tools/appimagetool-$arch"
 
 appdir="$work/AppDir"
 mkdir -p "$appdir/usr/lib/kinolune" "$appdir/usr/share/applications" \
@@ -119,9 +133,9 @@ cp "$here/$APP_ID.svg" "$appdir/$APP_ID.svg"
 cp "$here/$APP_ID.svg" "$appdir/usr/share/icons/hicolor/scalable/apps/$APP_ID.svg"
 ln -s "$APP_ID.svg" "$appdir/.DirIcon"
 
-appimage="$out/kinolune-${version}-x86_64.AppImage"
+appimage="$out/kinolune-${version}-${arch}.AppImage"
 # appimagetool is itself an AppImage; extract-and-run avoids needing FUSE on CI.
-APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 VERSION="$version" \
-    "$tools/appimagetool" --no-appstream --runtime-file "$tools/runtime-x86_64" "$appdir" "$appimage"
+APPIMAGE_EXTRACT_AND_RUN=1 ARCH=$arch VERSION="$version" \
+    "$tools/appimagetool-$arch" --no-appstream --runtime-file "$tools/runtime-$arch" "$appdir" "$appimage"
 chmod +x "$appimage"
 printf 'wrote %s (%s)\n' "$appimage" "$APP_NAME"
