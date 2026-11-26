@@ -6,8 +6,10 @@
 // latency mode over a fake live proxy, and the chat per form factor. Fake
 // usher, fake proxy, fake engine, made-up chat; no network.
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_device_sync.dart';
+import 'package:kinolune/fakes/fake_twitch.dart';
 import 'package:kinolune/fakes/fake_twitch_archive.dart';
 import 'package:kinolune/features/twitch/chat/chat_model.dart';
 import 'package:kinolune/flavor.dart';
@@ -901,5 +903,82 @@ void main() {
     expect(find.byKey(const ValueKey('twitch-recording-badge')), findsOne);
     expect(find.byKey(const ValueKey('twitch-record-live-stop')), findsOne);
     await _close(t);
+  });
+
+  // TWI-040: «Клип» in the live player (store and full builds), next to
+  // «Записать» and the sleep timer without covering them; Alt+X on a
+  // computer; in the TV player's bar; no button on VODs.
+  group('clip', () {
+    void noOverlap(WidgetTester t, List<String> keys) {
+      final rects = [
+        for (final k in keys)
+          if (find.byKey(ValueKey(k)).evaluate().isNotEmpty)
+            t.getRect(find.byKey(ValueKey(k))),
+      ];
+      for (var i = 0; i < rects.length; i++) {
+        for (var j = i + 1; j < rects.length; j++) {
+          expect(rects[i].overlaps(rects[j]), isFalse, reason: '$keys');
+        }
+      }
+    }
+
+    for (final (name, size, form) in [
+      ('computer', _desktop, FormFactor.desktop),
+      ('phone', _phoneLandscape, FormFactor.phone),
+      ('TV', _tv, FormFactor.tv),
+    ]) {
+      testWidgets('live on a $name: the button makes a clip', (t) async {
+        setSurface(t, size);
+        final h = await _harness(archive: FakeTwitchArchive());
+        final backend = h.services.twitch.backend as FakeTwitchBackend
+          ..clipsScope = true;
+        await _play(
+          t,
+          h,
+          const TwitchPlayTarget.live('pixelheron'),
+          formFactor: form,
+        );
+        t.state<PlayerScreenState>(find.byType(PlayerScreen)).osd.show();
+        await settle(t, 3);
+        final clip = find.byKey(const ValueKey('twitch-clip'));
+        expect(clip, findsOneWidget);
+        noOverlap(t, [
+          'twitch-clip',
+          'twitch-record-live',
+          'osd-sleep',
+          'twitch-chat-toggle',
+        ]);
+        await _tap(t, clip);
+        await settle(t, 6);
+        expect(backend.clipRequests, ['7001']);
+        expect(find.byKey(const ValueKey('twitch-clip-ready')), findsOneWidget);
+        await _close(t);
+      });
+    }
+
+    testWidgets('Alt+X on a computer; no button on a VOD', (t) async {
+      setSurface(t, _desktop);
+      final h = await _harness();
+      final backend = h.services.twitch.backend as FakeTwitchBackend
+        ..clipsScope = true;
+      await _play(t, h, const TwitchPlayTarget.live('pixelheron'));
+      await t.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+      await t.sendKeyEvent(LogicalKeyboardKey.keyX);
+      await t.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+      await settle(t, 6);
+      expect(backend.clipRequests, ['7001']);
+      expect(find.byKey(const ValueKey('twitch-clip-ready')), findsOneWidget);
+      await _close(t);
+
+      await _play(
+        t,
+        h,
+        const TwitchPlayTarget.vod('9101', login: 'pixelheron'),
+      );
+      t.state<PlayerScreenState>(find.byType(PlayerScreen)).osd.show();
+      await settle(t, 3);
+      expect(find.byKey(const ValueKey('twitch-clip')), findsNothing);
+      await _close(t);
+    });
   });
 }

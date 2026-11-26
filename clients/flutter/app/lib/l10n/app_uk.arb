@@ -2423,5 +2423,19 @@
   "liveUploadNoResults": "Нічого не знайдено. Перевірте назву або залиште як є.",
   "liveUploadEpisode": "Сезон {season}, серія {episode}",
   "liveUploadSection": "Копіюється зараз",
-  "liveUploadThisDevice": "цього пристрою"
+  "liveUploadThisDevice": "цього пристрою",
+  "twitchClip": "Кліп",
+  "twitchClipTooltip": "Кліп останніх секунд ефіру",
+  "twitchClipShortcut": "Кліп останніх секунд ефіру (Alt+X)",
+  "twitchClipMaking": "Twitch робить кліп…",
+  "twitchClipReady": "Кліп готовий",
+  "twitchClipWatch": "Дивитися",
+  "twitchClipShare": "Поділитися",
+  "twitchClipEditHint": "На Twitch кліп можна обрізати й дати йому назву.",
+  "twitchClipsOff": "Канал вимкнув кліпи.",
+  "twitchClipOffline": "Канал не в ефірі — кліп зробити не можна.",
+  "twitchClipNotReady": "Twitch ще не закінчив кліп. Він з'явиться серед кліпів каналу пізніше.",
+  "twitchClipRateLimited": "Забагато кліпів поспіль. Спробуйте через {seconds} с.",
+  "twitchClipFailed": "Не вдалося зробити кліп. Спробуйте ще раз.",
+  "twitchSignInClipsNote": "Twitch також запитає дозвіл створювати кліпи з Kinolune."
 }

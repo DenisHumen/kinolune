@@ -2423,5 +2423,19 @@
   "liveUploadNoResults": "Ничего не нашлось. Проверьте название или оставьте как есть.",
   "liveUploadEpisode": "Сезон {season}, серия {episode}",
   "liveUploadSection": "Копируется сейчас",
-  "liveUploadThisDevice": "этого устройства"
+  "liveUploadThisDevice": "этого устройства",
+  "twitchClip": "Клип",
+  "twitchClipTooltip": "Клип последних секунд эфира",
+  "twitchClipShortcut": "Клип последних секунд эфира (Alt+X)",
+  "twitchClipMaking": "Twitch делает клип…",
+  "twitchClipReady": "Клип готов",
+  "twitchClipWatch": "Смотреть",
+  "twitchClipShare": "Поделиться",
+  "twitchClipEditHint": "На Twitch клип можно обрезать и дать ему название.",
+  "twitchClipsOff": "Канал отключил клипы.",
+  "twitchClipOffline": "Канал не в эфире — клип сделать нельзя.",
+  "twitchClipNotReady": "Twitch ещё не закончил клип. Он появится среди клипов канала позже.",
+  "twitchClipRateLimited": "Слишком много клипов подряд. Попробуйте через {seconds} с.",
+  "twitchClipFailed": "Не удалось сделать клип. Попробуйте ещё раз.",
+  "twitchSignInClipsNote": "Twitch также спросит разрешение создавать клипы из Kinolune."
 }

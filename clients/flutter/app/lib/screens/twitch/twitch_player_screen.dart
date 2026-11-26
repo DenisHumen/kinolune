@@ -68,6 +68,7 @@ import '../../twitch/twitch_native.dart';
 import '../../twitch/twitch_service.dart';
 import '../../twitch/twitch_skip_chatting.dart';
 import '../../widgets/error_boundary.dart';
+import 'twitch_clip.dart';
 import 'twitch_record_live.dart';
 import 'twitch_widgets.dart';
 
@@ -888,10 +889,26 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _attachOsd();
     });
+    final login = widget.target.login;
     return Stack(
       fit: StackFit.expand,
       children: [
-        PlayerScreen(
+        // TWI-040: Alt+X makes a clip on a computer; the player's own keys
+        // go first, the chat panel is outside.
+        Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: (node, event) {
+            if (!isLive ||
+                login == null ||
+                login.isEmpty ||
+                !isTwitchClipShortcut(event)) {
+              return KeyEventResult.ignored;
+            }
+            unawaited(makeTwitchClip(context, login));
+            return KeyEventResult.handled;
+          },
+          child: PlayerScreen(
           key: _playerKey,
           request: request,
           engineFactory: ({bool video = true}) => _createEngine(),
@@ -930,6 +947,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
                       ? 40
                       : 30,
                 ),
+        ),
         ),
         if (q.audioOnly) const _AudioOnlyNote(),
         if (playingLive) _AdBadgeLayer(state: this),
@@ -1038,6 +1056,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
           icon: const Icon(Icons.download_rounded),
           onPressed: () => unawaited(_download(context)),
         ),
+      // TWI-040: a clip of the last seconds (store and full builds).
+      if (isLive && (widget.target.login ?? '').isNotEmpty)
+        TwitchClipButton(login: widget.target.login!, compact: compact),
       // TWI-035: record this broadcast (full builds, archive open).
       if (AppFlavor.twitchArchive &&
           isLive &&

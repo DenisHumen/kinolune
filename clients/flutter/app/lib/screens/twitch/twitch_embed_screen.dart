@@ -49,6 +49,7 @@ import '../../services/external_links.dart';
 import '../../twitch/twitch_embed.dart';
 import '../../twitch/twitch_service.dart';
 import '../../widgets/error_boundary.dart';
+import 'twitch_clip.dart';
 import 'twitch_embed_desktop.dart';
 import 'twitch_player_screen.dart'
     show
@@ -460,8 +461,16 @@ class TwitchEmbedScreenState extends State<TwitchEmbedScreen>
       _keys.requestFocus();
       return KeyEventResult.handled;
     }
+    final login = widget.target.login;
     if (key == LogicalKeyboardKey.keyC && _chat != null) {
       toggleChat();
+    } else if (isTwitchClipShortcut(event) &&
+        widget.target.isLive &&
+        !_fullscreen &&
+        login != null &&
+        login.isNotEmpty) {
+      // TWI-040; not in fullscreen: nothing may cover the embed.
+      unawaited(makeTwitchClip(context, login));
     } else if (key == LogicalKeyboardKey.escape) {
       _escape();
     } else if (key == LogicalKeyboardKey.space ||
@@ -595,6 +604,11 @@ class TwitchEmbedScreenState extends State<TwitchEmbedScreen>
                   overflow: TextOverflow.ellipsis,
                 ),
                 actions: [
+                  // TWI-040: a clip of the last seconds (store and full).
+                  if (widget.target.isLive &&
+                      login != null &&
+                      login.isNotEmpty)
+                    TwitchClipButton(login: login, compact: _phone),
                   // TWI-035: record this broadcast (full builds).
                   if (AppFlavor.twitchArchive &&
                       widget.target.isLive &&
