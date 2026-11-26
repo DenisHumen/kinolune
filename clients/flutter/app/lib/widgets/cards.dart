@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
+import '../library/show_airing.dart' show AiringPosterLabel;
 import '../integration/library.dart';
 import '../review/review_marks.dart';
 import '../theme/kinolune_theme.dart';
@@ -68,13 +69,17 @@ class PosterCard extends StatelessWidget {
                 title: item.title,
                 subtitle: item.year?.toString(),
               );
+              // UI-057: «Новая серия в чт» / «Сериал завершён».
+              final airing = item.kind == ItemKind.show
+                  ? AiringPosterLabel(item: item)
+                  : null;
               return AspectRatio(
                 aspectRatio: 2 / 3,
-                child: overlay == null && review == null
+                child: overlay == null && review == null && airing == null
                     ? art
                     : Stack(
                         fit: StackFit.expand,
-                        children: [art, ?overlay, ?review],
+                        children: [art, ?overlay, ?review, ?airing],
                       ),
               );
             },

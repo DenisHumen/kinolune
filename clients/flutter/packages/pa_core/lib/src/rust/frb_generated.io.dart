@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/airing.dart';
 import 'api/anime_db.dart';
 import 'api/app_update.dart';
 import 'api/audiobooks.dart';
@@ -11,6 +12,7 @@ import 'api/cloud.dart';
 import 'api/content_kind.dart';
 import 'api/details.dart';
 import 'api/diagnostics.dart';
+import 'api/disc.dart';
 import 'api/discovery.dart';
 import 'api/dlna.dart';
 import 'api/episodes.dart';
@@ -25,6 +27,7 @@ import 'api/library.dart';
 import 'api/library_labels.dart';
 import 'api/library_lists.dart';
 import 'api/library_query.dart';
+import 'api/live_uploads.dart';
 import 'api/lyrics.dart';
 import 'api/music.dart';
 import 'api/offline.dart';
@@ -746,6 +749,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreChatWordRule dco_decode_box_autoadd_core_chat_word_rule(dynamic raw);
 
   @protected
+  CoreDiscPlayback dco_decode_box_autoadd_core_disc_playback(dynamic raw);
+
+  @protected
+  CoreDiscTitle dco_decode_box_autoadd_core_disc_title(dynamic raw);
+
+  @protected
   CoreDiscoveryConfig dco_decode_box_autoadd_core_discovery_config(dynamic raw);
 
   @protected
@@ -867,6 +876,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSetupReceived dco_decode_box_autoadd_core_setup_received(dynamic raw);
 
   @protected
+  CoreShowAiring dco_decode_box_autoadd_core_show_airing(dynamic raw);
+
+  @protected
   CoreSidecarSubtitle dco_decode_box_autoadd_core_sidecar_subtitle(dynamic raw);
 
   @protected
@@ -910,6 +922,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchAccount dco_decode_box_autoadd_core_twitch_account(dynamic raw);
+
+  @protected
+  CoreTwitchNewClip dco_decode_box_autoadd_core_twitch_new_clip(dynamic raw);
 
   @protected
   CoreTwitchUser dco_decode_box_autoadd_core_twitch_user(dynamic raw);
@@ -958,6 +973,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int dco_decode_box_autoadd_u_8(dynamic raw);
+
+  @protected
+  CoreAiringStatus dco_decode_core_airing_status(dynamic raw);
 
   @protected
   CoreAlphabetEntry dco_decode_core_alphabet_entry(dynamic raw);
@@ -1068,6 +1086,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreDeviceClass dco_decode_core_device_class(dynamic raw);
+
+  @protected
+  CoreDiscPlayback dco_decode_core_disc_playback(dynamic raw);
+
+  @protected
+  CoreDiscStream dco_decode_core_disc_stream(dynamic raw);
+
+  @protected
+  CoreDiscTitle dco_decode_core_disc_title(dynamic raw);
 
   @protected
   CoreDiscoveredService dco_decode_core_discovered_service(dynamic raw);
@@ -1248,6 +1275,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreLiveStatus dco_decode_core_live_status(dynamic raw);
+
+  @protected
+  CoreLiveUpload dco_decode_core_live_upload(dynamic raw);
 
   @protected
   CoreLyricLine dco_decode_core_lyric_line(dynamic raw);
@@ -1463,6 +1493,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSetupReceived dco_decode_core_setup_received(dynamic raw);
 
   @protected
+  CoreShowAiring dco_decode_core_show_airing(dynamic raw);
+
+  @protected
   CoreShowEpisode dco_decode_core_show_episode(dynamic raw);
 
   @protected
@@ -1630,6 +1663,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTwitchClip dco_decode_core_twitch_clip(dynamic raw);
 
   @protected
+  CoreTwitchClipOutcome dco_decode_core_twitch_clip_outcome(dynamic raw);
+
+  @protected
+  CoreTwitchClipResult dco_decode_core_twitch_clip_result(dynamic raw);
+
+  @protected
   CoreTwitchDeviceLogin dco_decode_core_twitch_device_login(dynamic raw);
 
   @protected
@@ -1643,6 +1682,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchImportReport dco_decode_core_twitch_import_report(dynamic raw);
+
+  @protected
+  CoreTwitchNewClip dco_decode_core_twitch_new_clip(dynamic raw);
 
   @protected
   CoreTwitchProgress dco_decode_core_twitch_progress(dynamic raw);
@@ -1675,6 +1717,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTxtEntry dco_decode_core_txt_entry(dynamic raw);
+
+  @protected
+  CoreUploadGuess dco_decode_core_upload_guess(dynamic raw);
+
+  @protected
+  CoreUploadPhase dco_decode_core_upload_phase(dynamic raw);
+
+  @protected
+  CoreUploadState dco_decode_core_upload_state(dynamic raw);
+
+  @protected
+  CoreUploadTick dco_decode_core_upload_tick(dynamic raw);
 
   @protected
   CoreV0Source dco_decode_core_v_0_source(dynamic raw);
@@ -1816,6 +1870,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreCredit> dco_decode_list_core_credit(dynamic raw);
 
   @protected
+  List<CoreDiscStream> dco_decode_list_core_disc_stream(dynamic raw);
+
+  @protected
+  List<CoreDiscTitle> dco_decode_list_core_disc_title(dynamic raw);
+
+  @protected
   List<CoreDiscoveredService> dco_decode_list_core_discovered_service(
     dynamic raw,
   );
@@ -1873,6 +1933,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreLiveChannel> dco_decode_list_core_live_channel(dynamic raw);
+
+  @protected
+  List<CoreLiveUpload> dco_decode_list_core_live_upload(dynamic raw);
 
   @protected
   List<CoreLyricLine> dco_decode_list_core_lyric_line(dynamic raw);
@@ -1974,6 +2037,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreServiceKind> dco_decode_list_core_service_kind(dynamic raw);
 
   @protected
+  List<CoreShowAiring> dco_decode_list_core_show_airing(dynamic raw);
+
+  @protected
   List<CoreShowEpisode> dco_decode_list_core_show_episode(dynamic raw);
 
   @protected
@@ -2069,6 +2135,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreTxtEntry> dco_decode_list_core_txt_entry(dynamic raw);
 
   @protected
+  List<CoreUploadTick> dco_decode_list_core_upload_tick(dynamic raw);
+
+  @protected
   List<CoreV0Source> dco_decode_list_core_v_0_source(dynamic raw);
 
   @protected
@@ -2091,6 +2160,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<FilenameHypothesis> dco_decode_list_filename_hypothesis(dynamic raw);
+
+  @protected
+  List<List<CorePlayPart>> dco_decode_list_list_core_play_part(dynamic raw);
 
   @protected
   Int64List dco_decode_list_prim_i_64_strict(dynamic raw);
@@ -2139,6 +2211,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreChatStatus? dco_decode_opt_box_autoadd_core_chat_status(dynamic raw);
+
+  @protected
+  CoreDiscPlayback? dco_decode_opt_box_autoadd_core_disc_playback(dynamic raw);
+
+  @protected
+  CoreDiscTitle? dco_decode_opt_box_autoadd_core_disc_title(dynamic raw);
 
   @protected
   CoreEpisodeOrder? dco_decode_opt_box_autoadd_core_episode_order(dynamic raw);
@@ -2230,6 +2308,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreShowAiring? dco_decode_opt_box_autoadd_core_show_airing(dynamic raw);
+
+  @protected
   CoreSidecarSubtitle? dco_decode_opt_box_autoadd_core_sidecar_subtitle(
     dynamic raw,
   );
@@ -2265,6 +2346,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchAccount? dco_decode_opt_box_autoadd_core_twitch_account(
+    dynamic raw,
+  );
+
+  @protected
+  CoreTwitchNewClip? dco_decode_opt_box_autoadd_core_twitch_new_clip(
     dynamic raw,
   );
 
@@ -2999,6 +3085,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreDiscPlayback sse_decode_box_autoadd_core_disc_playback(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreDiscTitle sse_decode_box_autoadd_core_disc_title(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreDiscoveryConfig sse_decode_box_autoadd_core_discovery_config(
     SseDeserializer deserializer,
   );
@@ -3178,6 +3274,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreShowAiring sse_decode_box_autoadd_core_show_airing(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSidecarSubtitle sse_decode_box_autoadd_core_sidecar_subtitle(
     SseDeserializer deserializer,
   );
@@ -3251,6 +3352,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreTwitchNewClip sse_decode_box_autoadd_core_twitch_new_clip(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreTwitchUser sse_decode_box_autoadd_core_twitch_user(
     SseDeserializer deserializer,
   );
@@ -3307,6 +3413,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int sse_decode_box_autoadd_u_8(SseDeserializer deserializer);
+
+  @protected
+  CoreAiringStatus sse_decode_core_airing_status(SseDeserializer deserializer);
 
   @protected
   CoreAlphabetEntry sse_decode_core_alphabet_entry(
@@ -3439,6 +3548,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreDeviceClass sse_decode_core_device_class(SseDeserializer deserializer);
+
+  @protected
+  CoreDiscPlayback sse_decode_core_disc_playback(SseDeserializer deserializer);
+
+  @protected
+  CoreDiscStream sse_decode_core_disc_stream(SseDeserializer deserializer);
+
+  @protected
+  CoreDiscTitle sse_decode_core_disc_title(SseDeserializer deserializer);
 
   @protected
   CoreDiscoveredService sse_decode_core_discovered_service(
@@ -3649,6 +3767,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreLiveStatus sse_decode_core_live_status(SseDeserializer deserializer);
+
+  @protected
+  CoreLiveUpload sse_decode_core_live_upload(SseDeserializer deserializer);
 
   @protected
   CoreLyricLine sse_decode_core_lyric_line(SseDeserializer deserializer);
@@ -3916,6 +4037,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreShowAiring sse_decode_core_show_airing(SseDeserializer deserializer);
+
+  @protected
   CoreShowEpisode sse_decode_core_show_episode(SseDeserializer deserializer);
 
   @protected
@@ -4129,6 +4253,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTwitchClip sse_decode_core_twitch_clip(SseDeserializer deserializer);
 
   @protected
+  CoreTwitchClipOutcome sse_decode_core_twitch_clip_outcome(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTwitchClipResult sse_decode_core_twitch_clip_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreTwitchDeviceLogin sse_decode_core_twitch_device_login(
     SseDeserializer deserializer,
   );
@@ -4148,6 +4282,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchImportReport sse_decode_core_twitch_import_report(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTwitchNewClip sse_decode_core_twitch_new_clip(
     SseDeserializer deserializer,
   );
 
@@ -4192,6 +4331,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTxtEntry sse_decode_core_txt_entry(SseDeserializer deserializer);
+
+  @protected
+  CoreUploadGuess sse_decode_core_upload_guess(SseDeserializer deserializer);
+
+  @protected
+  CoreUploadPhase sse_decode_core_upload_phase(SseDeserializer deserializer);
+
+  @protected
+  CoreUploadState sse_decode_core_upload_state(SseDeserializer deserializer);
+
+  @protected
+  CoreUploadTick sse_decode_core_upload_tick(SseDeserializer deserializer);
 
   @protected
   CoreV0Source sse_decode_core_v_0_source(SseDeserializer deserializer);
@@ -4369,6 +4520,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreCredit> sse_decode_list_core_credit(SseDeserializer deserializer);
 
   @protected
+  List<CoreDiscStream> sse_decode_list_core_disc_stream(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreDiscTitle> sse_decode_list_core_disc_title(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreDiscoveredService> sse_decode_list_core_discovered_service(
     SseDeserializer deserializer,
   );
@@ -4456,6 +4617,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreLiveChannel> sse_decode_list_core_live_channel(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreLiveUpload> sse_decode_list_core_live_upload(
     SseDeserializer deserializer,
   );
 
@@ -4621,6 +4787,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreShowAiring> sse_decode_list_core_show_airing(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreShowEpisode> sse_decode_list_core_show_episode(
     SseDeserializer deserializer,
   );
@@ -4770,6 +4941,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreUploadTick> sse_decode_list_core_upload_tick(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreV0Source> sse_decode_list_core_v_0_source(
     SseDeserializer deserializer,
   );
@@ -4804,6 +4980,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<FilenameHypothesis> sse_decode_list_filename_hypothesis(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<List<CorePlayPart>> sse_decode_list_list_core_play_part(
     SseDeserializer deserializer,
   );
 
@@ -4866,6 +5047,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreChatStatus? sse_decode_opt_box_autoadd_core_chat_status(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreDiscPlayback? sse_decode_opt_box_autoadd_core_disc_playback(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreDiscTitle? sse_decode_opt_box_autoadd_core_disc_title(
     SseDeserializer deserializer,
   );
 
@@ -4993,6 +5184,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreShowAiring? sse_decode_opt_box_autoadd_core_show_airing(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSidecarSubtitle? sse_decode_opt_box_autoadd_core_sidecar_subtitle(
     SseDeserializer deserializer,
   );
@@ -5034,6 +5230,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchAccount? sse_decode_opt_box_autoadd_core_twitch_account(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTwitchNewClip? sse_decode_opt_box_autoadd_core_twitch_new_clip(
     SseDeserializer deserializer,
   );
 
@@ -5913,6 +6114,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_disc_playback(
+    CoreDiscPlayback self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_disc_title(
+    CoreDiscTitle self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_discovery_config(
     CoreDiscoveryConfig self,
     SseSerializer serializer,
@@ -6135,6 +6348,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_show_airing(
+    CoreShowAiring self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_sidecar_subtitle(
     CoreSidecarSubtitle self,
     SseSerializer serializer,
@@ -6225,6 +6444,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_twitch_new_clip(
+    CoreTwitchNewClip self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_twitch_user(
     CoreTwitchUser self,
     SseSerializer serializer,
@@ -6298,6 +6523,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_airing_status(
+    CoreAiringStatus self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_core_alphabet_entry(
@@ -6484,6 +6715,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     CoreDeviceClass self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_core_disc_playback(
+    CoreDiscPlayback self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_disc_stream(
+    CoreDiscStream self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_disc_title(CoreDiscTitle self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_discovered_service(
@@ -6776,6 +7022,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_live_status(
     CoreLiveStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_live_upload(
+    CoreLiveUpload self,
     SseSerializer serializer,
   );
 
@@ -7152,6 +7404,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_show_airing(
+    CoreShowAiring self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_show_episode(
     CoreShowEpisode self,
     SseSerializer serializer,
@@ -7443,6 +7701,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_twitch_clip_outcome(
+    CoreTwitchClipOutcome self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_twitch_clip_result(
+    CoreTwitchClipResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_twitch_device_login(
     CoreTwitchDeviceLogin self,
     SseSerializer serializer,
@@ -7469,6 +7739,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_twitch_import_report(
     CoreTwitchImportReport self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_twitch_new_clip(
+    CoreTwitchNewClip self,
     SseSerializer serializer,
   );
 
@@ -7528,6 +7804,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_core_txt_entry(CoreTxtEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_upload_guess(
+    CoreUploadGuess self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_upload_phase(
+    CoreUploadPhase self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_upload_state(
+    CoreUploadState self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_upload_tick(
+    CoreUploadTick self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_core_v_0_source(CoreV0Source self, SseSerializer serializer);
@@ -7752,6 +8052,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_disc_stream(
+    List<CoreDiscStream> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_disc_title(
+    List<CoreDiscTitle> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_discovered_service(
     List<CoreDiscoveredService> self,
     SseSerializer serializer,
@@ -7859,6 +8171,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_live_channel(
     List<CoreLiveChannel> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_live_upload(
+    List<CoreLiveUpload> self,
     SseSerializer serializer,
   );
 
@@ -8061,6 +8379,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_show_airing(
+    List<CoreShowAiring> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_show_episode(
     List<CoreShowEpisode> self,
     SseSerializer serializer,
@@ -8244,6 +8568,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_upload_tick(
+    List<CoreUploadTick> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_v_0_source(
     List<CoreV0Source> self,
     SseSerializer serializer,
@@ -8288,6 +8618,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_filename_hypothesis(
     List<FilenameHypothesis> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_list_core_play_part(
+    List<List<CorePlayPart>> self,
     SseSerializer serializer,
   );
 
@@ -8366,6 +8702,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_chat_status(
     CoreChatStatus? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_disc_playback(
+    CoreDiscPlayback? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_disc_title(
+    CoreDiscTitle? self,
     SseSerializer serializer,
   );
 
@@ -8520,6 +8868,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_core_show_airing(
+    CoreShowAiring? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_core_sidecar_subtitle(
     CoreSidecarSubtitle? self,
     SseSerializer serializer,
@@ -8570,6 +8924,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_twitch_account(
     CoreTwitchAccount? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_twitch_new_clip(
+    CoreTwitchNewClip? self,
     SseSerializer serializer,
   );
 

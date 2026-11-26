@@ -50,6 +50,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+pub mod disc;
 mod folders;
 pub mod mpls;
 mod music;

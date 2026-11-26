@@ -57,8 +57,17 @@ abstract interface class TwitchBackend {
   TwitchAccount? get account;
 
   /// Starts a sign-in; with [chat] it also asks for permission to send
-  /// chat messages (TWI-024).
-  Future<TwitchDeviceLogin> startLogin({bool chat = false});
+  /// chat messages (TWI-024), with [clips] to make clips (TWI-040).
+  /// Permissions granted before stay.
+  Future<TwitchDeviceLogin> startLogin({bool chat = false, bool clips = false});
+
+  /// The signed-in account may make clips (`clips:edit`). No network.
+  bool get canMakeClips;
+
+  /// Makes a clip of the live stream of [broadcasterId] and waits until
+  /// Twitch finished it (TWI-040). The expected failures are outcomes,
+  /// not exceptions; [TwitchUnavailable] only without a client id.
+  Future<TwitchClipResult> makeClip(String broadcasterId);
 
   /// Polls the pending sign-in once: the account when confirmed.
   Future<TwitchAccount?> pollLogin();
@@ -138,7 +147,16 @@ class LocalTwitchBackend implements TwitchBackend {
   TwitchAccount? get account => null;
 
   @override
-  Future<TwitchDeviceLogin> startLogin({bool chat = false}) async => _off();
+  Future<TwitchDeviceLogin> startLogin({
+    bool chat = false,
+    bool clips = false,
+  }) async => _off();
+
+  @override
+  bool get canMakeClips => false;
+
+  @override
+  Future<TwitchClipResult> makeClip(String broadcasterId) async => _off();
 
   @override
   Future<TwitchAccount?> pollLogin() async => _off();

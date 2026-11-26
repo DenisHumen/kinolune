@@ -1,0 +1,24 @@
+ Kinolune OS 0.1.0 - Installer
+
+ The installation failed
+
+ Failed step: Copying the system image
+
+ bootc install: podman: exit status 1: error: writing objects: No space left on
+ device
+
+ The disk may be partly written. Other disks were not touched.
+ Log: /run/alpha-installer/install.log
+
+ > Back to the confirmation
+   Text menu and command line
+   Reboot
+   Power off
+
+
+
+
+
+
+
+ Up/Down: select  Enter: run

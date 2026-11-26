@@ -10,7 +10,7 @@
 #
 # The base is pinned by the digest of the multi-arch manifest list.
 # Bump it deliberately (one PR per bump) and re-run the VM checks in distro/README.md.
-ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:2342f957281b061919c48a12227f9cd04f2d9825d17629fd914083aaa672002c
+ARG BASE_IMAGE=ghcr.io/denishumen/fedora-bootc:45@sha256:f3afa8b1d590ba2842366e0bca4f921ba4a0c7b5ee72679b632aeaa08f170a1e
 
 # Our Go daemons are built with the Go toolchain of the same pinned Fedora base
 # (no second base image to pin); only the static binaries reach the OS image.
@@ -28,7 +28,7 @@ RUN cd /src/updated && \
 
 # Admin backend (DIST-013), built with the Go toolchain of the same pinned
 # Fedora base; only the binaries reach the OS image. alpha-admin is static;
-# alpha-admin-auth links libpam (cgo), which the base image has. Go modules
+# alpha-admin-auth and alpha-admin-priv (DIST-018) link libpam (cgo), which the base image has. Go modules
 # (godbus, msteinert/pam) come from the module proxy, checked against go.sum.
 FROM ${BASE_IMAGE} AS admin-build
 # hadolint ignore=DL3041
@@ -37,7 +37,8 @@ COPY admin/ /src/admin/
 RUN cd /src/admin && \
     export GOTOOLCHAIN=local GOFLAGS="-trimpath -mod=readonly" GOCACHE=/tmp/gocache GOPATH=/tmp/gopath && \
     CGO_ENABLED=0 go build -ldflags=-s -o /out/alpha-admin ./cmd/alpha-admin && \
-    CGO_ENABLED=1 go build -tags pam -ldflags=-s -o /out/alpha-admin-auth ./cmd/alpha-admin-auth
+    CGO_ENABLED=1 go build -tags pam -ldflags=-s -o /out/alpha-admin-auth ./cmd/alpha-admin-auth && \
+    CGO_ENABLED=1 go build -tags pam -ldflags=-s -o /out/alpha-admin-priv ./cmd/alpha-admin-priv
 
 FROM ${BASE_IMAGE}
 
@@ -54,7 +55,7 @@ COPY rootfs/ /
 # Update agent (DIST-009), see distro/updated/README.md.
 COPY --from=go-build /out/alpha-updated /usr/libexec/alpha/alpha-updated
 # Admin backend (DIST-013), see distro/admin/README.md.
-COPY --from=admin-build /out/alpha-admin /out/alpha-admin-auth /usr/libexec/alpha/
+COPY --from=admin-build /out/alpha-admin /out/alpha-admin-auth /out/alpha-admin-priv /usr/libexec/alpha/
 # Public cosign key of the project (distro/keys/alpha-os.pub, committed by the owner).
 COPY keys/ /usr/share/alpha/keys/
 
@@ -73,6 +74,9 @@ ARG ALPHA_SIGNATURE_POLICY=auto
 
 RUN set -eux; \
     chmod 0755 /usr/libexec/alpha/*; \
+    # Our configuration files must not be group-writable whatever the umask
+    # of the checkout was (sshd and Samba read them as root).
+    chmod -R go-w /etc/samba /etc/ssh/sshd_config.d /etc/selinux/targeted/contexts/files/file_contexts.local; \
     rm -f /usr/share/alpha/keys/.gitkeep; \
     policy="${ALPHA_SIGNATURE_POLICY}"; \
     if [ "${policy}" = auto ]; then \
@@ -94,14 +98,21 @@ RUN set -eux; \
     # Enable/disable services according to rootfs/usr/lib/systemd/system-preset/.
     # Cockpit is shipped but off; the admin UI turns it on for LAN only (05 §5.1).
     systemctl preset alpha-media.service alpha-admin.service alpha-admin-auth.socket alpha-updated.service alpha-updated.socket \
+        alpha-admin-priv.socket alpha-samba-config.service alpha-ssh-firstboot.service \
         smb.service wsdd.service avahi-daemon.service firewalld.service smartd.service \
         chronyd.service sshd.service cockpit.socket; \
-    # Firewall: default zone "home", only the services we need (05 §5.2).
+    # Firewall: default zone "home", only what we need (05 §5.2, DIST-018):
+    # admin UI (http, https), SMB on 445 only (NetBIOS is off), media server,
+    # mDNS and WS-Discovery, DHCPv6 replies. SSH is closed: alpha-ssh-firstboot
+    # opens it when keys were installed, later the admin UI decides.
     firewall-offline-cmd --set-default-zone=home; \
-    for svc in samba mdns ws-discovery http https; do \
+    for svc in mdns ws-discovery http https; do \
         firewall-offline-cmd --zone=home --add-service="${svc}"; \
     done; \
-    firewall-offline-cmd --zone=home --remove-service-from-zone=samba-client; \
+    for svc in samba samba-client ssh; do \
+        firewall-offline-cmd --zone=home --remove-service-from-zone="${svc}" || true; \
+    done; \
+    firewall-offline-cmd --zone=home --add-port=445/tcp; \
     firewall-offline-cmd --zone=home --add-port=8487/tcp; \
     # Leftovers of package scriptlets in runtime-only dirs (bootc lint: nonempty-run-tmp).
     rm -rf /run/dnf /run/cockpit /run/selinux-policy /var/log/* /var/cache/* /var/tmp/* /tmp/*; \

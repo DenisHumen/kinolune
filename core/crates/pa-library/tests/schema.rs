@@ -36,6 +36,7 @@ const TABLES: &[&str] = &[
     "import_v0_progress",
     "jobs",
     "label_sync",
+    "live_uploads",
     "match_candidates",
     "match_episodes",
     "matches",
@@ -101,6 +102,7 @@ const TABLES: &[&str] = &[
     "user_tags",
     "version_prefs",
     "view_prefs",
+    "work_airing",
     "work_candidates",
     "work_certifications",
     "work_credits",
@@ -545,6 +547,8 @@ fn build_graph(conn: &Connection) -> Graph {
         INSERT INTO work_credits (work_id, provider, role, position, person_ref, name, character)
             VALUES (30, 'tmdb', 'cast', 0, '17419', 'Actor', 'Hero');
         INSERT INTO work_ratings (work_id, provider, value, votes) VALUES (30, 'tmdb', 8.4, 1200);
+        INSERT INTO work_airing (work_id, status, next_season, next_episode, next_air_date, source, checked_at_ms)
+            VALUES (30, 'airing', 1, 4, '2026-12-01', 'tmdb', {now});
         INSERT INTO skip_segments (file_id, kind, origin, start_ms, end_ms, confidence, updated_at_ms)
             VALUES (100, 'intro', 'audio', 60000, 90000, 0.9, {now});
         INSERT INTO skip_analysis (file_id, version, size_bytes, duration_ms, intro_fp,
@@ -634,6 +638,13 @@ fn build_graph(conn: &Connection) -> Graph {
               '{"schema_version":1,"data":{}}', 'parked', NULL),
              ('category'||char(31)||'default'||char(31)||'ffff', 'default', NULL, 'merged',
               '0123456789abcdef0123456789abcdef');"#,
+    )
+    .unwrap();
+    // A file another device is copying into the library (LIB-028).
+    conn.execute_batch(
+        r#"INSERT INTO live_uploads (upload_id, phase, info, device_id, stamp, updated_ms)
+           VALUES ('up-m3k9x2-0-5d21aa07', 'started', '{"v":1,"name":"Dune.mkv"}',
+                   'kpc', NULL, 1763000000000);"#,
     )
     .unwrap();
     // Another device said its TMDB key and this `file:` key are one film
@@ -772,6 +783,7 @@ fn deleting_a_work_cascades_through_the_catalog() {
         "artwork",
         "version_prefs",
         "work_metadata",
+        "work_airing",
         "work_credits",
         "work_ratings",
         "work_certifications",

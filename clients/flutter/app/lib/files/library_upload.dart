@@ -34,6 +34,8 @@ import 'package:pa_library/pa_library.dart'
         SourceFiles;
 
 import '../l10n/l10n.dart';
+import '../library/live_upload_card.dart';
+import '../library/live_uploads.dart';
 import '../screens/downloads_screen.dart';
 import '../services/app_services.dart';
 import '../sources/source_manager.dart';
@@ -686,6 +688,11 @@ Future<List<UploadJob>> addToLibrary(
     // is needed.
     plan = await LibraryPlanner(files.files, -1).planItems(items);
   }
+  // LIB-028: a grey card per item, on every device, recognized before a
+  // byte is copied.
+  final cards = jobs.isEmpty
+      ? const <LiveUpload>[]
+      : await liveCardsFor(s.liveUploads, items, jobs);
   if (!context.mounted) return jobs;
   if (plan.personal.isNotEmpty) {
     await uploadToPersonal(context, plan.personal);
@@ -697,6 +704,12 @@ Future<List<UploadJob>> addToLibrary(
       l.libUploadStarted(jobs.length, source!.name),
       if (skipped > 0) l.libUploadSkipped(skipped),
     ].join(' ');
+    // One item with a guess: «Это „…“?» — nothing to press when it is
+    // right (BUG-009), «Не то» to pick by hand.
+    if (cards.length == 1 && !cards.single.info.value.guess.isEmpty) {
+      showLiveUploadGuess(context, cards.single, text);
+      return jobs;
+    }
     _snack(
       context,
       text,
@@ -715,6 +728,62 @@ Future<List<UploadJob>> addToLibrary(
     _snack(context, l.libUploadNothing);
   }
   return jobs;
+}
+
+/// The kind of a live card for a sorted item.
+LiveUploadKind liveKindOf(DropKind kind) => switch (kind) {
+  DropKind.series => LiveUploadKind.series,
+  DropKind.music => LiveUploadKind.music,
+  DropKind.disc => LiveUploadKind.disc,
+  _ => LiveUploadKind.movie,
+};
+
+/// LIB-028: a live card for every library item of a drop, with the jobs
+/// LIB-027 queued for it: a file is one job, a folder (disc, season,
+/// album) many. The card's guess is made on where the item goes — the
+/// path the scan will read.
+Future<List<LiveUpload>> liveCardsFor(
+  LiveUploads live,
+  List<SortedDrop> items,
+  List<UploadJob> jobs,
+) async {
+  final out = <LiveUpload>[];
+  for (final item in items) {
+    if (item.kind == DropKind.personal || item.kind == DropKind.unsupported) {
+      continue;
+    }
+    final root = item.request.localPath;
+    final mine = [
+      for (final j in jobs)
+        if (j.localPath == root ||
+            j.localPath.startsWith('$root/') ||
+            j.localPath.startsWith('$root\\'))
+          j,
+    ];
+    if (mine.isEmpty) continue;
+    final first = mine.first;
+    String dest;
+    if (item.isFolder) {
+      // `<kind folder>/<item folder>/…`: the item is its first two parts.
+      final parts = first.dir.split('/');
+      dest = '${parts.take(2).join('/')}/';
+    } else {
+      dest = first.dir.isEmpty ? first.name : '${first.dir}/${first.name}';
+    }
+    try {
+      out.add(
+        await live.began(
+          jobs: mine,
+          name: item.isFolder ? item.folderName : item.name,
+          kind: liveKindOf(item.kind),
+          dest: dest,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Live card not made: $e');
+    }
+  }
+  return out;
 }
 
 /// Picks files or a folder to add to the library. Tests replace it.

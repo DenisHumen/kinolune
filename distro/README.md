@@ -8,9 +8,9 @@
 
 | Путь | Что |
 |---|---|
-| `Containerfile` | образ ОС: `FROM fedora-bootc:45@sha256:…` (пин по digest), пакеты, сервисы, firewall, `bootc container lint` |
+| `Containerfile` | образ ОС: `FROM ghcr.io/denishumen/fedora-bootc:45@sha256:…` (пин по digest из нашего зеркала, см. ниже), пакеты, сервисы, firewall, `bootc container lint` |
 | `packages.txt` | пакеты поверх базы (Samba, wsdd, Avahi, firewalld, smartmontools, mdadm, btrfs-progs, greenboot, Cockpit) |
-| `rootfs/` | файлы, копируемые в образ: юниты-заглушки наших сервисов, preset, `tmpfiles.d`, `smb.conf` |
+| `rootfs/` | файлы, копируемые в образ: юниты наших сервисов, preset, `tmpfiles.d`, `smb.conf` и сгенерированный по умолчанию `smb.conf.d/kinolune.conf`, `sshd_config.d`, `file_contexts.local` |
 | `scripts/build-image.sh` | сборка образа (`podman`, если есть, иначе `docker`) |
 | `scripts/make-disk.sh` | загрузочный raw-диск через `bootc install to-disk --via-loopback` в привилегированном контейнере |
 | `scripts/ci-build.sh`, `ci-sbom.sh`, `sign-image.sh` | сборка в CI (build → rechunk → lint), SBOM (syft), подпись cosign |
@@ -32,13 +32,16 @@
 | `tests/wifi-hwsim.sh`, `tests/wifi-hwsim-vm.sh` | DIST-032: Wi-Fi приложения (клиент NetworkManager, `tool/nm_probe.dart`) в VM Fedora Cloud с `mac80211_hwsim` — точки WPA2 и открытая, пользователь группы `kinolune` без root |
 | `.work/` | локальные артефакты (диски, ключи SSH, логи); в git не попадает |
 
+**Зеркало базового образа.** quay.io периодически удаляет старые digest-ы `fedora-bootc`, и сборка по закреплённому digest-у падает с «manifest unknown». Поэтому `Containerfile` и `installer/Containerfile` берут базу из зеркала `ghcr.io/denishumen/fedora-bootc` (публичный пакет). Workflow [`base-image-mirror.yml`](../.github/workflows/base-image-mirror.yml) копирует туда закреплённые digest-ы и текущий `:45` с теми же digest-ами (`skopeo copy --all --preserve-digests`) раз в неделю, при смене пина на main и вручную. Сменить базу: взять digest текущего `quay.io/fedora/fedora-bootc:45`, запустить `base-image-mirror` (или он уже скопировал его по расписанию), вписать digest в оба `Containerfile`.
+
 ## Что в образе
 
 - **`alpha-updated` — настоящий агент обновлений** (Go, DIST-009): бинарник `/usr/libexec/alpha/alpha-updated` собирается в стадии `go-build` `Containerfile`, API — только на unix-сокете `/run/alpha-updated/api.sock` (`root:alpha-admin 0660`, `alpha-updated.socket`), состояние — `/var/lib/alpha/updated`. Подробно — [updated/README.md](updated/README.md).
 - **`alpha-media` пока заглушка** (`/usr/libexec/alpha/alpha-stub`, Python): `alpha-media` (:8487). Отвечает `GET /health` и `/healthz` JSON-ом с версией образа. Юниты с `DynamicUser=yes` и `ProtectSystem=strict`.
 - **`alpha-admin`** (DIST-013) — настоящий бэкенд админки: HTTPS на :443 с самоподписанным сертификатом, :80 перенаправляет и отвечает `/health`; только LAN; работает от пользователя `alpha-admin`, права на D-Bus — через polkit-правило, пароли проверяет PAM-помощник `alpha-admin-auth`. Подробно — [admin/README.md](admin/README.md).
-- **Samba**: SMB3, `vfs_fruit` для macOS, шара `Media` → `/var/srv/media` (гостевое чтение). **wsdd** (Windows), **Avahi** + nss-mdns (`<hostname>.local`).
-- **firewalld**: зона по умолчанию `home`; открыты samba, mdns, ws-discovery, http, https, 8487/tcp. (ssh и dhcpv6-client остаются из стандартной зоны `home` — на прототипе SSH нужен для тестов; выключение по умолчанию — в DIST-013.)
+- **Samba** (DIST-018, ADR-NNNN): SMB3 только на 445 (NetBIOS выключен), `vfs_fruit` для macOS, `server string = Kinolune OS (%h)`. Статический `/etc/samba/smb.conf` подключает `/etc/samba/smb.conf.d/kinolune.conf`, который `alpha-samba-config.service` рендерит при каждой загрузке из настроек админки (`/var/lib/alpha/samba/settings.json`). Шары: `Media` → `/var/srv/media` (пользователи NAS читают и пишут), `Users` → `/var/srv/users/<имя>` (каждый видит только свою папку), `TimeMachine` → `/var/srv/timemachine/<имя>` (резервные копии Mac). **Анонимного доступа по умолчанию нет**; чтение `Media` без пароля (для телевизоров) включается в админке, записи для гостя нет никогда. Пользователи NAS — люди в группах `alpha-users`, `wheel`, `alpha-admin`; пароль Samba = пароль пользователя (ставится при создании и смене пароля в админке, при входе в админку, из установщика). Типы SELinux шар — `samba_share_t` (`file_contexts.local`). **wsdd** (Windows), **Avahi** + nss-mdns (`<hostname>.local`, Samba сама анонсирует `_smb._tcp` и `_adisk._tcp`).
+- **firewalld**: зона по умолчанию `home`; открыты http, https, 445/tcp, 8487/tcp, mdns, ws-discovery и стандартный dhcpv6-client. `ssh`, `samba-client` и NetBIOS 137–139 закрыты (DIST-018).
+- **SSH выключен по умолчанию** и принимает только ключи (`/etc/ssh/sshd_config.d/40-kinolune.conf`). Только на свежей установке с ключами (метка установщика `/var/lib/alpha/ssh-keys-at-install` или `bootc install --root-ssh-authorized-keys` без установщика) `alpha-ssh-firstboot.service` один раз включает `sshd` и открывает порт; на обновлённой системе состояние SSH не меняется. Дальше — `PUT /api/v1/ssh` в админке.
 - **NetworkManager** с Wi-Fi (`NetworkManager-wifi`, `wpa_supplicant`): группа `kinolune` (`sysusers.d`) по polkit-правилу `50-kinolune-network.rules` подключает сети, сканирует, включает и выключает Wi-Fi, сохраняет и забывает профили без root — для панели «Сеть» на главной Kinolune (DIST-032, ADR-0167).
 - **smartd**, **chronyd**, **greenboot** (проверки появятся в DIST-011), **Cockpit** установлен, `cockpit.socket` выключен.
 - `bootc-fetch-apply-updates.timer` и его `.service` **замаскированы**: обновлениями управляет `alpha-updated` (DIST-009) — скачивает в фоне, ставит в окне обслуживания и не перезагружает NAS во время просмотра.
