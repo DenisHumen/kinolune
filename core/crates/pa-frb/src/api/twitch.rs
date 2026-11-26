@@ -697,9 +697,7 @@ impl CoreTwitch {
             )),
             Some(Api::Plain(helix)) => {
                 // Tests: a fixed token, no sign-in to check scopes against.
-                let created = self
-                    .rt
-                    .block_on(helix.create_clip(&broadcaster_id, false));
+                let created = self.rt.block_on(helix.create_clip(&broadcaster_id, false));
                 let made = match created {
                     Ok(c) => {
                         let found = self.rt.block_on(helix.clip_by_id(&c.id));
@@ -774,11 +772,7 @@ impl CoreTwitch {
         };
         // A repeated sign-in for one more scope keeps the ones granted
         // before (chat sending, clips): the new token replaces the old.
-        let mut scopes: Vec<String> = api
-            .auth()
-            .account()
-            .map(|a| a.scopes)
-            .unwrap_or_default();
+        let mut scopes: Vec<String> = api.auth().account().map(|a| a.scopes).unwrap_or_default();
         for s in extra {
             if !scopes.iter().any(|have| have == s) {
                 scopes.push((*s).to_owned());
@@ -1589,7 +1583,8 @@ mod tests {
             core.make_clip("pixelheron".into()).unwrap_err().kind,
             TwitchErrorKind::Invalid
         );
-        let unconfigured = CoreTwitch::with_helix(pa_library::open_in_memory().unwrap(), None).unwrap();
+        let unconfigured =
+            CoreTwitch::with_helix(pa_library::open_in_memory().unwrap(), None).unwrap();
         assert_eq!(
             unconfigured.make_clip("7001".into()).unwrap_err().kind,
             TwitchErrorKind::NotConfigured

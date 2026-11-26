@@ -115,7 +115,10 @@ async fn clip_is_created_and_ready_after_waiting() {
     assert_eq!(
         h.helix_calls(),
         [
-            (Method::Post, "clips?broadcaster_id=1001&has_delay=true".to_owned()),
+            (
+                Method::Post,
+                "clips?broadcaster_id=1001&has_delay=true".to_owned()
+            ),
             get.clone(),
             get.clone(),
             get,

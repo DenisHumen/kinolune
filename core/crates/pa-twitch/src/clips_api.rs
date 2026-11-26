@@ -179,10 +179,7 @@ impl AuthorizedHelix {
         loop {
             clock.sleep(CLIP_POLL_INTERVAL).await;
             let id = created.id.as_str();
-            if let Some(clip) = self
-                .call(|h| async move { h.clip_by_id(id).await })
-                .await?
-            {
+            if let Some(clip) = self.call(|h| async move { h.clip_by_id(id).await }).await? {
                 return Ok((created, clip));
             }
             if clock.now() >= deadline {

@@ -64,10 +64,10 @@ mod auth;
 mod cache;
 pub mod chapters;
 mod chat_api;
-mod clips_api;
 #[cfg(pa_twitch_native)]
 pub mod chat_replay;
 mod client;
+mod clips_api;
 mod error;
 mod model;
 mod pagination;
@@ -83,19 +83,18 @@ mod util;
 pub use auth::{
     Account, AuthConfig, AuthError, AuthResult, AuthorizedHelix, DEFAULT_ID_BASE_URL,
     DEFAULT_SCOPES, DeviceAuthorization, REFRESH_MARGIN, SCOPE_CLIPS_EDIT, SCOPE_READ_CHAT,
-    SCOPE_READ_FOLLOWS,
-    SCOPE_WRITE_CHAT, TwitchAuth, VALIDATE_INTERVAL, Validation,
+    SCOPE_READ_FOLLOWS, SCOPE_WRITE_CHAT, TwitchAuth, VALIDATE_INTERVAL, Validation,
 };
 pub use cache::{MAX_CACHE_TTL, TtlCache};
 pub use chat_api::{
     ChatDropReason, EventSubSubscription, EventSubSubscriptionRequest, MAX_CHAT_MESSAGE_CHARS,
     SendChatMessage, SentChatMessage,
 };
-pub use clips_api::{CLIP_POLL_INTERVAL, CLIP_READY_TIMEOUT, ClipError, CreatedClip};
 pub use client::{
     AccessToken, ClientId, ClipsQuery, DEFAULT_BASE_URL, FollowedStreamer, HelixClient,
     HelixConfig, SchedulePage, SearchChannelsQuery, StreamsQuery, VideosQuery,
 };
+pub use clips_api::{CLIP_POLL_INTERVAL, CLIP_READY_TIMEOUT, ClipError, CreatedClip};
 pub use error::{Error, Result};
 pub use model::*;
 pub use pagination::{Cursor, HasId, MAX_PAGE_SIZE, Page, collect_pages};
