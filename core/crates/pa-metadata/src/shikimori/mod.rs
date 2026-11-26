@@ -233,6 +233,20 @@ impl ShikimoriClient {
         Ok(anime)
     }
 
+    /// [`anime`](Self::anime) for the airing schedule (UI-057): an expired
+    /// cached answer is never returned in place of a failed request.
+    pub fn anime_airing(&self, id: u64) -> Result<Anime, FetchError> {
+        let anime: Anime =
+            self.get_json_with(&format!("/animes/{id}"), Vec::new(), TtlClass::Anime, false)?;
+        if anime.adult() && !self.config.include_adult {
+            return Err(FetchError::NotFound {
+                provider: PROVIDER,
+                what: format!("anime {id}"),
+            });
+        }
+        Ok(anime)
+    }
+
     /// `/animes/{id}/related` (anime entries only; manga is dropped).
     pub fn related(&self, id: u64) -> Result<Vec<Related>, FetchError> {
         let mut related: Vec<Related> = self.get_json(
@@ -300,6 +314,16 @@ impl ShikimoriClient {
         query: Vec<(String, String)>,
         class: TtlClass,
     ) -> Result<T, FetchError> {
+        self.get_json_with(path, query, class, true)
+    }
+
+    fn get_json_with<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        query: Vec<(String, String)>,
+        class: TtlClass,
+        stale_ok: bool,
+    ) -> Result<T, FetchError> {
         let request = HttpRequest {
             base: self.config.base_url.trim_end_matches('/').to_owned(),
             path: path.to_owned(),
@@ -309,13 +333,14 @@ impl ShikimoriClient {
                 ("user-agent".into(), self.config.user_agent.clone()),
             ],
         };
-        let body = self.fetcher.fetch(
+        let body = self.fetcher.fetch_with(
             &request,
             None,
             &ShikimoriHooks {
                 ttl: self.config.ttl,
                 class,
             },
+            stale_ok,
         )?;
         serde_json::from_str(&body)
             .map_err(|e| FetchError::Decode(format!("Shikimori {path}: {e}")))

@@ -228,6 +228,9 @@ if mode == "tui":
     wait(r"To start, type the disk name nvme0n1", 30, "TUI install: summary")
     send("nvme0n1" + ENTER)
     wait(r"Installing Kinolune OS", 60, "TUI install: progress screen")
+    # DIST-034: a line per task with its bar; the copy shows amounts and speed.
+    wait(r"Copying the system image", 120, "TUI install: task list")
+    wait(r"MB of [0-9.]+ [MG]B, [0-9.]+ [kMG]?B/s", 600, "TUI install: copy amounts and speed")
     wait(r"Kinolune OS is installed", 1800, "TUI install: success screen")
     send(DOWN); send(ENTER)
     wait(r"Save an answer file", 30, "TUI install: save screen")
@@ -237,6 +240,11 @@ if mode == "tui":
     m = wait(r"TUIINSTALL=(\d+):(\w*)\r?\n", 60, "TUI install: exited")
     if m.group(1) != "0" or m.group(2) != "menu":
         sys.exit(f"FAILED: TUI install: exit {m.group(1)}, action {m.group(2)!r}")
+    # DIST-034: every task moved and finished, the ETA halfway was close.
+    send("cat /run/alpha-installer/progress.jsonl; alpha-installer progress; echo PRO\"\"GRESS=$?\r")
+    m = wait(r"PROGRESS=(\d+)\r?\n", 60, "progress stream checked")
+    if m.group(1) != "0":
+        sys.exit("FAILED: progress stream (see alpha-installer progress above)")
     # The saved file carries the yescrypt hash, no clear-text password, and is valid.
     send("echo HA\"\"SH=$(grep -c 'password_hash\": \"\\$y\\$' /root/kinolune-answers.json)"
          ":$(grep -c smoke-test-pw /root/kinolune-answers.json)"

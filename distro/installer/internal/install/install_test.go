@@ -434,6 +434,18 @@ func TestRunFullInstall(t *testing.T) {
 		info.InstalledAt != "2026-11-25T10:00:00Z" || info.InstallID == "" || info.Disk.Path != "/dev/nvme0n1" {
 		t.Errorf("install.json: %+v", info)
 	}
+	// Samba password of the first user for the first boot (DIST-018).
+	imp := filepath.Join(varSub, "lib/alpha/samba/import.smbpasswd")
+	if got := read(imp); got != SambaImportLine("admin", 1001, "correct horse", 1795600800) {
+		t.Errorf("import.smbpasswd: %q", got)
+	}
+	if st, err := os.Stat(imp); err != nil || st.Mode().Perm() != 0o600 {
+		t.Errorf("import.smbpasswd mode: %v %v", st, err)
+	}
+	// SSH keys were in the answers: the first boot may turn SSH on.
+	if _, err := os.Stat(filepath.Join(varSub, "lib/alpha/ssh-keys-at-install")); err != nil {
+		t.Errorf("no SSH keys marker: %v", err)
+	}
 
 	// SELinux relabel covers what we wrote.
 	sf := s.fake.cmds[20]
@@ -494,6 +506,13 @@ func TestRunDataPartitionHostRunnerHashedPassword(t *testing.T) {
 	_ = json.Unmarshal(infoData, &info)
 	if info.DataPool == nil || info.DataPool.Name != "films" || info.DataPool.UUID != "uuid-sda4" || info.Image.SignaturePolicyEnforce {
 		t.Errorf("install.json: %s", infoData)
+	}
+	// A hashed password gives no NT hash: no Samba import file.
+	if _, err := os.Stat(filepath.Join(s.in.Root, "@var/lib/alpha/samba/import.smbpasswd")); !os.IsNotExist(err) {
+		t.Errorf("import file with a hashed password: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(s.in.Root, "@var/lib/alpha/ssh-keys-at-install")); !os.IsNotExist(err) {
+		t.Errorf("SSH keys marker without keys: %v", err)
 	}
 	sfdisk := s.fake.cmds[1]
 	if !strings.Contains(sfdisk.Stdin, "/dev/sda3 : size=16384MiB") || !strings.Contains(sfdisk.Stdin, `/dev/sda4 : type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, name="kinolune-data"`) {

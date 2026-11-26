@@ -63,8 +63,13 @@ enum ItemKind { movie, show, episode, track }
 /// Why the player cannot play an item's file (LIB-017, LIB-020). The app
 /// shows the reason instead of opening the player.
 enum Unplayable {
-  /// A disc image (`.iso`): the LGPL player build has no disc navigation.
+  /// A disc image (`.iso`): the LGPL player build had no disc navigation
+  /// (LIB-020). Not reported since PLAY-017.
   discImage,
+
+  /// A copy-protected Blu-ray or DVD (AACS, BD+, CSS; PLAY-017): not
+  /// played, never decrypted (ADR-0139).
+  protectedDisc,
 
   /// A reason this app version does not know (a newer core).
   other;
@@ -73,6 +78,7 @@ enum Unplayable {
   static Unplayable? fromCode(String? code) => switch (code) {
     null || '' => null,
     'disc_image' => Unplayable.discImage,
+    'protected_disc' => Unplayable.protectedDisc,
     _ => Unplayable.other,
   };
 }

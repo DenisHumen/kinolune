@@ -11,7 +11,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -37,6 +40,8 @@ type tuiEnv struct {
 	livePath string // answer file in the live system
 	saveMnt  string
 	snapshot bool // disks come from a recorded snapshot (--from)
+	// payloadSize measures the image to install (bytes, 0: unknown).
+	payloadSize func(ref string) int64
 }
 
 func (t *tuiEnv) Disks() ([]disks.Disk, error) {
@@ -73,6 +78,22 @@ func (t *tuiEnv) Install(ctx context.Context, a *answers.Answers, ui io.Writer) 
 		return "", err
 	}
 	in.Version = version
+	if p, ok := ui.(tui.ProgressSink); ok {
+		in.Progress = p.Progress
+	}
+	if t.logPath != "" {
+		// The event stream next to the log: a recording replays the progress
+		// screen (DIST-034).
+		pp := filepath.Join(filepath.Dir(t.logPath), "progress.jsonl")
+		if f, err := os.OpenFile(pp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600); err == nil {
+			defer f.Close()
+			in.Progress = install.Tee(in.Progress, install.JSONLines(f))
+		}
+	}
+	if t.payloadSize != nil {
+		ref := a.Image.SourceRef()
+		in.PayloadSize = func() int64 { return t.payloadSize(ref) }
+	}
 	if err := in.WritePlan(log); err != nil {
 		return "", err
 	}
@@ -92,6 +113,22 @@ func (t *tuiEnv) Install(ctx context.Context, a *answers.Answers, ui io.Writer) 
 		return "", err
 	}
 	return in.PasswordHash, nil
+}
+
+// podmanImageSize is the unpacked size of a local image (containers-storage
+// of the live system), or 0.
+func podmanImageSize(ref string) int64 {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "podman", "image", "inspect", "--format", "{{.Size}}", ref).Output()
+	if err != nil {
+		return 0
+	}
+	n, err := strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64)
+	if err != nil || n < 0 {
+		return 0
+	}
+	return n
 }
 
 // quiet points the command echo of a real runner at log instead of stderr,
@@ -160,7 +197,8 @@ func runTUI(args []string, stdin io.Reader, stdout, stderr io.Writer, e env) err
 	}
 
 	t := &tuiEnv{e: e, src: e.live, resolve: e.resolve, dryRun: *dryRun, smart: !*noSmart, sysRoot: "/",
-		lockPath: *lockPath, logPath: *logPath, livePath: *livePath, saveMnt: "/run/alpha-installer/save"}
+		lockPath: *lockPath, logPath: *logPath, livePath: *livePath, saveMnt: "/run/alpha-installer/save",
+		payloadSize: podmanImageSize}
 	if *from != "" {
 		t.src, t.resolve, t.dryRun, t.smart, t.snapshot = disks.Dir(*from), nil, true, false, true
 	}

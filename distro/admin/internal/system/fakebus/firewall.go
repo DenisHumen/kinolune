@@ -38,12 +38,13 @@ func fwErr(code, msg string) *dbus.Error {
 }
 
 func (f *Fake) firewalld() error {
-	// The image's home zone (distro/Containerfile): samba, mdns, ws-discovery,
-	// http, https, 8487/tcp; the stock ssh, dhcpv6-client stay.
+	// The image's home zone (distro/Containerfile, DIST-018): mdns,
+	// ws-discovery, http, https, 445/tcp, 8487/tcp and the stock
+	// dhcpv6-client; ssh is closed.
 	home := func() *zoneSet {
 		return &zoneSet{
-			services: []string{"dhcpv6-client", "http", "https", "mdns", "samba", "ssh", "ws-discovery"},
-			ports:    []string{"8487/tcp"},
+			services: []string{"dhcpv6-client", "http", "https", "mdns", "ws-discovery"},
+			ports:    []string{"445/tcp", "8487/tcp"},
 		}
 	}
 	f.fw = fwState{

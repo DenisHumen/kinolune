@@ -629,8 +629,12 @@
   "@showEpisodesAllTitle": {
     "description": "UI-055: title of the «All episodes» screen: the show and the season tab.",
     "placeholders": {
-      "show": {"type": "String"},
-      "season": {"type": "String"}
+      "show": {
+        "type": "String"
+      },
+      "season": {
+        "type": "String"
+      }
     }
   },
   "showEpisodesPrevious": "Previous episodes",
@@ -645,16 +649,24 @@
   "@showEpisodeRange": {
     "description": "UI-055: chip above the row of a long season that jumps to a range of episodes, e.g. «151–200».",
     "placeholders": {
-      "from": {"type": "int"},
-      "to": {"type": "int"}
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      }
     }
   },
   "showEpisodeRangeLabel": "Episodes {from} to {to}",
   "@showEpisodeRangeLabel": {
     "description": "UI-055: screen-reader label of a range chip.",
     "placeholders": {
-      "from": {"type": "int"},
-      "to": {"type": "int"}
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      }
     }
   },
   "showMarkedWatched": "{count, plural, =1{1 episode marked as watched} other{{count} episodes marked as watched}}",
@@ -8499,5 +8511,300 @@
   "twitchRecordDiskFullBody": "What was recorded is kept as is, without conversion (a .ts file).",
   "@twitchRecordDiskFullBody": {
     "description": "Body of the disk-full notification of a recording (TWI-035)."
+  },
+  "liveUploadFrom": "Copying from {device} · {percent} %",
+  "@liveUploadFrom": {
+    "description": "LIB-028: status of a grey card of a file being copied into the library from another (or this) device.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadBytes": "{done} of {size}",
+  "@liveUploadBytes": {
+    "description": "LIB-028: bytes copied of the file size on a grey card.",
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadSpeed": "{size}/s",
+  "@liveUploadSpeed": {
+    "description": "LIB-028: copy speed on a grey card (size per second).",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadEtaSeconds": "{count, plural, one{{count} s left} other{{count} s left}}",
+  "@liveUploadEtaSeconds": {
+    "description": "LIB-028: time left of a copy, seconds.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "liveUploadEtaMinutes": "{count, plural, one{{count} min left} other{{count} min left}}",
+  "@liveUploadEtaMinutes": {
+    "description": "LIB-028: time left of a copy, minutes.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "liveUploadEtaHours": "{hours} h {minutes} min left",
+  "@liveUploadEtaHours": {
+    "description": "LIB-028: time left of a long copy.",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "liveUploadWaiting": "Waiting on {device}",
+  "@liveUploadWaiting": {
+    "description": "LIB-028: a grey card whose file waits in the upload queue of its device.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadOffline": "Paused: {device} is offline",
+  "@liveUploadOffline": {
+    "description": "LIB-028: the device that copies went quiet; the copy resumes when it is back.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadPaused": "Paused: no connection to the server, it goes on by itself",
+  "@liveUploadPaused": {
+    "description": "LIB-028: the device that copies cannot reach the source; it resumes by itself."
+  },
+  "liveUploadVerifying": "Checking…",
+  "@liveUploadVerifying": {
+    "description": "LIB-028: the copy is complete and is being checked and renamed."
+  },
+  "liveUploadAdding": "Adding to the library…",
+  "@liveUploadAdding": {
+    "description": "LIB-028: the copy is done; the item appears in a moment."
+  },
+  "liveUploadFailed": "Could not copy",
+  "@liveUploadFailed": {
+    "description": "LIB-028: the copy failed for good (no space …)."
+  },
+  "liveUploadUnavailable": "Available once it is copied",
+  "@liveUploadUnavailable": {
+    "description": "LIB-028: tapping a grey card that is still being copied."
+  },
+  "liveUploadCancel": "Cancel copying",
+  "@liveUploadCancel": {
+    "description": "LIB-028: action of a grey card (the device that copies, or an administrator)."
+  },
+  "liveUploadCancelled": "Copying cancelled",
+  "@liveUploadCancelled": {
+    "description": "LIB-028: snack bar after a copy was cancelled."
+  },
+  "liveUploadGuess": "Is this “{title}”?",
+  "@liveUploadGuess": {
+    "description": "LIB-028: the guess before copying, shown right after a drop; nothing to press if it is right.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadGuessYear": "Is this “{title}” ({year})?",
+  "@liveUploadGuessYear": {
+    "description": "LIB-028: the guess before copying with the year.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadNotThis": "Not this",
+  "@liveUploadNotThis": {
+    "description": "LIB-028: button of the guess: search and pick by hand."
+  },
+  "liveUploadPickTitle": "What is it?",
+  "@liveUploadPickTitle": {
+    "description": "LIB-028: title of the search after «Не то»."
+  },
+  "liveUploadSearchLabel": "Title",
+  "@liveUploadSearchLabel": {
+    "description": "LIB-028: search field of «Не то»."
+  },
+  "liveUploadSearchYear": "Year",
+  "@liveUploadSearchYear": {
+    "description": "LIB-028: year field of «Не то»."
+  },
+  "liveUploadSearch": "Search",
+  "@liveUploadSearch": {
+    "description": "LIB-028: search button of «Не то»."
+  },
+  "liveUploadNoResults": "Nothing found. Check the title or leave it as it is.",
+  "@liveUploadNoResults": {
+    "description": "LIB-028: «Не то» found nothing."
+  },
+  "liveUploadEpisode": "Season {season}, episode {episode}",
+  "@liveUploadEpisode": {
+    "description": "LIB-028: episode of a grey card of a series file.",
+    "placeholders": {
+      "season": {
+        "type": "int"
+      },
+      "episode": {
+        "type": "int"
+      }
+    }
+  },
+  "liveUploadSection": "Copying now",
+  "@liveUploadSection": {
+    "description": "LIB-028: heading of the grey cards on a library page (screen readers)."
+  },
+  "liveUploadThisDevice": "this device",
+  "@liveUploadThisDevice": {
+    "description": "LIB-028: «Копируется с этого устройства» when the copy runs here."
+  },
+  "libraryUnplayableProtectedDisc": "This disc is copy-protected (AACS, BD+ or CSS). Kinolune doesn't remove protection, so it can't play it. Discs and images without protection play by themselves.",
+  "detailExtraDiscTitle": "From the disc",
+  "airingNextOn": "Episode {episode} — {when}",
+  "@airingNextOn": {
+    "description": "Show page (UI-057): when the next episode airs; {when} is a date like «Thu, Dec 4», «today» or «tomorrow».",
+    "placeholders": {
+      "episode": {
+        "type": "int"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "airingNextIn": "Episode {episode} — {when} · in {left}",
+  "@airingNextIn": {
+    "description": "Show page (UI-057), anime: the next episode with its local date and time and a countdown like «2d 5h».",
+    "placeholders": {
+      "episode": {
+        "type": "int"
+      },
+      "when": {
+        "type": "String"
+      },
+      "left": {
+        "type": "String"
+      }
+    }
+  },
+  "airingLeftDaysHours": "{days}d {hours}h",
+  "@airingLeftDaysHours": {
+    "description": "Countdown to the next episode (UI-057): days and hours.",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "airingLeftHours": "{hours}h",
+  "@airingLeftHours": {
+    "description": "Countdown to the next episode (UI-057): hours.",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "airingLeftSoon": "less than an hour",
+  "@airingLeftSoon": {
+    "description": "Countdown to the next episode (UI-057): under an hour."
+  },
+  "airingToday": "today",
+  "@airingToday": {
+    "description": "The next episode airs today (UI-057)."
+  },
+  "airingTomorrow": "tomorrow",
+  "@airingTomorrow": {
+    "description": "The next episode airs tomorrow (UI-057)."
+  },
+  "airingNoDate": "More episodes are coming, no date yet",
+  "@airingNoDate": {
+    "description": "Show page (UI-057): an ongoing show on a break without a known date."
+  },
+  "airingEnded": "Series ended",
+  "@airingEnded": {
+    "description": "Show page and poster label (UI-057): the show is finished or cancelled."
+  },
+  "airingOffline": "offline · as of {date}",
+  "@airingOffline": {
+    "description": "Show page (UI-057): the airing date could not be refreshed; {date} is when it was last fetched.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "airingBadgeNext": "{weekday, select, mon{New episode Mon} tue{New episode Tue} wed{New episode Wed} thu{New episode Thu} fri{New episode Fri} sat{New episode Sat} sun{New episode Sun} other{New episode soon}}",
+  "@airingBadgeNext": {
+    "description": "Poster label (UI-057): the next episode airs this week on {weekday} (mon…sun).",
+    "placeholders": {
+      "weekday": {
+        "type": "String"
+      }
+    }
+  },
+  "airingBadgeToday": "New episode today",
+  "@airingBadgeToday": {
+    "description": "Poster label (UI-057)."
+  },
+  "airingBadgeTomorrow": "New episode tomorrow",
+  "@airingBadgeTomorrow": {
+    "description": "Poster label (UI-057)."
+  },
+  "airingBadgeOn": "New episode {date}",
+  "@airingBadgeOn": {
+    "description": "Poster label (UI-057): the next episode airs in more than a week; {date} like «Dec 4».",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "airingCardTitle": "Not out yet",
+  "@airingCardTitle": {
+    "description": "Card of the episode still to come at the end of the episode row (UI-057)."
+  },
+  "airingCardLabel": "{code}, airs {when}",
+  "@airingCardLabel": {
+    "description": "Screen reader label of the card of the episode still to come (UI-057).",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
   }
 }

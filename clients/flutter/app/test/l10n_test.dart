@@ -198,6 +198,8 @@ void main() {
         'cast',
         // LIB-027: uploading files into the library.
         'libUpload',
+        // LIB-028: grey live cards of uploads on every device.
+        'liveUpload',
         // UI-046: setting up a new device from the phone.
         'newDevice',
         // SYNC-011: Trakt.
@@ -211,6 +213,8 @@ void main() {
         'availability',
         // DIST-032: Wi-Fi and network from Home.
         'network',
+        // UI-057: when the next episode of an ongoing show airs.
+        'airing',
       ];
       for (final k in _keys(en)) {
         expect(

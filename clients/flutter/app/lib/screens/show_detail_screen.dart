@@ -19,6 +19,12 @@
 // UI-055: the episodes of the season tab are one horizontal row
 // (episode_row.dart); «Все серии» opens them as the grid (list on phones)
 // of BUG-019 on a screen of their own ([SeasonEpisodesScreen]).
+//
+// UI-057: an ongoing show says when its next episode airs under the meta
+// line («Серия 8 — чт, 4 дек.», anime with a countdown), and the row of its
+// season ends with a card of that episode: no frame, the date, it does not
+// open. Asked from the providers when the page opens; once the file of the
+// episode is in the library the real episode takes the card's place.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -31,6 +37,7 @@ import '../l10n/l10n.dart';
 import '../review/review_inbox_screen.dart';
 import '../offline/offline_ui.dart';
 import '../library/library_queries.dart' show combineLatest2;
+import '../library/show_airing.dart';
 import '../services/app_services.dart';
 import '../sources/source_text.dart' show formatAgo;
 import '../theme/kinolune_theme.dart';
@@ -104,6 +111,13 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
   /// The selected season tab: ↑ from the episode row comes back to it.
   final _seasonNode = FocusNode(debugLabel: 'season-tab');
 
+  /// UI-057: when the next episode airs; null without data.
+  ShowAiring? _airing;
+
+  /// The episodes the airing was last read for: a new file of the next
+  /// episode replaces its card.
+  ShowEpisodes? _airingEpisodes;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -113,6 +127,38 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     _seasonFromRoute = widget.initialSeason != null;
     unawaited(_loadDetails());
     unawaited(_trailer.load(context));
+    unawaited(_loadAiring(refresh: true));
+  }
+
+  /// UI-057: the stored value at once, then (on open) the providers' fresh
+  /// one; offline the stored one comes back marked.
+  Future<void> _loadAiring({bool refresh = false}) async {
+    final library = Services.read(context).library;
+    if (library is! LibraryAiring) return;
+    final airing = library as LibraryAiring;
+    try {
+      final stored = await airing.showAiring(_show.id);
+      if (mounted && stored != _airing) setState(() => _airing = stored);
+      if (!refresh) return;
+      final fresh = await airing.refreshAiring(_show.id);
+      if (mounted && fresh != _airing) setState(() => _airing = fresh);
+    } catch (e) {
+      debugPrint('Airing of ${_show.id} not read: $e');
+    }
+  }
+
+  /// The episodes changed (a new file, a watched mark): read the airing
+  /// again, after this build.
+  void _episodesChanged(ShowEpisodes eps) {
+    if (identical(eps, _airingEpisodes)) return;
+    final first = _airingEpisodes == null;
+    _airingEpisodes = eps;
+    if (first) return;
+    unawaited(
+      Future<void>.value().then((_) {
+        if (mounted) return _loadAiring();
+      }),
+    );
   }
 
   void _onTrailer() {
@@ -275,6 +321,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
         final eps = snap.data ?? ShowEpisodes.empty;
         final target = _target(eps);
         if (snap.hasData) _loadTarget(target);
+        if (snap.hasData) _episodesChanged(eps);
         return ValueListenableBuilder<bool>(
           valueListenable: Services.of(context).hideSpoilers,
           builder: (context, hide, _) => _page(context, eps, target, hide),
@@ -323,6 +370,18 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
     // UI-056: «10 серий · 7 ч 10 мин · осталось 2 ч 30 мин» of the tab.
     final seasonLine = formatSeasonRuntime(l, runtime.season(season));
     final badges = techBadges(_targetTech, null);
+    // UI-057: «Серия 8 — чт, 4 дек.» / «Сериал завершён».
+    final airing = _airing;
+    final now = Services.read(context).clock();
+    final airingText = airing == null
+        ? null
+        : airingLine(
+            l,
+            Localizations.localeOf(context).toLanguageTag(),
+            airing,
+            now,
+          );
+    final upcoming = _upcomingIn(eps, season, airing);
     // UI-049: watched marks need a library that can clear them.
     final canMark = canMarkEpisodes(context);
 
@@ -424,6 +483,33 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
                 color: KColors.textSecondaryOnArt,
               ),
             ),
+          if (airingText != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  airing!.status == AiringStatus.ended
+                      ? Icons.check_circle_outline
+                      : Icons.event_outlined,
+                  size: d.type.caption + 3,
+                  color: KColors.textSecondaryOnArt,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    airingText,
+                    key: showAiringKey,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontSize: d.type.caption + 1,
+                      color: KColors.textSecondaryOnArt,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (badges.isNotEmpty || details.ratings.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
@@ -572,6 +658,7 @@ class _ShowDetailScreenState extends State<ShowDetailScreen> {
                   all: eps.episodes,
                   canMark: canMark,
                   onUp: () => _seasonNode.requestFocus(),
+                  upcoming: upcoming,
                 ),
               ),
             ),
@@ -631,6 +718,32 @@ String? _nextId(ShowEpisodes eps) {
   return t.episode.item.id;
 }
 
+/// UI-057: the episode still to come, when it belongs at the end of the
+/// row of [season]: its own season (TMDB order), else — a new season not
+/// in the library yet, or anime numbered in one run — the last regular
+/// season. Null without a known date.
+(ShowAiring, NextAiring)? _upcomingIn(
+  ShowEpisodes eps,
+  int season,
+  ShowAiring? airing,
+) {
+  final next = airing?.next;
+  if (airing == null || next == null || next.day == null) return null;
+  if (season == 0) return null;
+  final regular = eps.seasons.where((s) => s >= 1).toList();
+  final last = regular.isEmpty ? 1 : regular.reduce(math.max);
+  final want = next.season;
+  final int target;
+  if (eps.order == EpisodeOrder.tmdb &&
+      want != null &&
+      regular.contains(want)) {
+    target = want;
+  } else {
+    target = last;
+  }
+  return target == season ? (airing, next) : null;
+}
+
 /// Name of an episode order.
 String orderLabel(AppLocalizations l, EpisodeOrder o) => switch (o) {
   EpisodeOrder.tmdb => l.showOrderTmdb,
@@ -662,6 +775,7 @@ class _SeasonRow extends StatelessWidget {
     this.all = const [],
     this.canMark = false,
     this.onUp,
+    this.upcoming,
   });
 
   final List<ShowEpisode> episodes;
@@ -671,6 +785,9 @@ class _SeasonRow extends StatelessWidget {
   final List<ShowEpisode> all;
   final bool canMark;
   final VoidCallback? onUp;
+
+  /// UI-057: the card of the episode still to come, after the last one.
+  final (ShowAiring, NextAiring)? upcoming;
 
   @override
   Widget build(BuildContext context) {
@@ -684,9 +801,12 @@ class _SeasonRow extends StatelessWidget {
     final next = nextId == null
         ? -1
         : episodes.indexWhere((e) => e.item.id == nextId);
-    int number(int i) => episodes[i].item.episode ?? i + 1;
+    final up = upcoming;
+    int number(int i) => i < episodes.length
+        ? episodes[i].item.episode ?? i + 1
+        : up?.$2.episode ?? i + 1;
     return EpisodeRow(
-      count: episodes.length,
+      count: episodes.length + (up == null ? 0 : 1),
       cardWidth: width,
       cardHeight: width * 9 / 16 + 112 * textScale,
       startIndex: next < 0 ? null : next,
@@ -696,6 +816,18 @@ class _SeasonRow extends StatelessWidget {
         l.showEpisodeRangeLabel(number(first), number(last)),
       ),
       itemBuilder: (context, i, node) {
+        if (up != null && i == episodes.length) {
+          final (airing, next) = up;
+          return UpcomingEpisodeCard(
+            focusNode: node,
+            airing: airing,
+            next: next,
+            code: next.season != null && order != EpisodeOrder.absolute
+                ? l.showEpisodeCode(next.season!, next.episode)
+                : l.showEpisodeNumber(next.episode),
+            width: width,
+          );
+        }
         final e = episodes[i];
         return _EpisodeCard(
           key: showEpisodeKey(e.item.id),

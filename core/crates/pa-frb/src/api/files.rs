@@ -218,14 +218,16 @@ pub struct CoreTransferEvent {
     pub error: Option<String>,
 }
 
-/// Sends progress at most every 150 ms, and polls the cancel flag.
+/// Sends progress at most every 50 ms (LIB-028: the live card on the
+/// other devices moves at 10 Hz, so the app must hear of progress more
+/// often than that), and polls the cancel flag.
 fn progress<'a>(
     sink: &'a StreamSink<CoreTransferEvent>,
     cancelled: &'a AtomicBool,
 ) -> impl FnMut(u64, u64) -> bool + 'a {
     let mut last: Option<Instant> = None;
     move |done, total| {
-        if last.is_none_or(|t| t.elapsed() >= Duration::from_millis(150)) || done == total {
+        if last.is_none_or(|t| t.elapsed() >= Duration::from_millis(50)) || done == total {
             last = Some(Instant::now());
             let _ = sink.add(CoreTransferEvent {
                 done,

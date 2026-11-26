@@ -1,0 +1,66 @@
+{"t":2,"kind":"start","step":"partition","total":7}
+{"t":8,"kind":"progress","step":"partition","done":1,"total":7,"detail":"wipefs"}
+{"t":276,"kind":"progress","step":"partition","done":2,"total":7,"detail":"sfdisk"}
+{"t":314,"kind":"progress","step":"partition","done":3,"total":7,"detail":"udevadm"}
+{"t":314,"kind":"progress","step":"partition","done":4,"total":7,"detail":"/dev/nvme0n1p1"}
+{"t":314,"kind":"progress","step":"partition","done":5,"total":7,"detail":"/dev/nvme0n1p2"}
+{"t":314,"kind":"progress","step":"partition","done":6,"total":7,"detail":"/dev/nvme0n1p3"}
+{"t":314,"kind":"progress","step":"partition","done":7,"total":7,"detail":"/dev/nvme0n1p4"}
+{"t":314,"kind":"progress","step":"partition","done":7,"total":7}
+{"t":314,"kind":"done","step":"partition"}
+{"t":314,"kind":"start","step":"format","total":5}
+{"t":343,"kind":"progress","step":"format","done":1,"total":5,"detail":"vfat EFI-SYSTEM"}
+{"t":357,"kind":"progress","step":"format","done":2,"total":5,"detail":"ext4 boot"}
+{"t":378,"kind":"progress","step":"format","done":3,"total":5,"detail":"btrfs root"}
+{"t":395,"kind":"progress","step":"format","done":4,"total":5,"detail":"btrfs kinolune-data"}
+{"t":425,"kind":"progress","step":"format","done":5,"total":5}
+{"t":425,"kind":"done","step":"format"}
+{"t":467,"kind":"start","step":"copy","total":2263708422,"bytes":true}
+{"t":1468,"kind":"progress","step":"copy","done":33550336,"total":2263708422,"bytes":true}
+{"t":2468,"kind":"progress","step":"copy","done":33759232,"total":2263708422,"bytes":true}
+{"t":3468,"kind":"progress","step":"copy","done":41369600,"total":2263708422,"bytes":true}
+{"t":4468,"kind":"progress","step":"copy","done":146915328,"total":2263708422,"bytes":true}
+{"t":5468,"kind":"progress","step":"copy","done":273010688,"total":2263708422,"bytes":true}
+{"t":6468,"kind":"progress","step":"copy","done":361897984,"total":2263708422,"bytes":true}
+{"t":7468,"kind":"progress","step":"copy","done":449798144,"total":2263708422,"bytes":true}
+{"t":8468,"kind":"progress","step":"copy","done":532537344,"total":2263708422,"bytes":true}
+{"t":9468,"kind":"progress","step":"copy","done":665067520,"total":2263708422,"bytes":true}
+{"t":10468,"kind":"progress","step":"copy","done":726966272,"total":2263708422,"bytes":true}
+{"t":11468,"kind":"progress","step":"copy","done":806572032,"total":2263708422,"bytes":true}
+{"t":12468,"kind":"progress","step":"copy","done":864223232,"total":2263708422,"bytes":true}
+{"t":13468,"kind":"progress","step":"copy","done":949714944,"total":2263708422,"bytes":true}
+{"t":14468,"kind":"progress","step":"copy","done":1004240896,"total":2263708422,"bytes":true}
+{"t":15468,"kind":"progress","step":"copy","done":1082843136,"total":2263708422,"bytes":true}
+{"t":16468,"kind":"progress","step":"copy","done":1141067776,"total":2263708422,"bytes":true}
+{"t":17468,"kind":"progress","step":"copy","done":1170378752,"total":2263708422,"bytes":true}
+{"t":18468,"kind":"progress","step":"copy","done":1306812416,"total":2263708422,"bytes":true}
+{"t":19468,"kind":"progress","step":"copy","done":1378918400,"total":2263708422,"bytes":true}
+{"t":20467,"kind":"progress","step":"copy","done":1451319296,"total":2263708422,"bytes":true}
+{"t":21468,"kind":"progress","step":"copy","done":1573556224,"total":2263708422,"bytes":true}
+{"t":22468,"kind":"progress","step":"copy","done":1828753408,"total":2263708422,"bytes":true}
+{"t":23468,"kind":"progress","step":"copy","done":1828753408,"total":2263708422,"bytes":true}
+{"t":24468,"kind":"progress","step":"copy","done":1829240832,"total":2263708422,"bytes":true}
+{"t":25468,"kind":"progress","step":"copy","done":1829240832,"total":2263708422,"bytes":true}
+{"t":26468,"kind":"progress","step":"copy","done":1954918400,"total":2263708422,"bytes":true}
+{"t":27467,"kind":"progress","step":"copy","done":1954918400,"total":2263708422,"bytes":true}
+{"t":28468,"kind":"progress","step":"copy","done":1954918400,"total":2263708422,"bytes":true}
+{"t":29468,"kind":"progress","step":"copy","done":2222379008,"total":2267733681,"bytes":true}
+{"t":29678,"kind":"progress","step":"copy","done":2222657536,"total":2268017893,"bytes":true}
+{"t":29678,"kind":"progress","step":"copy","done":2222657536,"total":2222657536,"bytes":true}
+{"t":29678,"kind":"done","step":"copy"}
+{"t":29678,"kind":"start","step":"bootloader"}
+{"t":30220,"kind":"done","step":"bootloader"}
+{"t":30220,"kind":"start","step":"configure","total":4}
+{"t":30229,"kind":"progress","step":"configure","total":4,"detail":"Moving /var into the btrfs subvolume @var"}
+{"t":30243,"kind":"progress","step":"configure","done":1,"total":4,"detail":"Hostname kinolune-iso"}
+{"t":30243,"kind":"progress","step":"configure","done":2,"total":4,"detail":"User admin (wheel)"}
+{"t":30263,"kind":"progress","step":"configure","done":3,"total":4,"detail":"Applying SELinux labels"}
+{"t":30274,"kind":"progress","step":"configure","done":4,"total":4}
+{"t":30274,"kind":"done","step":"configure"}
+{"t":30274,"kind":"start","step":"finalize","total":4}
+{"t":30279,"kind":"progress","step":"finalize","done":1,"total":4,"detail":"/run/alpha-installer/target/boot/efi"}
+{"t":30288,"kind":"progress","step":"finalize","done":2,"total":4,"detail":"/run/alpha-installer/target/boot"}
+{"t":30530,"kind":"progress","step":"finalize","done":3,"total":4,"detail":"/run/alpha-installer/target"}
+{"t":30531,"kind":"progress","step":"finalize","done":4,"total":4,"detail":"sync"}
+{"t":30531,"kind":"progress","step":"finalize","done":4,"total":4}
+{"t":30531,"kind":"done","step":"finalize"}

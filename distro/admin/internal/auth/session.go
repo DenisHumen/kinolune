@@ -160,6 +160,26 @@ func (s *Store) Delete(token string) {
 	delete(s.sessions, hashToken(token))
 }
 
+// RevokeUser ends every session of user except the one of keepToken (empty:
+// none kept) and returns how many it ended. Called after the user is
+// deleted, loses administrator rights or gets a new password.
+func (s *Store) RevokeUser(user, keepToken string) int {
+	keep := ""
+	if keepToken != "" {
+		keep = hashToken(keepToken)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := 0
+	for k, sess := range s.sessions {
+		if sess.User == user && k != keep {
+			delete(s.sessions, k)
+			n++
+		}
+	}
+	return n
+}
+
 // Len returns the number of live sessions.
 func (s *Store) Len() int {
 	s.mu.Lock()
