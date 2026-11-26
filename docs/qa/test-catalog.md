@@ -2230,3 +2230,19 @@ Samba на NAS с Kinolune OS (ADR-NNNN). Проверки делаются с �
 
 Автотесты: NAS-01…NAS-04, NAS-06, NAS-07 — `distro/admin/tests/vm-admin-e2e.sh` (QEMU, `smbclient` снаружи VM через проброс порта и firewall VM, `tests/vm_samba_check.py`), NAS-02…NAS-04 также `distro/admin/tests/samba-container.sh`; API — `distro/admin/internal/server/accounts_test.go`, помощник — `distro/admin/internal/privhelper/privhelper_test.go`.
 Автотесты: INST-02…INST-10 — `distro/installer/internal/tui/tui_test.go` (вызовы Update() на снимках дисков, эталонные экраны 80×24 на uk/en/ru в `testdata/golden/`) и `distro/installer/cmd/alpha-installer/tui_test.go`; INST-01, INST-02, INST-06, INST-10 — `distro/tests/iso-boot.sh` (ISO в QEMU/OVMF по последовательной консоли, пробная установка через все экраны). INST-07, INST-12 — `distro/installer/internal/tui/progress_test.go` (записанный поток прогресса установки из QEMU: эталонные экраны, teatest) и `distro/installer/internal/install/progress_test.go`; `INSTALL=tui distro/tests/iso-boot.sh` ждёт строку копирования со скоростью и проверяет поток командой «alpha-installer progress».
+
+## 26. Сайт (SITE-001)
+
+Сайт проекта на GitHub Pages (`denishumen.github.io/kinolune/`, ADR-NNNN). Колонки — браузер на этой платформе (на ТВ-платформах сайта нет: «—»).
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| SITE-01 | Открыть корень сайта → переход на язык: запомненный выбор, иначе язык браузера (uk, en, ru), иначе English; без JavaScript видны три ссылки на языки | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-02 | Переключатель «UK / EN / RU» в шапке → та же страница на другом языке, выбор запоминается для корня сайта | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-03 | «Завантажити / Download / Скачать» → страница GitHub Releases; «Код на GitHub» → репозиторий | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-04 | Раздел «Встановити»: команды APT и DNF из README, после их выполнения `kinolune` ставится из `/apt` и `/rpm` того же сайта | — | — | — | — | — | — | — | ⬜ |
+| SITE-05 | После деплоя сайта `/apt/dists/stable/InRelease`, `/rpm/kinolune.repo` и `/kinolune.asc` по-прежнему открываются | — | — | — | — | — | — | — | ⬜ |
+| SITE-06 | Несуществующий адрес → страница 404 на трёх языках со ссылками на главную | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-07 | Узкий экран (телефон): нет горизонтальной прокрутки, меню и кнопки помещаются; «Уменьшить движение» и «Уменьшить прозрачность» убирают анимацию и стекло | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+
+Автотесты: SITE-01…SITE-06 частично — `docs/site/scripts/check.mjs` в CI (`site.yml`, `linux-repo.yml`): одинаковые ключи во всех языках, нет литералов цвета, все внутренние ссылки и якоря живые, нет сторонних скриптов и шрифтов, сайт не пишет в `/apt`, `/rpm`, `/kinolune.asc`.

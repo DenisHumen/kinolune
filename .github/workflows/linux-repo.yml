@@ -28,6 +28,7 @@ on:
       - "docs/site/**"
       - "design/tokens/generated/web/**"
       - "design/brand/export/**"
+      - "docs/screenshots/0.1/**"
 
 permissions:
   contents: read
