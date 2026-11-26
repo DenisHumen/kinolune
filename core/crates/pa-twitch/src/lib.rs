@@ -32,6 +32,9 @@
 //! - **Chat writes** (TWI-010): [`HelixClient::send_chat_message`] and
 //!   [`HelixClient::create_eventsub_subscription`] (WebSocket transport) for
 //!   the live-chat sources in `pa-twitch-chat`.
+//! - **Clips** (TWI-040): [`HelixClient::create_clip`] and
+//!   [`AuthorizedHelix::make_clip`], which waits until `GET /clips?id=`
+//!   returns the clip and asks for `clips:edit` only when it is missing.
 //! - **Playback** (TWI-004): [`playback::TwitchPlayback`] decides between
 //!   the official embed and native HLS from the signed remote config
 //!   (`pa-remote-config`); the GQL/usher path exists only in full builds
@@ -64,6 +67,7 @@ mod chat_api;
 #[cfg(pa_twitch_native)]
 pub mod chat_replay;
 mod client;
+mod clips_api;
 mod error;
 mod model;
 mod pagination;
@@ -78,8 +82,8 @@ mod util;
 
 pub use auth::{
     Account, AuthConfig, AuthError, AuthResult, AuthorizedHelix, DEFAULT_ID_BASE_URL,
-    DEFAULT_SCOPES, DeviceAuthorization, REFRESH_MARGIN, SCOPE_READ_CHAT, SCOPE_READ_FOLLOWS,
-    SCOPE_WRITE_CHAT, TwitchAuth, VALIDATE_INTERVAL, Validation,
+    DEFAULT_SCOPES, DeviceAuthorization, REFRESH_MARGIN, SCOPE_CLIPS_EDIT, SCOPE_READ_CHAT,
+    SCOPE_READ_FOLLOWS, SCOPE_WRITE_CHAT, TwitchAuth, VALIDATE_INTERVAL, Validation,
 };
 pub use cache::{MAX_CACHE_TTL, TtlCache};
 pub use chat_api::{
@@ -90,6 +94,7 @@ pub use client::{
     AccessToken, ClientId, ClipsQuery, DEFAULT_BASE_URL, FollowedStreamer, HelixClient,
     HelixConfig, SchedulePage, SearchChannelsQuery, StreamsQuery, VideosQuery,
 };
+pub use clips_api::{CLIP_POLL_INTERVAL, CLIP_READY_TIMEOUT, ClipError, CreatedClip};
 pub use error::{Error, Result};
 pub use model::*;
 pub use pagination::{Cursor, HasId, MAX_PAGE_SIZE, Page, collect_pages};

@@ -8782,5 +8782,67 @@
         "type": "String"
       }
     }
+  },
+  "twitchClip": "Clip",
+  "@twitchClip": {
+    "description": "Button on the live player that makes a Twitch clip (TWI-040)."
+  },
+  "twitchClipTooltip": "Clip the last seconds of the stream",
+  "@twitchClipTooltip": {
+    "description": "Tooltip of the clip button (TWI-040)."
+  },
+  "twitchClipShortcut": "Clip the last seconds of the stream (Alt+X)",
+  "@twitchClipShortcut": {
+    "description": "Tooltip of the clip button on a computer, with its key (TWI-040)."
+  },
+  "twitchClipMaking": "Twitch is making the clip…",
+  "@twitchClipMaking": {
+    "description": "Shown while the clip is being made (TWI-040)."
+  },
+  "twitchClipReady": "Clip ready",
+  "@twitchClipReady": {
+    "description": "Title of the card shown when the clip is made (TWI-040)."
+  },
+  "twitchClipWatch": "Watch",
+  "@twitchClipWatch": {
+    "description": "Button of the clip card: watch the clip (TWI-040)."
+  },
+  "twitchClipShare": "Share",
+  "@twitchClipShare": {
+    "description": "Button of the clip card on a phone: the system share menu (TWI-040)."
+  },
+  "twitchClipEditHint": "On Twitch you can trim the clip and give it a title.",
+  "@twitchClipEditHint": {
+    "description": "Hint under the clip card's «Open on Twitch» (TWI-040)."
+  },
+  "twitchClipsOff": "This channel has turned clips off.",
+  "@twitchClipsOff": {
+    "description": "Why the clip button is off (TWI-040)."
+  },
+  "twitchClipOffline": "The channel is not live, so there is nothing to clip.",
+  "@twitchClipOffline": {
+    "description": "Clip failed: channel offline (TWI-040)."
+  },
+  "twitchClipNotReady": "Twitch has not finished the clip yet. It will show up among the channel's clips later.",
+  "@twitchClipNotReady": {
+    "description": "Clip not finished within 15 seconds (TWI-040)."
+  },
+  "twitchClipRateLimited": "Too many clips in a row. Try again in {seconds} s.",
+  "@twitchClipRateLimited": {
+    "description": "Clip refused: rate limit, with the wait (TWI-040).",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "example": "30"
+      }
+    }
+  },
+  "twitchClipFailed": "Could not make the clip. Try again.",
+  "@twitchClipFailed": {
+    "description": "Clip failed: network or Twitch error (TWI-040)."
+  },
+  "twitchSignInClipsNote": "Twitch will also ask to let Kinolune make clips.",
+  "@twitchSignInClipsNote": {
+    "description": "Line in the sign-in dialog opened by the clip button (TWI-040)."
   }
 }

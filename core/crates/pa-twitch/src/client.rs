@@ -400,6 +400,11 @@ impl HelixClient {
 
     // ----- request loop ---------------------------------------------------
 
+    /// The clock (fixture clock in tests).
+    pub(crate) fn clock(&self) -> Arc<dyn Clock> {
+        self.clock.clone()
+    }
+
     pub(crate) fn build_request(
         &self,
         method: Method,
@@ -520,7 +525,7 @@ impl HelixClient {
             .ok_or_else(|| Error::Decode("empty response".to_owned()))
     }
 
-    async fn get_opt<T: DeserializeOwned>(
+    pub(crate) async fn get_opt<T: DeserializeOwned>(
         &self,
         path: &str,
         query: Query,

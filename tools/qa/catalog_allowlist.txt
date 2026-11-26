@@ -127,3 +127,6 @@ twitch-record-live-recording  # row of the recording indicator; its parts are ci
 live-upload-status-*  # status line inside a grey card (LIB-028); the card is cited as OFF-39
 live-upload-detail-*  # bytes, speed and time left inside a grey card (LIB-028, OFF-39)
 live-upload-guess-text  # text of the guess snack bar (LIB-028); the snack bar is cited as OFF-37
+twitch-clip-busy  # spinner while Twitch makes a clip (TWI-040); the button is cited as TWI-196
+twitch-clip-url  # selectable link text on the clip card (TWI-040); the card is cited as TWI-198
+twitch-sign-in-clips-note  # line in the sign-in dialog (TWI-040); the flow is cited as TWI-197
