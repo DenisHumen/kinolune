@@ -151,9 +151,8 @@ void main() {
     await t.tap(find.byKey(const ValueKey('twitch-clip-watch')));
     await settle(t, 4);
     expect(find.byKey(const ValueKey('twitch-open-dialog')), findsOneWidget);
-    Navigator.of(
-      t.element(find.byKey(const ValueKey('twitch-open-dialog'))),
-    ).pop();
+    Navigator.of(t.element(find.byKey(const ValueKey('twitch-open-dialog'))))
+        .pop();
     await settle(t, 4);
     await t.tap(find.byKey(const ValueKey('twitch-clip-close')));
     await settle(t, 4);

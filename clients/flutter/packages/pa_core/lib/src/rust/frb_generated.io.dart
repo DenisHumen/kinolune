@@ -920,6 +920,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTwitchAccount dco_decode_box_autoadd_core_twitch_account(dynamic raw);
 
   @protected
+  CoreTwitchNewClip dco_decode_box_autoadd_core_twitch_new_clip(dynamic raw);
+
+  @protected
   CoreTwitchUser dco_decode_box_autoadd_core_twitch_user(dynamic raw);
 
   @protected
@@ -1650,6 +1653,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTwitchClip dco_decode_core_twitch_clip(dynamic raw);
 
   @protected
+  CoreTwitchClipOutcome dco_decode_core_twitch_clip_outcome(dynamic raw);
+
+  @protected
+  CoreTwitchClipResult dco_decode_core_twitch_clip_result(dynamic raw);
+
+  @protected
   CoreTwitchDeviceLogin dco_decode_core_twitch_device_login(dynamic raw);
 
   @protected
@@ -1663,6 +1672,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchImportReport dco_decode_core_twitch_import_report(dynamic raw);
+
+  @protected
+  CoreTwitchNewClip dco_decode_core_twitch_new_clip(dynamic raw);
 
   @protected
   CoreTwitchProgress dco_decode_core_twitch_progress(dynamic raw);
@@ -2318,6 +2330,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchAccount? dco_decode_opt_box_autoadd_core_twitch_account(
+    dynamic raw,
+  );
+
+  @protected
+  CoreTwitchNewClip? dco_decode_opt_box_autoadd_core_twitch_new_clip(
     dynamic raw,
   );
 
@@ -3314,6 +3331,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreTwitchNewClip sse_decode_box_autoadd_core_twitch_new_clip(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreTwitchUser sse_decode_box_autoadd_core_twitch_user(
     SseDeserializer deserializer,
   );
@@ -4204,6 +4226,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreTwitchClip sse_decode_core_twitch_clip(SseDeserializer deserializer);
 
   @protected
+  CoreTwitchClipOutcome sse_decode_core_twitch_clip_outcome(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTwitchClipResult sse_decode_core_twitch_clip_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreTwitchDeviceLogin sse_decode_core_twitch_device_login(
     SseDeserializer deserializer,
   );
@@ -4223,6 +4255,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchImportReport sse_decode_core_twitch_import_report(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTwitchNewClip sse_decode_core_twitch_new_clip(
     SseDeserializer deserializer,
   );
 
@@ -5156,6 +5193,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreTwitchAccount? sse_decode_opt_box_autoadd_core_twitch_account(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreTwitchNewClip? sse_decode_opt_box_autoadd_core_twitch_new_clip(
     SseDeserializer deserializer,
   );
 
@@ -6355,6 +6397,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_core_twitch_account(
     CoreTwitchAccount self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_twitch_new_clip(
+    CoreTwitchNewClip self,
     SseSerializer serializer,
   );
 
@@ -7598,6 +7646,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_core_twitch_clip_outcome(
+    CoreTwitchClipOutcome self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_twitch_clip_result(
+    CoreTwitchClipResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_twitch_device_login(
     CoreTwitchDeviceLogin self,
     SseSerializer serializer,
@@ -7624,6 +7684,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_twitch_import_report(
     CoreTwitchImportReport self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_twitch_new_clip(
+    CoreTwitchNewClip self,
     SseSerializer serializer,
   );
 
@@ -8791,6 +8857,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_twitch_account(
     CoreTwitchAccount? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_twitch_new_clip(
+    CoreTwitchNewClip? self,
     SseSerializer serializer,
   );
 
