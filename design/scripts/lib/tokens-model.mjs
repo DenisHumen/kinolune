@@ -22,6 +22,7 @@ async function readTree(dir, rel) {
 
 const listTokenFiles = async (dir, sub) =>
   (await readdir(path.join(dir, sub))).filter((f) => f.endsWith('.tokens.json')).sort();
+const listOptional = (dir, sub) => listTokenFiles(dir, sub).catch((e) => (e.code === 'ENOENT' ? [] : Promise.reject(e)));
 
 /** camelCase identifier from a token path: `bg.elevated-2` → `bgElevated2`. */
 export function camelName(p) {
@@ -57,7 +58,7 @@ export async function buildModel(dir = TOKENS_DIR) {
   for (const t of tn) for (const d of dn) sets[`${t}/${d}`] = new Map([...primitive, ...semantic, ...themes[t], ...densities[d], ...component]);
   const paths = [...new Set([...semantic.keys(), ...densities[dn[0]].keys(), ...component.keys()])];
 
-  const model = { themes: tn, densities: dn, constant: [], byTheme: [], byDensity: [] };
+  const model = { themes: tn, densities: dn, constant: [], byTheme: [], byDensity: [], palettes: [] };
   for (const p of paths) {
     const set0 = sets[`${tn[0]}/${dn[0]}`];
     const tok = set0.get(p);
@@ -76,6 +77,19 @@ export async function buildModel(dir = TOKENS_DIR) {
         exts: Object.fromEntries(dn.map((d) => [d, ext(tn[0], d)])),
       });
     } else model.constant.push({ ...info, value: val(tn[0], dn[0]) });
+  }
+  // Palettes (palettes/*) override colour roles on top of the default theme and density.
+  // Only the CSS emitter uses them so far (DSN-017 brings them to the other platforms).
+  for (const f of await listOptional(dir, 'palettes')) {
+    const pal = await readTree(dir, `palettes/${f}`);
+    const set = new Map([...sets[`${tn[0]}/${dn[0]}`], ...pal]);
+    const entries = [];
+    for (const e of [...model.constant, ...model.byTheme]) {
+      const base = e.value ?? e.values[tn[0]];
+      const v = resolve(set, e.p);
+      if (JSON.stringify(v) !== JSON.stringify(base)) entries.push({ p: e.p, type: e.type, ext: e.ext, value: v });
+    }
+    model.palettes.push({ name: f.replace('.tokens.json', ''), entries });
   }
   return model;
 }

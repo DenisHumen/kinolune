@@ -22,6 +22,7 @@ import '../library_grid_screen.dart' show FilterPill;
 import '../twitch_screen.dart' show formatScheduleTime;
 import 'twitch_archive_screens.dart';
 import 'twitch_browse.dart';
+import 'twitch_follow.dart';
 import 'twitch_play.dart';
 import 'twitch_record_live.dart';
 import 'twitch_widgets.dart';
@@ -205,9 +206,14 @@ class _TwitchChannelScreenState extends State<TwitchChannelScreen> {
                   key: const ValueKey('twitch-channel-favorite'),
                   autofocus: live == null,
                   icon: fav ? Icons.star_rounded : Icons.star_outline_rounded,
-                  label: l.twitchFavorites,
+                  // TWI-033: the label says it is Kinolune's, not Twitch's.
+                  label: fav
+                      ? l.twitchInKinoluneFavorites
+                      : l.twitchAddFavorite,
                   onPressed: () => twitch.toggleFavorite(c),
                 ),
+                // TWI-033: follow on Twitch (signed in only, ADR-NNNN).
+                if (twitch.account != null) TwitchFollowButton(channel: c),
                 // TWI-009: the favourite's "X is live" bell.
                 if (fav)
                   KButton(

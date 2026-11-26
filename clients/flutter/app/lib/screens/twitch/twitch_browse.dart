@@ -30,6 +30,7 @@ import '../../widgets/cards.dart';
 import '../../widgets/focusable.dart';
 import '../library_grid_screen.dart' show FilterPill;
 import 'twitch_channel_screen.dart';
+import 'twitch_follow.dart';
 import 'twitch_play.dart';
 import 'twitch_widgets.dart';
 
@@ -676,7 +677,7 @@ class _TwitchCategoryStreamsState extends State<TwitchCategoryStreams> {
   }
 }
 
-enum _StreamAction { watch, channel, favorite }
+enum _StreamAction { watch, channel, favorite, follow }
 
 /// The menu of a live stream (right click, long press, the menu key or a
 /// held OK): watch, open the channel, add to or remove from favourites.
@@ -689,6 +690,9 @@ Future<void> showTwitchStreamMenu(
   final twitch = Services.of(context).twitch;
   final channel = twitchChannelOfStream(twitch, stream);
   final favorite = twitch.isFavorite(stream.login);
+  // TWI-033: signed in, the menu also follows on Twitch.
+  final signedIn = twitch.account != null;
+  final follows = twitch.followsOnTwitch(stream.login) == true;
   final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
   final chosen = await showMenu<_StreamAction>(
     context: context,
@@ -712,6 +716,12 @@ Future<void> showTwitchStreamMenu(
         value: _StreamAction.favorite,
         child: Text(favorite ? l.twitchRemoveFavorite : l.twitchAddFavorite),
       ),
+      if (signedIn)
+        PopupMenuItem(
+          key: const ValueKey('twitch-stream-menu-follow'),
+          value: _StreamAction.follow,
+          child: Text(follows ? l.twitchUnfollow : l.twitchFollow),
+        ),
     ],
   );
   if (chosen == null || !context.mounted) return;
@@ -722,6 +732,8 @@ Future<void> showTwitchStreamMenu(
       openTwitchChannel(context, channel);
     case _StreamAction.favorite:
       await twitch.toggleFavorite(channel);
+    case _StreamAction.follow:
+      await followOnTwitch(context, channel, unfollow: follows);
   }
 }
 

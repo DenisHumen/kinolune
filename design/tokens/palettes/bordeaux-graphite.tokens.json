@@ -1,0 +1,432 @@
+{
+  "$description": "Palette v2 №12 «Бордо и графит» (docs/design/palette-v2.md), tentative choice of the owner 2026-11-26. Overrides colour roles of semantic.tokens.json on top of the dark theme. Six base colours: bg #161214, surface #251C1F, text #EFE6E6, muted #A3949A, accent #C27580, accent 2 #C8B6A6; the rest is derived from them (mixes and alphas noted per token). CSS: data-palette=\"bordeaux-graphite\".",
+  "bg": {
+    "$type": "color",
+    "base": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0863,
+          0.0706,
+          0.0784
+        ],
+        "hex": "#161214"
+      },
+      "$description": "bg"
+    },
+    "elevated": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.1451,
+          0.1098,
+          0.1216
+        ],
+        "hex": "#251c1f"
+      },
+      "$description": "surface"
+    },
+    "elevated-2": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.1922,
+          0.1569,
+          0.1686
+        ],
+        "hex": "#31282b"
+      },
+      "$description": "surface + 6 % text"
+    },
+    "sunken": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0549,
+          0.0471,
+          0.051
+        ],
+        "hex": "#0e0c0d"
+      },
+      "$description": "bg + 35 % black"
+    },
+    "hover": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9373,
+          0.902,
+          0.902
+        ],
+        "hex": "#efe6e6",
+        "alpha": 0.08
+      },
+      "$description": "text @ 8 %"
+    },
+    "selected": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9373,
+          0.902,
+          0.902
+        ],
+        "hex": "#efe6e6",
+        "alpha": 0.16
+      },
+      "$description": "text @ 16 %"
+    }
+  },
+  "text": {
+    "$type": "color",
+    "primary": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9373,
+          0.902,
+          0.902
+        ],
+        "hex": "#efe6e6"
+      },
+      "$description": "text"
+    },
+    "secondary": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.6392,
+          0.5804,
+          0.6039
+        ],
+        "hex": "#a3949a"
+      },
+      "$description": "muted"
+    },
+    "tertiary": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.6392,
+          0.5804,
+          0.6039
+        ],
+        "hex": "#a3949a",
+        "alpha": 0.62
+      },
+      "$description": "muted @ 62 % (inactive, ≥ 3:1)"
+    },
+    "link": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.7843,
+          0.7137,
+          0.651
+        ],
+        "hex": "#c8b6a6"
+      },
+      "$description": "accent 2"
+    },
+    "on-accent": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0863,
+          0.0706,
+          0.0784
+        ],
+        "hex": "#161214"
+      },
+      "$description": "bg on accent (dark label, palette-v2: chosen by contrast)"
+    }
+  },
+  "border": {
+    "$type": "color",
+    "subtle": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9373,
+          0.902,
+          0.902
+        ],
+        "hex": "#efe6e6",
+        "alpha": 0.12
+      },
+      "$description": "text @ 12 % (glass edge, palette-v2)"
+    },
+    "strong": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9373,
+          0.902,
+          0.902
+        ],
+        "hex": "#efe6e6",
+        "alpha": 0.24
+      },
+      "$description": "text @ 24 %"
+    }
+  },
+  "accent": {
+    "$type": "color",
+    "default": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.7608,
+          0.4588,
+          0.502
+        ],
+        "hex": "#c27580"
+      },
+      "$description": "accent"
+    },
+    "pressed": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.7843,
+          0.5216,
+          0.5569
+        ],
+        "hex": "#c8858e"
+      },
+      "$description": "accent + 14 % text (lighter: the label is dark)"
+    },
+    "subtle": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.2745,
+          0.1804,
+          0.1961
+        ],
+        "hex": "#462e32"
+      },
+      "$description": "accent + 72 % bg"
+    }
+  },
+  "status": {
+    "$type": "color",
+    "success": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.5608,
+          0.7608,
+          0.6039
+        ],
+        "hex": "#8fc29a"
+      },
+      "$description": "muted green, no acid colours (palette-v2)"
+    },
+    "warning": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8667,
+          0.7059,
+          0.4314
+        ],
+        "hex": "#ddb46e"
+      },
+      "$description": "muted amber"
+    },
+    "danger": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9098,
+          0.5137,
+          0.5412
+        ],
+        "hex": "#e8838a"
+      },
+      "$description": "muted red"
+    }
+  },
+  "state": {
+    "$type": "color",
+    "progress-track": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9373,
+          0.902,
+          0.902
+        ],
+        "hex": "#efe6e6",
+        "alpha": 0.24
+      },
+      "$description": "text @ 24 %"
+    }
+  },
+  "focus": {
+    "$type": "color",
+    "fill": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9373,
+          0.902,
+          0.902
+        ],
+        "hex": "#efe6e6"
+      },
+      "$description": "text"
+    },
+    "label": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0863,
+          0.0706,
+          0.0784
+        ],
+        "hex": "#161214"
+      },
+      "$description": "bg"
+    },
+    "ring": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.7608,
+          0.4588,
+          0.502
+        ],
+        "hex": "#c27580"
+      },
+      "$description": "accent"
+    }
+  },
+  "glass": {
+    "$type": "color",
+    "thin": {
+      "tint": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.1451,
+            0.1098,
+            0.1216
+          ],
+          "hex": "#251c1f",
+          "alpha": 0.45
+        },
+        "$description": "surface @ 45 % (liquid glass)"
+      },
+      "highlight": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9373,
+            0.902,
+            0.902
+          ],
+          "hex": "#efe6e6",
+          "alpha": 0.12
+        },
+        "$description": "text @ 12 %"
+      },
+      "fallback": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.1451,
+            0.1098,
+            0.1216
+          ],
+          "hex": "#251c1f",
+          "alpha": 0.85
+        },
+        "$description": "surface @ 85 % (no blur)"
+      }
+    },
+    "regular": {
+      "tint": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.1451,
+            0.1098,
+            0.1216
+          ],
+          "hex": "#251c1f",
+          "alpha": 0.5
+        },
+        "$description": "surface @ 50 %"
+      },
+      "highlight": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9373,
+            0.902,
+            0.902
+          ],
+          "hex": "#efe6e6",
+          "alpha": 0.14
+        },
+        "$description": "text @ 14 %"
+      },
+      "fallback": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.1451,
+            0.1098,
+            0.1216
+          ],
+          "hex": "#251c1f",
+          "alpha": 0.92
+        },
+        "$description": "surface @ 92 % (no blur)"
+      }
+    },
+    "thick": {
+      "tint": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.1451,
+            0.1098,
+            0.1216
+          ],
+          "hex": "#251c1f",
+          "alpha": 0.55
+        },
+        "$description": "surface @ 55 %"
+      },
+      "highlight": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9373,
+            0.902,
+            0.902
+          ],
+          "hex": "#efe6e6",
+          "alpha": 0.16
+        },
+        "$description": "text @ 16 %"
+      },
+      "fallback": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.1451,
+            0.1098,
+            0.1216
+          ],
+          "hex": "#251c1f",
+          "alpha": 0.95
+        },
+        "$description": "surface @ 95 % (no blur)"
+      }
+    }
+  }
+}

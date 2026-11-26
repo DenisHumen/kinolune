@@ -13,6 +13,7 @@
 | `primitive.tokens.json` | primitive | Палитра (gray, white/black-alpha, lune — бренд-акцент Kinolune (DSN-006), red — LIVE, green, amber), отступы 0–100 (база 4 pt), радиусы, размеры, blur, шрифт, веса, длительности, кривые, коэффициенты. **Из кода платформ не используются.** |
 | `semantic.tokens.json` | semantic, тёмная тема | `bg/*`, `text/*`, `icon/*`, `border/*`, `accent/default|pressed|subtle|live`, `status/*`, `state/*`, `focus/*` (fill, label, ring, scale.poster/card/button/hover/press, shadow, specular, tilt, parallax, idle-dim), `badge/*`, `scrim/*`, `glass/thin|regular|thick` (tint, blur, saturation, highlight, fallback), `motion/*` |
 | `themes/light.tokens.json` | переопределение | Светлая тема (телефон, планшет, десктоп; TV всегда тёмный). Переопределяет **только существующие** semantic-токены |
+| `palettes/<имя>.tokens.json` | палитра | Палитра редизайна v2 ([docs/design/palette-v2.md](../../docs/design/palette-v2.md)): переопределяет **только цвета** semantic-ролей поверх тёмной темы. Сейчас `bordeaux-graphite` (№ 12 «Бордо и графит», предварительный выбор владельца). Пока только в CSS (`data-palette="<имя>"`, админка NAS — DIST-014); на Flutter, Apple и Android — в DSN-017 |
 | `density/{tv,desktop,tablet,phone}.tokens.json` | плотность | `type/*` (display, title1, title2, headline, subtitle, body, callout, caption, caption2, timecode), `layout/*` (поля, safe area TV 60/80, отступы, ширины постеров и карточек, колонки), `shape/*` (радиусы карточек/панелей/кнопок), `icon-size/*`, `control/*`. **Без цветов**; набор токенов во всех профилях одинаковый |
 | `component.tokens.json` | component | `poster`, `card`, `button`, `media-badge`, `osd`, `dialog` — привязки к ролям |
 | `contrast.pairs.json` | — | Пары «текст/фон» для проверки контраста (не токены) |
@@ -49,9 +50,9 @@ just design contrast   # таблица контраста всех пар
 1. структуру DTCG: зарезервированные ключи, токен не содержит детей, у каждого токена есть `$type` (свой или группы), значения соответствуют типу (цвет: srgb, компоненты 0–1, `hex` совпадает с компонентами; размеры px/rem; длительности ms/s; составные типы — по полям);
 2. ссылки: существуют, совместимы по типу (в том числе внутри shadow/typography/transition/gradient), без циклов — для **каждой** комбинации тема × плотность (2 × 4);
 3. правила слоёв: темы только переопределяют, профили плотности одинаковы по набору и без цветов, один путь — в одном слое;
-4. контраст WCAG 2.x для всех пар из `contrast.pairs.json` в обеих темах: текст ≥ 4.5:1, неактивный текст и нетекстовые элементы (кольцо фокуса, контур бейджа, прогресс) ≥ 3:1. Полупрозрачные фоны (стекло, scrim, подложка бейджа) проверяются поверх худших случаев арта — чёрного и белого.
+4. контраст WCAG 2.x для всех пар из `contrast.pairs.json` в обеих темах и в каждой палитре: текст ≥ 4.5:1, неактивный текст и нетекстовые элементы (кольцо фокуса, контур бейджа, прогресс) ≥ 3:1. Полупрозрачные фоны (стекло, scrim, подложка бейджа) проверяются поверх худших случаев арта — чёрного и белого.
 
-Сейчас: 287 токенов, 66 проверок контраста, минимум 3.31:1 (неактивный текст в светлой теме), минимум для обычного текста — 4.76:1 (бейдж поверх белого арта).
+Сейчас: 287 токенов, 99 проверок контраста (темы dark, light и палитра bordeaux-graphite), минимум 3.31:1 (неактивный текст в светлой теме), минимум для обычного текста — 4.76:1 (бейдж поверх белого арта).
 
 ## Экспорт в код (DSN-003)
 
@@ -62,7 +63,7 @@ just design contrast   # таблица контраста всех пар
 | Flutter | `flutter/pa_design/lib/src/tokens.g.dart` | `Color`, `double`, `Duration`, `Cubic`, `BoxShadow`, `LinearGradient`, `TextStyle` (Inter, `opsz`), `PaTransition`. API релиза 0.1 сохранён |
 | Apple (SwiftUI) | `tokens/generated/apple/Tokens.swift` | `Color` (sRGB), `CGFloat`, `Double`, `TimeInterval` (с), `PaCurve`, `PaShadow`, `PaGradient`, `PaTransition` (`.animation`), `PaTypography` (`.font` — системный SF, DSN-ADR-0002). Подключается в `clients/apple/TVApp/project.yml` |
 | Android (Kotlin) | `tokens/generated/android/PaTokens.kt`, пакет `app.kinolune.design` | без зависимостей: цвет — ARGB `Int` (`Color(Int)` в Compose), размеры — `Float` dp/sp, длительности — `Long` мс, `PaCurve`, `PaShadow`, `PaGradientStop`, `PaTransition`, `PaTypography` |
-| Web (CSS) | `tokens/generated/web/tokens.css` | custom properties `--pa-<путь>`; по умолчанию тёмная тема и плотность desktop на `:root`, переключение — `data-theme="light"`, `data-density="tv|tablet|phone"` на любом элементе. Типографика — шорткат для `font` плюс `-letter-spacing` и `-font-feature-settings` |
+| Web (CSS) | `tokens/generated/web/tokens.css` | custom properties `--pa-<путь>`; по умолчанию тёмная тема и плотность desktop на `:root`, переключение — `data-theme="light"`, `data-density="tv|tablet|phone"`, палитра — `data-palette="<имя>"` на любом элементе. Типографика — шорткат для `font` плюс `-letter-spacing` и `-font-feature-settings` |
 
 ```bash
 just design tokens     # проверить JSON и перегенерировать код всех платформ

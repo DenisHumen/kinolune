@@ -2172,6 +2172,30 @@
   },
   "twitchAddFavorite": "Add to favorites",
   "twitchRemoveFavorite": "Remove from favorites",
+  "twitchInKinoluneFavorites": "In Kinolune favorites ✓",
+  "twitchFollow": "Follow",
+  "twitchFollowingOnTwitch": "Following on Twitch ✓",
+  "twitchUnfollow": "Unfollow",
+  "twitchUnfollowTitle": "Unfollow {name}?",
+  "@twitchUnfollowTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "twitchUnfollowMessage": "The channel leaves your Kinolune favorites. Twitch lets apps only read follows, so the channel page opens on Twitch: press «Unfollow» there.",
+  "twitchFollowOpened": "{name} is in your Kinolune favorites. Press «Follow» on Twitch and come back — the button will update.",
+  "@twitchFollowOpened": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "twitchUnfollowOpened": "Press «Unfollow» on Twitch and come back — the button will update.",
+  "twitchFollowQrHint": "The channel is in your Kinolune favorites. To follow it on Twitch, scan the code with your phone and press «Follow».",
+  "twitchUnfollowQrHint": "The channel left your Kinolune favorites. To unfollow it on Twitch, scan the code with your phone and press «Unfollow».",
   "twitchPin": "Pin to the top",
   "twitchUnpin": "Unpin",
   "twitchSort": "Sort",
