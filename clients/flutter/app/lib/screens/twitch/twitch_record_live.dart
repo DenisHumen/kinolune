@@ -138,9 +138,9 @@ class _TwitchRecordLiveButtonState extends State<TwitchRecordLiveButton>
   @override
   String? get userId => widget.userId;
 
-  void _snack(String text) => ScaffoldMessenger.maybeOf(
-    context,
-  )?.showSnackBar(SnackBar(content: Text(text)));
+  void _snack(String text) =>
+      ScaffoldMessenger.maybeOf(context)
+          ?.showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _start() async {
     final m = model;

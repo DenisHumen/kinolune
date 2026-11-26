@@ -131,6 +131,7 @@ class FakeTwitchArchive implements TwitchArchive {
     final i = _recordings.indexWhere((r) => r.jobId == item.jobId);
     if (i >= 0) _recordings[i] = item;
   }
+
   final imported = <String>[];
   TwitchImportResult importResult = const TwitchImportResult(
     added: 3,

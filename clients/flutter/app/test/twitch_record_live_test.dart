@@ -25,6 +25,7 @@ import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/twitch/live_notifications.dart';
 import 'package:kinolune/twitch/twitch_archive.dart';
 import 'package:kinolune/twitch/twitch_downloads.dart';
+import 'package:kinolune/twitch/twitch_embed.dart' show TwitchEmbedEngine;
 import 'package:kinolune/twitch/twitch_live_recordings.dart';
 import 'package:kinolune/twitch/twitch_service.dart';
 import 'package:material_ui/material_ui.dart';
@@ -151,11 +152,11 @@ void main() {
     // Accepted: recordNow for the channel on screen and the active profile.
     await t.tap(record);
     await settle(t);
-    await t.tap(
-      find.byKey(const ValueKey('twitch-record-warning-accept')),
-    );
+    await t.tap(find.byKey(const ValueKey('twitch-record-warning-accept')));
     await settle(t);
-    expect(archive.recordCalls, [(services.archiveProfileId, '7002', 'lunaforge')]);
+    expect(archive.recordCalls, [
+      (services.archiveProfileId, '7002', 'lunaforge'),
+    ]);
     expect(
       find.text(
         'Recording. It goes on after you close the player, as long as '
@@ -180,7 +181,10 @@ void main() {
     // Stop: confirmed, the recording ends and is kept (not cancelled).
     await t.tap(find.byKey(const ValueKey('twitch-record-live-stop')));
     await settle(t);
-    expect(find.byKey(const ValueKey('twitch-record-live-stop-dialog')), findsOne);
+    expect(
+      find.byKey(const ValueKey('twitch-record-live-stop-dialog')),
+      findsOne,
+    );
     await t.tap(find.byKey(const ValueKey('twitch-record-live-stop-confirm')));
     await settle(t);
     expect(archive.actions, [(jobId, TwitchDownloadAction.stop)]);
@@ -403,8 +407,7 @@ void main() {
     // ignore: unawaited_futures
     nav.push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            const TwitchArchiveScreen(refresh: Duration(hours: 1)),
+        builder: (_) => const TwitchArchiveScreen(refresh: Duration(hours: 1)),
       ),
     );
     await settle(t);
@@ -414,4 +417,3 @@ void main() {
     await settle(t, 2);
   });
 }
-

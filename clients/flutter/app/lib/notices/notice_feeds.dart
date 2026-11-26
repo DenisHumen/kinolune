@@ -393,9 +393,8 @@ class NoticeFeeds {
                 title: (l) => full
                     ? l.twitchRecordDiskFullTitle(channel)
                     : l.twitchRecordReadyTitle(channel),
-                body: (l) => full
-                    ? l.twitchRecordDiskFullBody
-                    : l.twitchRecordReadyBody,
+                body: (l) =>
+                    full ? l.twitchRecordDiskFullBody : l.twitchRecordReadyBody,
                 onAction: openTwitchArchive,
               ),
             );

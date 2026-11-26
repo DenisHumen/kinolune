@@ -19,6 +19,7 @@ import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sync/device_sync.dart';
+import 'package:kinolune/twitch/twitch_archive.dart' show TwitchArchive;
 import 'package:kinolune/twitch/twitch_models.dart';
 import 'package:kinolune/twitch/twitch_native.dart';
 import 'package:kinolune/twitch/twitch_service.dart';
@@ -818,7 +819,10 @@ void main() {
     final record = find.byKey(const ValueKey('twitch-record-live'));
     if (!AppFlavor.twitchArchive) {
       expect(record, findsNothing);
-      expect(find.byKey(const ValueKey('twitch-recording-badge')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('twitch-recording-badge')),
+        findsNothing,
+      );
       await _close(t);
       return;
     }
