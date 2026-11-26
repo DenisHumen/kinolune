@@ -47,7 +47,7 @@ export PA_MPV_ROOT PA_FF_ROOT PA_FF_CACHE
 
 # Targets with a libmpv build. iOS/tvOS use MPVKit or the native engine
 # (ADR-0003) and are not built here.
-PA_MPV_TARGETS="linux-x86_64 windows-x86_64 \
+PA_MPV_TARGETS="linux-x86_64 linux-arm64 windows-x86_64 \
 android-arm64-v8a android-armeabi-v7a android-x86_64 \
 macos-arm64 macos-x86_64"
 
