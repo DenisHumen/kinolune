@@ -11,9 +11,7 @@ import 'package:kinolune/twitch/twitch_backend.dart';
 import 'package:kinolune/twitch/twitch_service.dart';
 
 void main() {
-  testWidgets('first check after the delay, then on the timer', (
-    tester,
-  ) async {
+  testWidgets('first check after the delay, then on the timer', (tester) async {
     var checks = 0;
     var updates = 0;
     final r = RemoteConfigRefresher(
@@ -104,13 +102,14 @@ void main() {
 
   test('store builds stay off the native route', () {
     Future<void> noop(BuildContext _, TwitchPlayTarget _) async {}
-    final twitch = TwitchService(
-      backend: const LocalTwitchBackend(),
-      preferences: MemoryPreferences(),
-    )
-      ..embedPlayer = noop
-      ..nativePlayer = noop
-      ..applyNativeConfig(allowed: true, killed: false);
+    final twitch =
+        TwitchService(
+            backend: const LocalTwitchBackend(),
+            preferences: MemoryPreferences(),
+          )
+          ..embedPlayer = noop
+          ..nativePlayer = noop
+          ..applyNativeConfig(allowed: true, killed: false);
     expect(twitch.playRoute, TwitchPlayRoute.embed);
   });
 }

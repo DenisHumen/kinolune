@@ -49,8 +49,7 @@ class RemoteConfigRefresher {
   }
 
   /// One check now, joined with one already running.
-  Future<void> run() =>
-      _running ??= _run().whenComplete(() => _running = null);
+  Future<void> run() => _running ??= _run().whenComplete(() => _running = null);
 
   Future<void> _run() async {
     try {
