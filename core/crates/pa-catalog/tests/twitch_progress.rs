@@ -61,7 +61,10 @@ fn recording_position_is_stored_by_key() {
     cat.save_key_progress(&rec, 900_000, 7_200_000, 1_763_000_000_000, false)
         .unwrap();
     let p = cat.key_progress(&rec).unwrap().expect("stored");
-    assert_eq!((p.position_ms, p.duration_ms, p.watched), (900_000, Some(7_200_000), false));
+    assert_eq!(
+        (p.position_ms, p.duration_ms, p.watched),
+        (900_000, Some(7_200_000), false)
+    );
     let v = cat.key_progress(&vod("2001")).unwrap();
     assert!(v.is_none());
     assert!(cat.key_progress(&MediaKey::TmdbMovie { id: 603 }).is_err());
