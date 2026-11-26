@@ -12,8 +12,8 @@
 #   -> "Install now" + confirm -> the page waits for the reboot and comes back
 #   -> log in -> V2 installed, V1 previous -> "Roll back" + confirm -> reboot
 #   -> log in -> V1 installed again.
-# The real alpha-updated drives bootc; after each reboot the script also checks
-# over SSH which version booted. Screenshots go to ${WORK_DIR}/ui-e2e/.
+# The real alpha-updated drives bootc; afterwards the script checks over SSH which
+# version each of the three boots ran (journal). Screenshots go to ${WORK_DIR}/ui-e2e/.
 #
 # Requirements as tests/vm-admin-e2e.sh, plus a Playwright for Python: by default
 # the container image ${PLAYWRIGHT_IMAGE} on the host network; PLAYWRIGHT_RUN="python3"
@@ -125,25 +125,16 @@ else
 fi
 BROWSER=$!
 
-# Follow the VM from outside: each reboot must land on the expected version.
-expect_after_reboot() {
-    local want="$1" old="$2" i new
-    for i in $(seq 1 180); do
-        sleep 5
-        kill -0 "${BROWSER}" 2>/dev/null || break
-        if new="$(vm cat /proc/sys/kernel/random/boot_id 2>/dev/null)" && [[ "${new}" != "${old}" ]]; then
-            wait_admin
-            [[ "$(booted_version)" == "${want}" ]] || die "after the reboot ${want} expected, booted $(booted_version)"
-            log "OK rebooted into ${want}"
-            return 0
-        fi
-    done
-    wait "${BROWSER}" || die "the browser scenario failed (screenshots in ${OUT})"
-    die "the VM did not reboot into ${want}"
-}
-expect_after_reboot "${V2}" "$(vm cat /proc/sys/kernel/random/boot_id)"
-expect_after_reboot "${V1}" "$(vm cat /proc/sys/kernel/random/boot_id)"
+# The browser waits for both reboots itself (a reboot takes ~20 s, too fast to follow
+# over SSH reliably). Afterwards the journal tells which version each boot ran:
+# boot -2 = V1 (before the update), boot -1 = V2 (updated), boot 0 = V1 (rolled back).
 wait "${BROWSER}" || die "the browser scenario failed (screenshots in ${OUT})"
+wait_admin
+[[ "$(booted_version)" == "${V1}" ]] || die "after the rollback ${V1} expected, booted $(booted_version)"
+boot_os() { vm "journalctl -b $1 -u alpha-updated -o cat --no-pager | grep -m1 'alpha-updated started'" | sed -n 's/.*"os_version":"\([^"]*\)".*/\1/p'; }
+[[ "$(boot_os -1)" == "${V2}" ]] || die "the previous boot did not run ${V2} (got '$(boot_os -1)')"
+[[ "$(boot_os -2)" == "${V1}" ]] || die "the boot before it did not run ${V1} (got '$(boot_os -2)')"
+log "OK boots: ${V1} -> ${V2} (update from the UI) -> ${V1} (rollback from the UI)"
 
 vm "journalctl -u alpha-updated -b -1 -o cat --no-pager | tail -n 20" > "${OUT}/updated-journal.txt" || true
 log "ALL CHECKS PASSED (screenshots in ${OUT})"
