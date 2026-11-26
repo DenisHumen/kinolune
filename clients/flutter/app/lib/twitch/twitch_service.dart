@@ -272,11 +272,10 @@ class TwitchService extends ChangeNotifier {
     required this.preferences,
     DateTime Function()? clock,
     this.fullBuild = false,
-    bool nativeAllowedByConfig = false,
-    bool nativeKilledByConfig = false,
-  }) : clock = clock ?? DateTime.now,
-       _nativeAllowedByConfig = nativeAllowedByConfig,
-       _nativeKilledByConfig = nativeKilledByConfig;
+    // Callers pass `nativeAllowedByConfig:` / `nativeKilledByConfig:`.
+    this._nativeAllowedByConfig = false,
+    this._nativeKilledByConfig = false,
+  }) : clock = clock ?? DateTime.now;
 
   final TwitchBackend backend;
   final Preferences preferences;
