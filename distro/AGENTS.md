@@ -16,7 +16,7 @@ distro/tests/vm-switch-rollback.sh                     # ~10 мин: switch → 
 (cd distro/admin && go vet ./... && go test -race ./...) # alpha-admin: нужен dbus-daemon (иначе D-Bus-тесты пропускаются)
 distro/admin/tests/pam-container.sh                    # alpha-admin с настоящим PAM в контейнере Fedora
 distro/admin/tests/vm-admin-e2e.sh                     # ~15 мин: alpha-admin в QEMU против настоящих systemd/NM/firewalld/UDisks2/logind
-distro/tests/vm-install.sh                             # ~20 мин: установщик по файлу ответов (OVMF, NVMe)
+distro/tests/vm-install.sh                             # ~25 мин: установщик по файлу ответов (OVMF, NVMe), затем снапшот и откат /var (DIST-010)
 distro/scripts/build-iso.sh                            # ~30 мин: ISO установщика (DIST-007), размер < 1.9 GiB
 distro/tests/iso-boot.sh distro/.work/iso/kinolune-os-*.iso  # ~7 мин: ISO в QEMU/OVMF: TUI, текстовое меню, пробная установка через TUI
 distro/tests/wifi-hwsim-vm.sh FEDORA_CLOUD.qcow2 nm_probe  # ~10 мин: Wi-Fi приложения в VM с mac80211_hwsim (DIST-032)

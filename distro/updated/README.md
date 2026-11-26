@@ -105,6 +105,27 @@ curl -s --unix-socket $S -X PUT -d '{"auto":"download","window":"02:00-04:00"}' 
 curl -s --unix-socket $S -X POST -d '{"when":"maintenance"}' http://localhost/v1/update/apply
 ```
 
+## Снапшоты `/var` (DIST-010)
+
+bootc не откатывает `/var`, поэтому перед каждой перезагрузкой в обновление агент делает read-only снапшот сабволюма `@var`. Если обновление не удержалось, `/var` возвращается к этому снапшоту ещё до монтирования. Решение — [ADR-NNNN](../../docs/adr/NNNN-var-snapshots.md).
+
+- **Перед перезагрузкой** (после вето): `btrfs subvolume snapshot -r @var @var-snapshots/<UTC>` и маркер `@var-snapshots/pending.json` (checksum старого и нового деплоймента). Снапшот не удался — перезагрузки нет, ошибка видна в `update.last_error`. Хранятся 3 последних снапшота.
+- **При каждой загрузке** `alpha-var-restore.service` (до `var.mount`) запускает `alpha-updated var-restore`:
+  - загрузилась новая версия → в маркере отмечается `to_booted`;
+  - снова старая, а новая уже работала (greenboot откатил) → `@var` уходит в `@var-snapshots/<UTC>-replaced` (read-only, данные не теряются), новый `@var` создаётся из снапшота, итог пишется в `last-restore.json`;
+  - новая так и не загрузилась → маркер удаляется.
+- **Подтверждение:** когда новая версия достигла `boot-complete.target` (прошли проверки greenboot), агент удаляет маркер. После этого ручной откат ОС `/var` не трогает: базу открывает старая версия (expand→contract, LIB-002).
+- Верхний уровень btrfs монтируется во `/run/alpha-varsnap` только на время операции. Устройство берётся из `/sysroot`, сабволюм — из строки `/var` в `/etc/fstab`. Без разметки `@var` (dev-диск) обновление идёт без снапшота, с предупреждением в журнале.
+- В статусе: `var_snapshots.{snapshots,pending,last_restore}` и `last_apply.var_snapshot`.
+
+Посмотреть вручную:
+
+```bash
+dev=$(findmnt -no SOURCE /sysroot | sed 's/\[.*//'); mkdir -p /run/t && mount -o subvolid=5 "$dev" /run/t
+ls /run/t/@var-snapshots; cat /run/t/@var-snapshots/*.json; umount /run/t
+journalctl -b -u alpha-var-restore
+```
+
 ## Журнал
 
 Структурированный JSON (`log/slog`) в stderr → journald: `journalctl -u alpha-updated -o cat | jq`. Поля: `msg`, `op`, `auto`, `duration`, `digest`, `version`, `err`, для API — `method`, `path`, `uid`, `gid`, `pid`. Уровень — `-log-level`.
@@ -117,8 +138,10 @@ curl -s --unix-socket $S -X POST -d '{"when":"maintenance"}' http://localhost/v1
 | `/usr/lib/systemd/system/alpha-updated.{service,socket}` | демон и его сокет; оба включены preset-ом |
 | `/usr/lib/sysusers.d/alpha.conf` | группа `alpha-admin` |
 | `/var/lib/alpha/updated/` | `settings.json`, `state.json` (`StateDirectory=`, 0700) |
+| `/usr/lib/systemd/system/alpha-var-restore.service` | ранний откат `/var` к снапшоту (`alpha-updated var-restore`), включён preset-ом |
+| `@var-snapshots/` (верхний уровень корневого btrfs) | снапшоты `@var`, `pending.json`, `last-restore.json` |
 
-Флаги: `-socket`, `-socket-group` (если запускать без systemd), `-state-dir`, `-bootc`, `-version-file`, `-media-activity-url`, `-media-cert`, `-reboot-command`, `-check-interval`, `-tick`, `-start-delay`, `-log-level`.
+Флаги: `-socket`, `-socket-group` (если запускать без systemd), `-state-dir`, `-bootc`, `-version-file`, `-media-activity-url`, `-media-cert`, `-reboot-command`, `-check-interval`, `-tick`, `-start-delay`, `-log-level`, `-var-snapshots` (по умолчанию `true`), `-var-keep` (по умолчанию 3). Подкоманда `var-restore` — ранний шаг загрузки (см. выше).
 
 ## Разработка и тесты
 
@@ -133,6 +156,7 @@ gofmt -l . ; go vet ./... && go test -race ./...     # или: just distro::upda
 - `internal/bootc` — разбор `bootc status --format=json` (пример в `testdata/`), аргументы команд, запуск настоящего процесса на shell-скрипте вместо bootc;
 - `internal/agent` — проверка, загрузка, применение, откат, ошибки, «одна операция», смена канала, сохранение настроек и состояния, окно обслуживания, вето во время просмотра;
 - `internal/api` — все маршруты через настоящий unix-сокет, коды ошибок, журнал с uid клиента;
+- `internal/varsnap` — снапшот, маркер, откат при загрузке, хранение трёх, отказы (btrfs эмулируется каталогами), разбор fstab, mountinfo и `ostree=`;
 - `internal/settings` — окна (в том числе через полночь), проверка значений, атомарная запись.
 
 ## Ручная проверка на VM

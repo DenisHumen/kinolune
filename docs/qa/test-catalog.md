@@ -2186,3 +2186,17 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 | INST-11 | Ручная установка на реальное железо с монитором и USB-клавиатурой: все экраны читаются (кириллица, без обрезанных строк), установленная система загружается и открывается панель https://<имя>.local | — | — | — | — | — | — | — | ⬜ |
 
 Автотесты: INST-02…INST-10 — `distro/installer/internal/tui/tui_test.go` (вызовы Update() на снимках дисков, эталонные экраны 80×24 на uk/en/ru в `testdata/golden/`) и `distro/installer/cmd/alpha-installer/tui_test.go`; INST-01, INST-02, INST-06, INST-10 — `distro/tests/iso-boot.sh` (ISO в QEMU/OVMF по последовательной консоли, пробная установка через все экраны).
+
+## 25. Kinolune OS: снапшоты `/var` при обновлении (DIST-010)
+
+Агент обновлений `alpha-updated` перед перезагрузкой в обновление снимает `@var`, а если ОС откатилась — возвращает `/var` к снимку до монтирования (ADR-NNNN). К приложению Kinolune не относится: отметки — в колонке Linux.
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| VARSNAP-01 | «Обновить сейчас» (POST /v1/update/apply) → перед перезагрузкой в @var-snapshots/ появляется read-only снапшот и pending.json; в /v1/status — last_apply.var_snapshot; хранятся 3 последних | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-02 | Новая версия загрузилась и прошла проверки (boot-complete.target) → маркер снят; ручной откат ОС после этого /var не трогает | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-03 | Новая версия загрузилась, изменила базу медиасервера, ОС откатилась → после загрузки старой версии база как до обновления, медиасервер старой версии отвечает; /var неудачного обновления лежит в @var-snapshots/<время>-replaced; в /v1/status — var_snapshots.last_restore | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-04 | Снапшот не удался (нет места на корне) → перезагрузки нет, обновление остаётся staged, ошибка в update.last_error | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-05 | Настоящий откат greenboot (обновление с проваленной проверкой required.d) на реальном NAS → ОС и база вернулись, данные пула не тронуты | — | — | — | — | — | — | — | ⬜ |
+
+Автотесты: VARSNAP-01…04 — `distro/updated/internal/varsnap/varsnap_test.go`, `distro/updated/internal/agent/agent_test.go` (`TestApplySnapshotsVarThenConfirms`, `TestSnapshotFailureBlocksReboot` и др.); VARSNAP-01, VARSNAP-03 — QEMU, шаг 7 `distro/tests/vm-install.sh` (установка с `@var`, применение через агент, откат `bootc rollback` вместо greenboot).
