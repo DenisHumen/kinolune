@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MPL-2.0
 #
-# Release of the Flutter app (R01-REL): Linux x86_64 (tar.gz + AppImage,
-# .deb and .rpm with the APT/DNF repository: PKG-002, PKG-023),
+# Release of the Flutter app (R01-REL): Linux x86_64 and arm64 (tar.gz +
+# AppImage, .deb and .rpm with the APT/DNF repository: PKG-002, PKG-023;
+# arm64 natively on the free ubuntu-24.04-arm runner, PKG-026),
 # Android APKs (arm64-v8a, armeabi-v7a, x86_64 + universal), a macOS
 # universal app (zip, ad-hoc signed, not notarized: PKG-019) and a portable
 # Windows x64 zip (not code-signed: PKG-020, signing is PKG-005), SHA256SUMS,
@@ -129,13 +130,21 @@ jobs:
       linux_only: ${{ needs.meta.outputs.platforms == 'linux' }}
 
   linux:
-    name: Linux x86_64
+    name: Linux ${{ matrix.arch }}
     needs: [meta, libmpv, libsmb2]
     if: needs.meta.outputs.platforms == 'all' || needs.meta.outputs.platforms == 'linux'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    # arm64 natively on GitHub's free arm64 runner, no emulation (PKG-026).
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, lib: linux-x86_64, flutter: x64, artifact: linux, runner: ubuntu-24.04 }
+          - { arch: aarch64, lib: linux-arm64, flutter: arm64, artifact: linux-arm64, runner: ubuntu-24.04-arm }
     env:
       VERSION: ${{ needs.meta.outputs.version }}
+      ARCH: ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -149,12 +158,12 @@ jobs:
           # No libmpv-dev: the app links our libmpv (tools/mpv) through its .pc files.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: libmpv-linux-x86_64
-          path: ${{ runner.temp }}/libmpv-linux-x86_64
+          name: libmpv-${{ matrix.lib }}
+          path: ${{ runner.temp }}/libmpv
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: libsmb2-linux-x86_64
-          path: ${{ runner.temp }}/libsmb2-linux-x86_64
+          name: libsmb2-${{ matrix.lib }}
+          path: ${{ runner.temp }}/libsmb2
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           package-manager-cache: false
@@ -163,7 +172,15 @@ jobs:
         run: |
           # pa_design ships Inter outside git; the app and package need it to build.
           if [ -f design/scripts/fonts-fetch.mjs ]; then node design/scripts/fonts-fetch.mjs; fi
+      - name: Flutter from git (linux-arm64 host; no arm64 SDK archive is published)
+        if: runner.arch == 'ARM64'
+        run: |
+          git clone --quiet --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --disable-analytics >/dev/null
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        if: runner.arch != 'ARM64'
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -219,25 +236,26 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
           # media_kit_video finds libmpv with pkg-config: ours, never the system one.
-          export PKG_CONFIG_PATH="$RUNNER_TEMP/libmpv-linux-x86_64/lib/pkgconfig"
+          export PKG_CONFIG_PATH="$RUNNER_TEMP/libmpv/lib/pkgconfig"
           pkg-config --modversion mpv
           if [ -f pubspec.lock ]; then flutter pub get --enforce-lockfile; else flutter pub get; fi
           flutter build linux --release --build-name "$VERSION" --build-number "$BUILD_NUMBER" \
             --dart-define=KINOLUNE_VERSION="$VERSION" --dart-define=KINOLUNE_BUILD_NUMBER="$BUILD_NUMBER" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" --dart-define=KINOLUNE_TWITCH_CLIENT_ID="$KINOLUNE_TWITCH_CLIENT_ID"
       - name: Package tar.gz and AppImage (with our libmpv and libsmb2)
         env:
-          PA_LIBMPV_DIR: ${{ runner.temp }}/libmpv-linux-x86_64
-          PA_LIBSMB2_DIR: ${{ runner.temp }}/libsmb2-linux-x86_64
-        run: packaging/app/linux/package.sh "$APP_DIR/build/linux/x64/release/bundle" "$VERSION" dist
+          PA_LIBMPV_DIR: ${{ runner.temp }}/libmpv
+          PA_LIBSMB2_DIR: ${{ runner.temp }}/libsmb2
+          FLUTTER_ARCH: ${{ matrix.flutter }}
+        run: packaging/app/linux/package.sh "$APP_DIR/build/linux/$FLUTTER_ARCH/release/bundle" "$VERSION" dist
       - name: Package .deb and .rpm (PKG-002; nfpm pinned by SHA-256)
         # From the tar.gz just written: /opt/kinolune, /usr/bin/kinolune, the
         # .desktop file, package-type, and the APT/DNF repository on first
         # install. The rpm is signed in `assemble`, the only job with the key.
-        run: packaging/linux/build-packages.sh "dist/kinolune-$VERSION-linux-x86_64.tar.gz" "$VERSION" dist
+        run: packaging/linux/build-packages.sh "dist/kinolune-$VERSION-linux-$ARCH.tar.gz" "$VERSION" dist
       - name: Smoke-test the bundle links
         run: |
-          tar -xzf "dist/kinolune-$VERSION-linux-x86_64.tar.gz" -C "$RUNNER_TEMP"
-          dir="$RUNNER_TEMP/kinolune-$VERSION-linux-x86_64"
+          tar -xzf "dist/kinolune-$VERSION-linux-$ARCH.tar.gz" -C "$RUNNER_TEMP"
+          dir="$RUNNER_TEMP/kinolune-$VERSION-linux-$ARCH"
           exe=$(find "$dir" -maxdepth 1 -type f -perm -u+x | head -n1)
           if ldd "$exe" "$dir"/lib/*.so* | grep 'not found'; then
             echo "::error::unresolved shared libraries"; exit 1
@@ -260,9 +278,14 @@ jobs:
           [ -f "$dir/lib/libpa_frb.so" ] || { echo "::error::libpa_frb.so (Rust core) missing"; exit 1; }
           # The core is the full flavor (CORE-013).
           tools/flavor/check-artifacts.sh full "$dir/lib/libpa_frb.so"
+          # Every binary in the bundle is for this architecture (PKG-026).
+          want=$([ "$ARCH" = aarch64 ] && echo 'ARM aarch64' || echo 'x86-64')
+          for f in "$exe" "$dir"/lib/*.so*; do
+            file -bL "$f" | grep -qF "$want" || { echo "::error::$f is not $want: $(file -bL "$f")"; exit 1; }
+          done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: linux
+          name: ${{ matrix.artifact }}
           path: dist/
           if-no-files-found: error
           retention-days: 7
@@ -1093,12 +1116,20 @@ jobs:
   # PKG-024: the same silent update path for a Linux AppImage. Xvfb runs on
   # its own (not xvfb-run): the old app exits after starting the new one.
   linux-update:
-    name: Linux update test (AppImage alpha.N -> alpha.N+1)
+    name: Linux ${{ matrix.arch }} update test (AppImage alpha.N -> alpha.N+1)
     needs: [meta, libmpv, libsmb2]
     if: needs.meta.outputs.platforms == 'all' || needs.meta.outputs.platforms == 'linux'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, lib: linux-x86_64, flutter: x64, suffix: '', runner: ubuntu-24.04 }
+          - { arch: aarch64, lib: linux-arm64, flutter: arm64, suffix: '-arm64', runner: ubuntu-24.04-arm }
     env:
+      ARCH: ${{ matrix.arch }}
+      FLUTTER_ARCH: ${{ matrix.flutter }}
       OLD: 0.0.1-e2e.1
       NEW: 0.0.1-e2e.2
       API: http://127.0.0.1:8765/releases
@@ -1115,19 +1146,27 @@ jobs:
             xvfb fuse3 libfuse2t64
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: libmpv-linux-x86_64
-          path: ${{ runner.temp }}/libmpv-linux-x86_64
+          name: libmpv-${{ matrix.lib }}
+          path: ${{ runner.temp }}/libmpv
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: libsmb2-linux-x86_64
-          path: ${{ runner.temp }}/libsmb2-linux-x86_64
+          name: libsmb2-${{ matrix.lib }}
+          path: ${{ runner.temp }}/libsmb2
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           package-manager-cache: false
           node-version: 24
       - name: Fetch design fonts (pinned SHA-256)
         run: node design/scripts/fonts-fetch.mjs
+      - name: Flutter from git (linux-arm64 host; no arm64 SDK archive is published)
+        if: runner.arch == 'ARM64'
+        run: |
+          git clone --quiet --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --disable-analytics >/dev/null
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        if: runner.arch != 'ARM64'
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -1145,8 +1184,8 @@ jobs:
       - name: Build both versions and their AppImages
         env:
           TEST_KEY: ${{ steps.tools.outputs.pub }}
-          PA_LIBMPV_DIR: ${{ runner.temp }}/libmpv-linux-x86_64
-          PA_LIBSMB2_DIR: ${{ runner.temp }}/libsmb2-linux-x86_64
+          PA_LIBMPV_DIR: ${{ runner.temp }}/libmpv
+          PA_LIBSMB2_DIR: ${{ runner.temp }}/libsmb2
         run: |
           export PKG_CONFIG_PATH="$PA_LIBMPV_DIR/lib/pkgconfig"
           (cd "$APP_DIR" && flutter pub get --enforce-lockfile)
@@ -1154,14 +1193,14 @@ jobs:
             (cd "$APP_DIR" && flutter build linux --release --build-name "$v" --build-number 1 \
               --dart-define=KINOLUNE_VERSION="$v" --dart-define=KINOLUNE_FLAVOR="$KINOLUNE_FLAVOR" \
               --dart-define=KINOLUNE_UPDATES_API="$API" --dart-define=KINOLUNE_UPDATES_TEST_KEY="$TEST_KEY")
-            packaging/app/linux/package.sh "$APP_DIR/build/linux/x64/release/bundle" "$v" "$RUNNER_TEMP/e2e/$v"
+            packaging/app/linux/package.sh "$APP_DIR/build/linux/$FLUTTER_ARCH/release/bundle" "$v" "$RUNNER_TEMP/e2e/$v"
           done
           ls -lR "$RUNNER_TEMP/e2e"
       - name: The newer version as a signed test release
         run: |
           srv="$RUNNER_TEMP/serve"
           mkdir -p "$srv/assets"
-          cp "$RUNNER_TEMP/e2e/$NEW/kinolune-$NEW-x86_64.AppImage" "$RUNNER_TEMP/e2e/$NEW/kinolune-$NEW-linux-x86_64.tar.gz" "$srv/assets/"
+          cp "$RUNNER_TEMP/e2e/$NEW/kinolune-$NEW-$ARCH.AppImage" "$RUNNER_TEMP/e2e/$NEW/kinolune-$NEW-linux-$ARCH.tar.gz" "$srv/assets/"
           (cd "$srv/assets" && sha256sum -- * > SHA256SUMS)
           rsign sign -W -s "$RUNNER_TEMP/key/test.key" -x "$srv/assets/SHA256SUMS.minisig" \
             -t "$(printf 'timestamp:%s\tfile:SHA256SUMS\thashed' "$(date +%s)")" "$srv/assets/SHA256SUMS"
@@ -1175,8 +1214,8 @@ jobs:
           Xvfb :99 -screen 0 1600x1000x24 > "$log/xvfb.log" 2>&1 &
           xvfb=$!
           app="$HOME/Applications/Kinolune.AppImage"
-          install -m 755 "$RUNNER_TEMP/e2e/$OLD/kinolune-$OLD-x86_64.AppImage" "$app"
-          want="$(sha256sum < "$RUNNER_TEMP/e2e/$NEW/kinolune-$NEW-x86_64.AppImage")"
+          install -m 755 "$RUNNER_TEMP/e2e/$OLD/kinolune-$OLD-$ARCH.AppImage" "$app"
+          want="$(sha256sum < "$RUNNER_TEMP/e2e/$NEW/kinolune-$NEW-$ARCH.AppImage")"
           DISPLAY=:99 KINOLUNE_UPDATE_SMOKE="$log" "$app" > "$log/app-old.log" 2>&1 &
           ok=false
           for _ in $(seq 120); do
@@ -1198,32 +1237,39 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: linux-update-test
+          name: linux-update-test${{ matrix.suffix }}
           path: ${{ runner.temp }}/update-e2e
           if-no-files-found: ignore
           retention-days: 7
 
   linux-packages:
-    name: Linux packages and repositories (containers)
+    name: Linux ${{ matrix.arch }} packages and repositories (containers)
     needs: [meta, linux]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, artifact: linux, runner: ubuntu-24.04 }
+          - { arch: aarch64, artifact: linux-arm64, runner: ubuntu-24.04-arm }
     env:
       VERSION: ${{ needs.meta.outputs.version }}
+      ARCH: ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: linux
+          name: ${{ matrix.artifact }}
           path: ${{ runner.temp }}/linux
       - name: Install, upgrade and tamper tests in ubuntu:24.04, debian:13, fedora:latest
         # packaging/linux/test/repo-test.sh: this bundle packaged as 0.0.1,
         # 0.0.2 and 0.0.3-rc.1 with a throwaway key, served to clean
         # containers; README install, 20 s start under Xvfb, `apt upgrade` /
         # `dnf upgrade`, tampered and unsigned repositories refused.
-        run: packaging/linux/test/repo-test.sh "$RUNNER_TEMP/linux/kinolune-$VERSION-linux-x86_64.tar.gz"
+        run: packaging/linux/test/repo-test.sh "$RUNNER_TEMP/linux/kinolune-$VERSION-linux-$ARCH.tar.gz"
 
   assemble:
     name: Assemble release
@@ -1256,17 +1302,17 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends rpm
           export GNUPGHOME="$RUNNER_TEMP/gnupg"
           fpr=$(packaging/linux/import-key.sh)
-          rpm=$(ls artifacts/linux/kinolune-*-linux-x86_64.rpm)
+          rpms=(artifacts/linux/kinolune-*-linux-x86_64.rpm artifacts/linux-arm64/kinolune-*-linux-aarch64.rpm)
           rpmsign --define "__gpg $(command -v gpg)" --define "_gpg_name $fpr" --define "_gpg_path $GNUPGHOME" \
-            --define "_gpg_digest_algo sha512" --addsign "$rpm"
+            --define "_gpg_digest_algo sha512" --addsign "${rpms[@]}"
           rm -rf "$GNUPGHOME"
           db="$RUNNER_TEMP/rpmdb"; mkdir -p "$db"
           rpmkeys --dbpath "$db" --import packaging/linux/kinolune-repo-public.asc
-          rpmkeys --dbpath "$db" --checksig "$rpm"
+          rpmkeys --dbpath "$db" --checksig "${rpms[@]}"
       - name: Collect assets, licences and checksums
         run: |
           mkdir -p release/assets
-          cp artifacts/linux/* release/assets/
+          cp artifacts/linux/* artifacts/linux-arm64/* release/assets/
           cp artifacts/android/dist/* release/assets/
           cp artifacts/macos/* release/assets/
           cp artifacts/windows/* release/assets/
@@ -1277,7 +1323,8 @@ jobs:
           rm -f "release/assets/kinolune-$VERSION-android-x86_64.apk" \
                 "release/assets/kinolune-$VERSION-android-universal.apk" \
                 "release/assets/kinolune-$VERSION-windows-x64.zip" \
-                "release/assets/kinolune-$VERSION-linux-x86_64.tar.gz"
+                "release/assets/kinolune-$VERSION-linux-x86_64.tar.gz" \
+                "release/assets/kinolune-$VERSION-linux-aarch64.tar.gz"
           lic="kinolune-$VERSION-licenses"
           tp="kinolune-$VERSION-third-party"
           mkdir -p "$RUNNER_TEMP/$tp"
@@ -1286,7 +1333,7 @@ jobs:
           packaging/app/fetch-licences.sh "$RUNNER_TEMP/$lic/licenses"
           # Corresponding sources of the libmpv/FFmpeg shipped in the APKs and
           # the Linux bundle; checked against their BUILDINFO.txt.
-          libmpv=(artifacts/libmpv-android-{arm64-v8a,armeabi-v7a,x86_64} artifacts/libmpv-linux-x86_64
+          libmpv=(artifacts/libmpv-android-{arm64-v8a,armeabi-v7a,x86_64} artifacts/libmpv-linux-{x86_64,arm64}
                   artifacts/libmpv-macos-{arm64,x86_64} artifacts/libmpv-windows-x86_64)
           PA_LIBMPV_SOURCES="$(ls artifacts/libmpv-sources/project_alpha-libmpv-sources-*.tar.xz)" \
             packaging/app/lgpl-sources.sh "$RUNNER_TEMP/$tp/kinolune-$VERSION-libmpv-sources.tar.xz" \
@@ -1295,7 +1342,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/$lic/licenses/libmpv"
           for d in "${libmpv[@]}"; do cp "$d"/share/licenses/* "$RUNNER_TEMP/$lic/licenses/libmpv/"; done
           # The same for libsmb2 (LIB-019): its source bundle, notice and licences.
-          libsmb2=(artifacts/libsmb2-android-{arm64-v8a,armeabi-v7a,x86_64} artifacts/libsmb2-linux-x86_64
+          libsmb2=(artifacts/libsmb2-android-{arm64-v8a,armeabi-v7a,x86_64} artifacts/libsmb2-linux-{x86_64,arm64}
                    artifacts/libsmb2-apple/macos-{arm64,x86_64} artifacts/libsmb2-windows-x86_64)
           PA_LIBSMB2_SOURCES="$(ls artifacts/libsmb2-sources/project_alpha-libsmb2-sources-*.tar.xz)" \
             packaging/app/libsmb2-sources.sh "$RUNNER_TEMP/$tp/kinolune-$VERSION-libsmb2-sources.tar.xz" \
@@ -1365,6 +1412,7 @@ jobs:
             echo "| **Linux** (Ubuntu 24.04+) | [\`kinolune-$VERSION-x86_64.AppImage\`]($BASE/kinolune-$VERSION-x86_64.AppImage) |"
             echo "| **Ubuntu, Debian, Mint** (.deb) | [\`kinolune-$VERSION-linux-amd64.deb\`]($BASE/kinolune-$VERSION-linux-amd64.deb) |"
             echo "| **Fedora, openSUSE** (.rpm) | [\`kinolune-$VERSION-linux-x86_64.rpm\`]($BASE/kinolune-$VERSION-linux-x86_64.rpm) |"
+            echo "| **Linux ARM** (aarch64: Raspberry Pi 5, ARM-ноутбуки) | [\`AppImage\`]($BASE/kinolune-$VERSION-aarch64.AppImage) · [\`.deb\`]($BASE/kinolune-$VERSION-linux-arm64.deb) · [\`.rpm\`]($BASE/kinolune-$VERSION-linux-aarch64.rpm) |"
             echo "| **Android** и Android TV | [\`kinolune-$VERSION-android-arm64-v8a.apk\`]($BASE/kinolune-$VERSION-android-arm64-v8a.apk) |"
             echo "| Старые 32-битные ТВ-приставки · older 32-bit TV boxes | [\`kinolune-$VERSION-android-armeabi-v7a.apk\`]($BASE/kinolune-$VERSION-android-armeabi-v7a.apk) |"
             echo
