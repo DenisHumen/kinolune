@@ -606,6 +606,51 @@ fn refresh_policy_schedules_checks_and_retries() {
 }
 
 #[test]
+fn every_start_checks_once_with_the_cached_etag() {
+    // BUG-030: serial 3 was published, but a client restarted with a cache
+    // checked minutes ago stayed on the old copy until `interval_secs`.
+    let dir = tempfile::tempdir().unwrap();
+    let signer = TestSigner::generate();
+    let host = Arc::new(MockHost::default());
+    let v2 = doc(2, false);
+    host.publish(MIRROR_A, &v2, &signer.sign(v2.as_bytes()));
+    client(Some(signer.trusted_key()), dir.path(), &host)
+        .refresh_at(1_000)
+        .unwrap();
+
+    // Restart a minute later, nothing new: due at once, answered by a 304.
+    let c = client(Some(signer.trusted_key()), dir.path(), &host);
+    assert_eq!(c.snapshot().source, ConfigSource::Cache);
+    assert!(c.refresh_due(1_060), "a start checks once");
+    assert_eq!(c.refresh_at(1_060).unwrap(), RefreshOutcome::Unchanged);
+    assert_eq!(host.requests().last().unwrap().1.as_deref(), Some("\"v0\""));
+    assert!(!c.refresh_due(1_061), "then the interval applies");
+    drop(c);
+
+    // A new publication: the next start picks it up right away.
+    let v3 = doc(3, true);
+    host.publish(MIRROR_A, &v3, &signer.sign(v3.as_bytes()));
+    let c = client(Some(signer.trusted_key()), dir.path(), &host);
+    assert_eq!(c.config().serial, 2);
+    assert!(c.refresh_due(1_120));
+    assert_eq!(
+        c.refresh_at(1_120).unwrap(),
+        RefreshOutcome::Updated { serial: 3 }
+    );
+    assert!(c.config().twitch_flags(&android()).gql_playback);
+    drop(c);
+
+    // Offline start: the first attempt fails, the cached copy stays and
+    // the retry delay applies, not another immediate attempt.
+    host.set_offline(true);
+    let c = client(Some(signer.trusted_key()), dir.path(), &host);
+    assert!(c.refresh_due(1_200));
+    assert!(matches!(c.refresh_at(1_200), Err(Error::Offline(_))));
+    assert_eq!(c.config().serial, 3);
+    assert!(!c.refresh_due(1_201));
+}
+
+#[test]
 fn updates_section_carries_the_release_key() {
     // PKG-018: no section, a blank key, a valid key and a broken key.
     let none = RemoteConfig::parse(doc(2, false).as_bytes()).unwrap();
