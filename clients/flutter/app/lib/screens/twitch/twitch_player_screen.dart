@@ -87,8 +87,47 @@ typedef TwitchReplayFactory = Future<ReplayChatFeed?> Function(
 );
 
 /// Width of the chat beside the video (TWI-016): dragged, remembered.
+/// One setting for the native player and the embed (TWI-041).
 const kTwitchChatMinWidth = 260.0;
 const kTwitchChatMaxWidth = 640.0;
+
+/// Width of [TwitchChatResizeHandle].
+const kTwitchChatHandleWidth = 6.0;
+
+/// The remembered width of the chat beside the video; null: none yet.
+Future<double?> readTwitchChatWidth(AppServices services) async {
+  try {
+    final w = double.tryParse(
+      await services.preferences.read(Preferences.twitchChatWidth) ?? '',
+    );
+    return w?.clamp(kTwitchChatMinWidth, kTwitchChatMaxWidth).toDouble();
+  } catch (e) {
+    debugPrint('Twitch chat width: $e');
+    return null;
+  }
+}
+
+/// Remembers the width the chat was dragged to.
+Future<void> saveTwitchChatWidth(AppServices services, double width) async {
+  try {
+    await services.preferences.write(
+      Preferences.twitchChatWidth,
+      width.toStringAsFixed(0),
+    );
+  } catch (e) {
+    debugPrint('Twitch chat width: $e');
+  }
+}
+
+/// The chat's width beside a video in a row [maxWidth] wide: the dragged
+/// [chosen] width, else 30 % of the row (300–420); never over 60 %.
+double twitchSideChatWidth(double? chosen, double maxWidth) =>
+    (chosen ?? (maxWidth * 0.3).clamp(300.0, 420.0))
+        .clamp(
+          kTwitchChatMinWidth,
+          math.max(kTwitchChatMinWidth, maxWidth * 0.6),
+        )
+        .toDouble();
 
 /// The VOD of the stream on air on [login] and when the stream started
 /// (TWI-025); null: none.
@@ -399,18 +438,8 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   }
 
   Future<void> _loadChatWidth() async {
-    try {
-      final w = double.tryParse(
-        await _services.preferences.read(Preferences.twitchChatWidth) ?? '',
-      );
-      if (w != null && mounted) {
-        setState(
-          () => _chatWidth = w.clamp(kTwitchChatMinWidth, kTwitchChatMaxWidth),
-        );
-      }
-    } catch (e) {
-      debugPrint('Twitch chat width: $e');
-    }
+    final w = await readTwitchChatWidth(_services);
+    if (w != null && mounted) setState(() => _chatWidth = w);
   }
 
   /// The chat beside the video was dragged to [width] (remembered when
@@ -418,14 +447,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
   void setChatWidth(double width, {bool save = false}) {
     final w = width.clamp(kTwitchChatMinWidth, kTwitchChatMaxWidth);
     if (w != _chatWidth) setState(() => _chatWidth = w);
-    if (save) {
-      unawaited(
-        _services.preferences.write(
-          Preferences.twitchChatWidth,
-          w.toStringAsFixed(0),
-        ),
-      );
-    }
+    if (save) unawaited(saveTwitchChatWidth(_services, w));
   }
 
   Future<void> _openReplay() async {
@@ -1236,16 +1258,14 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
               final tv = f == FormFactor.tv;
               final width = tv
                   ? c.maxWidth * 0.28
-                  : (_chatWidth ?? (c.maxWidth * 0.3).clamp(300.0, 420.0))
-                        .clamp(kTwitchChatMinWidth, c.maxWidth * 0.6)
-                        .toDouble();
+                  : twitchSideChatWidth(_chatWidth, c.maxWidth);
               return Row(
                 children: [
                   Expanded(child: video),
                   // TWI-016: drag to resize (a pointer device; TV and
                   // touch keep the default width).
                   if (!tv)
-                    _ChatResizeHandle(
+                    TwitchChatResizeHandle(
                       // From the state, not this build: several drag
                       // events may come before the next frame.
                       onDrag: (dx) => setChatWidth((_chatWidth ?? width) - dx),
@@ -1302,8 +1322,14 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
 
 /// The strip between the video and the chat: dragging it changes the chat
 /// width (TWI-016).
-class _ChatResizeHandle extends StatelessWidget {
-  const _ChatResizeHandle({required this.onDrag, required this.onEnd});
+/// The edge between the video and the chat beside it (TWI-016): drag to
+/// resize. The native player and the embed (TWI-041) share it.
+class TwitchChatResizeHandle extends StatelessWidget {
+  const TwitchChatResizeHandle({
+    super.key,
+    required this.onDrag,
+    required this.onEnd,
+  });
 
   final ValueChanged<double> onDrag;
   final VoidCallback onEnd;
@@ -1321,7 +1347,7 @@ class _ChatResizeHandle extends StatelessWidget {
         onHorizontalDragEnd: (_) => onEnd(),
         // The full height of the row: a Row gives its children no height.
         child: const SizedBox(
-          width: 6,
+          width: kTwitchChatHandleWidth,
           height: double.infinity,
           child: ColoredBox(color: KColorsChat.bg),
         ),

@@ -10,8 +10,18 @@
 // with what to install. The page, its events and the progress sync live
 // in `twitch/twitch_embed.dart`; tests replace the web view with a fake
 // surface ([TwitchEmbedSurfaceFactory]).
+//
+// TWI-041: a live stream gets the app's chat panel beside the embed (the
+// native player's panel, its resize handle and its remembered width), with
+// «Показать чат / Скрыть чат» in the bar and C. Nothing may cover the
+// embed (Twitch rules), so the panel is a column of its own, hidden in
+// fullscreen; the web view's box — and the rectangle the Linux runner
+// places its native view at (BUG-028) — is what is left of the row. The
+// embed is Twitch's player alone (`Twitch.Player`, not `Twitch.Embed`):
+// Twitch's own chat never shows.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/services.dart';
@@ -20,6 +30,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
+import '../../features/twitch/chat/chat_host.dart';
+import '../../features/twitch/chat/chat_model.dart';
 import '../../integration/player.dart' show setWindowFullscreen;
 import '../../l10n/l10n.dart';
 import '../../platform/form_factor.dart';
@@ -29,7 +41,23 @@ import '../../twitch/twitch_embed.dart';
 import '../../twitch/twitch_service.dart';
 import '../../widgets/error_boundary.dart';
 import 'twitch_embed_desktop.dart';
+import 'twitch_player_screen.dart'
+    show
+        KColorsChat,
+        TwitchChatFactory,
+        TwitchChatResizeHandle,
+        defaultTwitchChat,
+        kTwitchChatHandleWidth,
+        kTwitchChatMaxWidth,
+        kTwitchChatMinWidth,
+        readTwitchChatWidth,
+        saveTwitchChatWidth,
+        twitchSideChatWidth,
+        twitchWideLayout;
 import 'twitch_widgets.dart';
+
+/// Twitch: the embed is at least 400×300.
+const kTwitchEmbedMinWidth = 400.0;
 
 /// A web view that shows the embed page; tests use a fake one.
 abstract class TwitchEmbedSurface {
@@ -78,6 +106,7 @@ Future<void> openTwitchEmbed(
   TwitchPlayTarget target, {
   TwitchEmbedSurfaceFactory? surface,
   TwitchEmbedEngine? engine,
+  TwitchChatFactory? chat,
 }) => Navigator.of(context, rootNavigator: true).push(
   // A player screen like pa_player's: over the whole window (no sidebar),
   // so fullscreen leaves nothing but the video (TWI-029).
@@ -90,6 +119,7 @@ Future<void> openTwitchEmbed(
         target: target,
         surface: surface,
         engine: engine,
+        chat: chat,
       ),
     ),
   ),
@@ -128,9 +158,13 @@ class TwitchEmbedScreen extends StatefulWidget {
     required this.target,
     this.surface,
     this.engine,
+    this.chat,
   });
 
   final TwitchPlayTarget target;
+
+  /// The live chat beside the embed (TWI-041); null: [defaultTwitchChat].
+  final TwitchChatFactory? chat;
 
   /// The web view; null = the one of [engine].
   final TwitchEmbedSurfaceFactory? surface;
@@ -139,10 +173,10 @@ class TwitchEmbedScreen extends StatefulWidget {
   final TwitchEmbedEngine? engine;
 
   @override
-  State<TwitchEmbedScreen> createState() => _TwitchEmbedScreenState();
+  State<TwitchEmbedScreen> createState() => TwitchEmbedScreenState();
 }
 
-class _TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
+class TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
   late TwitchEmbedSession _session;
   late TwitchEmbedSurface _surface;
   late AppServices _services;
@@ -154,6 +188,20 @@ class _TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
 
   /// The window itself is fullscreen because of this screen.
   var _windowFullscreen = false;
+
+  /// The screen's keys; Escape in the chat input gives focus back here.
+  final _keys = FocusNode(debugLabel: 'twitch-embed-keys');
+
+  /// The live chat beside the embed (TWI-041); null: none (yet).
+  ChatFeed? _chat;
+  var _chatStarted = false;
+  var _chatOn = true;
+
+  /// Width of the chat; null: the default share of the window.
+  double? _chatWidth;
+
+  /// The chat is on (it shows beside the embed on a wide window).
+  bool get chatOn => _chat != null && _chatOn && !_fullscreen;
 
   TwitchEmbedEngine get _engine =>
       widget.engine ?? twitchEmbedEngine ?? TwitchEmbedEngine.webviewFlutter;
@@ -181,6 +229,51 @@ class _TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
       }
     });
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_chatStarted) return;
+    _chatStarted = true;
+    // Live only (a VOD has no live chat); a TV keeps the embed alone.
+    final login = widget.target.login;
+    if (!widget.target.isLive || login == null || login.isEmpty) return;
+    if (FormFactorScope.of(context) == FormFactor.tv) return;
+    unawaited(_loadChatWidth());
+    unawaited(_openChat(login));
+  }
+
+  Future<void> _loadChatWidth() async {
+    final w = await readTwitchChatWidth(_services);
+    if (w != null && mounted) setState(() => _chatWidth = w);
+  }
+
+  /// The chat was dragged to [width] (remembered when the drag ends): the
+  /// same setting as the native player's.
+  void setChatWidth(double width, {bool save = false}) {
+    final w = width.clamp(kTwitchChatMinWidth, kTwitchChatMaxWidth);
+    if (w != _chatWidth) setState(() => _chatWidth = w);
+    if (save) unawaited(saveTwitchChatWidth(_services, w));
+  }
+
+  Future<void> _openChat(String login) async {
+    final feed = await (widget.chat ?? defaultTwitchChat)(context, login);
+    if (!mounted) {
+      feed?.close();
+      return;
+    }
+    setState(() => _chat = feed);
+  }
+
+  /// After a sign-in from the chat: open it again, now signed in. The old
+  /// panel's controller closes the old feed.
+  void _reopenChat() {
+    setState(() => _chat = null);
+    unawaited(_openChat(widget.target.login!));
+  }
+
+  /// «Показать чат / Скрыть чат» and C.
+  void toggleChat() => setState(() => _chatOn = !_chatOn);
 
   void _start() {
     _session = TwitchEmbedSession(
@@ -268,11 +361,27 @@ class _TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
     unawaited(_surface.runJavaScript('window.kinolune.seek($at);'));
   }
 
+  /// Text is being typed (the chat input): the keys are its letters.
+  static bool get _typing {
+    final context = FocusManager.instance.primaryFocus?.context;
+    return context != null &&
+        (context.widget is EditableText ||
+            context.findAncestorWidgetOfExactType<EditableText>() != null);
+  }
+
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     final vod = !widget.target.isLive;
-    if (key == LogicalKeyboardKey.escape) {
+    if (_typing) {
+      // Escape leaves the input; the next one leaves the screen.
+      if (key != LogicalKeyboardKey.escape) return KeyEventResult.ignored;
+      _keys.requestFocus();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.keyC && _chat != null) {
+      toggleChat();
+    } else if (key == LogicalKeyboardKey.escape) {
       _escape();
     } else if (key == LogicalKeyboardKey.space ||
         key == LogicalKeyboardKey.keyK ||
@@ -301,7 +410,74 @@ class _TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
     _surface.dispose();
     if (_phone) unawaited(SystemChrome.setPreferredOrientations(const []));
     if (_windowFullscreen) unawaited(setWindowFullscreen(false));
+    // The panel owns the chat controller; the feed is ours.
+    _chat?.close();
+    _keys.dispose();
     super.dispose();
+  }
+
+  /// Room for the chat beside the embed in [size]: a wide layout (as the
+  /// native player's side chat) that leaves the embed its 400.
+  bool _chatFits(BuildContext context, Size size) =>
+      twitchWideLayout(size, FormFactorScope.of(context)) &&
+      size.width - kTwitchEmbedMinWidth - kTwitchChatHandleWidth >=
+          kTwitchChatMinWidth;
+
+  /// The embed and, for a live stream in a wide window, the chat beside
+  /// it (TWI-041). The row never changes shape: the embed stays its first
+  /// child, so a web view is never rebuilt (that would reload the
+  /// stream); a hidden chat is offstage, keeping its lines and listener.
+  Widget _layout(BuildContext context, BoxConstraints c) {
+    final player = ValueListenableBuilder<TwitchEmbedState>(
+      key: ValueKey(_attempt),
+      valueListenable: _session.state,
+      builder: (context, state, _) => state == TwitchEmbedState.failed
+          ? _Failed(onRetry: _retry, onOpen: _openOnTwitch)
+          : KeyedSubtree(
+              key: ValueKey('twitch-embed-surface-$_attempt'),
+              child: _surface.build(context),
+            ),
+    );
+    final feed = _chat;
+    // Twitch: the embed stays at least 400 wide beside the chat.
+    final room = c.maxWidth - kTwitchEmbedMinWidth - kTwitchChatHandleWidth;
+    final width = math.max(
+      kTwitchChatMinWidth,
+      math.min(twitchSideChatWidth(_chatWidth, c.maxWidth), room),
+    );
+    final side = chatOn && _chatFits(context, c.biggest);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: player),
+        if (feed != null) ...[
+          if (side)
+            TwitchChatResizeHandle(
+              // From the state, not this build: several drag events may
+              // come before the next frame.
+              onDrag: (dx) => setChatWidth((_chatWidth ?? width) - dx),
+              onEnd: () => setChatWidth(_chatWidth ?? width, save: true),
+            ),
+          Offstage(
+            offstage: !side,
+            child: SizedBox(
+              width: width,
+              child: ColoredBox(
+                color: KColorsChat.bg,
+                child: KeyedSubtree(
+                  key: ObjectKey(feed),
+                  child: TwitchAppChatPanel(
+                    key: const ValueKey('twitch-embed-chat'),
+                    feed: feed,
+                    onReopen: _reopenChat,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   @override
@@ -311,7 +487,10 @@ class _TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
     final title = login == null || login.isEmpty
         ? l.twitchEmbedTitle
         : _services.twitch.channelOf(login).displayName;
+    final chatToggle =
+        _chat != null && _chatFits(context, MediaQuery.sizeOf(context));
     return Focus(
+      focusNode: _keys,
       autofocus: true,
       onKeyEvent: _onKey,
       child: Scaffold(
@@ -331,6 +510,19 @@ class _TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 actions: [
+                  if (chatToggle)
+                    IconButton(
+                      key: const ValueKey('twitch-embed-chat-toggle'),
+                      tooltip: _chatOn
+                          ? l.twitchPlayerHideChat
+                          : l.twitchPlayerShowChat,
+                      icon: Icon(
+                        _chatOn
+                            ? Icons.speaker_notes_off_outlined
+                            : Icons.chat_outlined,
+                      ),
+                      onPressed: toggleChat,
+                    ),
                   if (_desktop)
                     IconButton(
                       key: const ValueKey('twitch-embed-fullscreen'),
@@ -346,19 +538,7 @@ class _TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
                   ),
                 ],
               ),
-        body: SafeArea(
-          top: false,
-          child: ValueListenableBuilder<TwitchEmbedState>(
-            key: ValueKey(_attempt),
-            valueListenable: _session.state,
-            builder: (context, state, _) => state == TwitchEmbedState.failed
-                ? _Failed(onRetry: _retry, onOpen: _openOnTwitch)
-                : KeyedSubtree(
-                    key: ValueKey('twitch-embed-surface-$_attempt'),
-                    child: _surface.build(context),
-                  ),
-          ),
-        ),
+        body: SafeArea(top: false, child: LayoutBuilder(builder: _layout)),
       ),
     );
   }
