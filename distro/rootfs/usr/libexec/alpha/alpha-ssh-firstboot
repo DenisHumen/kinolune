@@ -24,7 +24,8 @@ if [[ "${keys}" == 1 ]]; then
     systemctl start --no-block sshd.service
 else
     echo "no SSH keys: SSH stays off"
-    firewall-offline-cmd --zone="${zone}" --remove-service=ssh >/dev/null || true
+    # (--remove-service is a lokkit option in firewall-offline-cmd; this is the zone one)
+    firewall-offline-cmd --zone="${zone}" --remove-service-from-zone=ssh >/dev/null || true
     systemctl disable --now sshd.service || true
 fi
 mkdir -p "$(dirname "${marker}")"
