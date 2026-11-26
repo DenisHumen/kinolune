@@ -1,0 +1,16 @@
+{
+  "status": 202,
+  "headers": {
+    "Ratelimit-Limit": "800",
+    "Ratelimit-Remaining": "798",
+    "Ratelimit-Reset": "1800000060"
+  },
+  "body": {
+    "data": [
+      {
+        "id": "FiercePlayfulOtterKappa-AbCdEf123",
+        "edit_url": "https://clips.twitch.tv/FiercePlayfulOtterKappa-AbCdEf123/edit"
+      }
+    ]
+  }
+}
