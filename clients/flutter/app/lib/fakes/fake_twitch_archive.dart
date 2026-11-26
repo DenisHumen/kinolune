@@ -119,6 +119,19 @@ class FakeTwitchArchive implements TwitchArchive {
   TwitchArchiveSettings _settings;
   final Map<(int, String), TwitchRecordRule> _rules = {};
   final actions = <(int, TwitchDownloadAction)>[];
+
+  /// Thrown by the next [recordNow] (TWI-035 tests).
+  TwitchRecordError? recordError;
+
+  /// Calls of [recordNow]: (profile, user id, login).
+  final recordCalls = <(int, String, String?)>[];
+
+  /// Replaces a recording (a test moves it on: bytes, state, end).
+  void update(TwitchRecordingItem item) {
+    final i = _recordings.indexWhere((r) => r.jobId == item.jobId);
+    if (i >= 0) _recordings[i] = item;
+  }
+
   final imported = <String>[];
   TwitchImportResult importResult = const TwitchImportResult(
     added: 3,
@@ -126,22 +139,94 @@ class FakeTwitchArchive implements TwitchArchive {
     chapters: 4,
   );
 
+  /// The broadcast of a recording ended (TWI-035): the job is done with
+  /// [end], and the file with its chat is in the saved recordings.
+  void finish(int jobId, {String end = 'offline', String title = 'Live'}) {
+    final i = _recordings.indexWhere((r) => r.jobId == jobId);
+    if (i < 0) return;
+    final r = _recordings[i];
+    _recordings[i] = TwitchRecordingItem(
+      jobId: r.jobId,
+      userId: r.userId,
+      login: r.login,
+      streamId: r.streamId,
+      state: TwitchDownloadState.done,
+      media: r.media,
+      bytesDone: r.bytesDone,
+      createdAt: r.createdAt,
+      end: end,
+    );
+    final ext = end == 'disk_full' ? 'ts' : 'mkv';
+    _saved.insert(
+      0,
+      TwitchSavedFile(
+        assetId: 1000 + jobId,
+        kind: TwitchSavedKind.recording,
+        userId: r.userId,
+        login: r.login,
+        displayName: r.login,
+        streamId: r.streamId,
+        title: title,
+        recordedAt: r.createdAt,
+        duration: r.media,
+        sizeBytes: r.bytesDone,
+        path: '/media/twitch/recordings/${r.login}/$jobId.$ext',
+        origin: 'recording',
+        hasChat: true,
+      ),
+    );
+  }
+
   @override
   Future<List<TwitchRecordingItem>> recordings() async => List.of(_recordings);
 
   @override
-  Future<void> controlRecording(int jobId, TwitchDownloadAction action) async =>
-      actions.add((jobId, action));
+  Future<void> controlRecording(int jobId, TwitchDownloadAction action) async {
+    actions.add((jobId, action));
+    // "Stop" finalises like the core: done, ended by the user (TWI-035).
+    if (action != TwitchDownloadAction.stop) return;
+    final i = _recordings.indexWhere((r) => r.jobId == jobId);
+    if (i < 0) return;
+    final r = _recordings[i];
+    _recordings[i] = TwitchRecordingItem(
+      jobId: r.jobId,
+      userId: r.userId,
+      login: r.login,
+      streamId: r.streamId,
+      state: TwitchDownloadState.done,
+      media: r.media,
+      bytesDone: r.bytesDone,
+      createdAt: r.createdAt,
+      end: 'stopped',
+    );
+  }
 
   @override
   Future<int> recordNow(int profileId, String userId, {String? login}) async {
+    recordCalls.add((profileId, userId, login));
+    if (recordError case final e?) {
+      recordError = null;
+      throw e;
+    }
+    // Like the core: an active recording of the channel is returned.
+    for (final r in _recordings) {
+      if (r.activity != RecordingActivity.active &&
+          r.activity != RecordingActivity.paused) {
+        continue;
+      }
+      if ((userId.isNotEmpty && r.userId == userId) ||
+          (login != null && r.login == login)) {
+        return r.jobId;
+      }
+    }
     _recordings.insert(
       0,
       TwitchRecordingItem(
         jobId: 100 + _recordings.length,
         userId: userId,
         login: login,
-        state: TwitchDownloadState.queued,
+        state: TwitchDownloadState.running,
+        createdAt: DateTime.now(),
       ),
     );
     return _recordings.first.jobId;
