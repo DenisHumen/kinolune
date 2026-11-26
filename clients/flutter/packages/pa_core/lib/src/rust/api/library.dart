@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'airing.dart';
 import 'audiobooks.dart';
 import 'content_kind.dart';
 import 'details.dart';
@@ -72,6 +73,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required PlatformInt64 id,
     required String itemId,
   });
+
+  /// The airing state of every show that has one (poster labels).
+  Future<List<CoreShowAiring>> airingAll({required PlatformInt64 nowMs});
 
   /// Alphabet index of a query in title order.
   Future<List<CoreAlphabetEntry>> alphabetIndex({
@@ -631,6 +635,21 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// count, 0 if the track is not hashed yet.
   Future<PlatformInt64> recordTrackPlay({required String itemId});
 
+  /// Asks TMDB, AniList or Shikimori about a show now (its page opened).
+  /// Offline the last value comes back with `offline`.
+  Future<CoreShowAiring?> refreshAiring({
+    required String showId,
+    required CoreMetadataSettings settings,
+    required PlatformInt64 nowMs,
+  });
+
+  /// The daily background refresh of the shows that are due. Returns how
+  /// many shows a provider answered for.
+  Future<int> refreshAiringDue({
+    required CoreMetadataSettings settings,
+    required PlatformInt64 nowMs,
+  });
+
   Future<bool> removeFromCollection({
     required PlatformInt64 id,
     required String itemId,
@@ -937,6 +956,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   /// Smart shelves by position; `pinned_only`: those on Home.
   Future<List<CoreSmartShelf>> shelves({required bool pinnedOnly});
+
+  /// The airing state of a show as last fetched; `None` without data.
+  Future<CoreShowAiring?> showAiring({
+    required String showId,
+    required PlatformInt64 nowMs,
+  });
 
   /// Episodes of a show item in `order`, or in the order stored for the
   /// show when `None`; an order without data falls back to TMDB. Each
