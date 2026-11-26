@@ -13,14 +13,14 @@
 # through the helper, Samba password sync, guest policy, shares and their
 # permissions with smbclient. SSH and the firewall need systemd and firewalld:
 # they are checked in the VM (vm-admin-e2e.sh).
-# ENGINE=docker|podman, NAME=container name.
+# ENGINE=docker|podman, NAME=container name, KEEP=1 leaves the container.
 set -euo pipefail
 source "$(dirname "$0")/../../scripts/lib.sh"
 
 NAME="${NAME:-alpha-admin-samba-test}"
 ADMIN_DIR="${DISTRO_DIR}/admin"
 "${ENGINE}" rm -f "${NAME}" >/dev/null 2>&1 || true
-trap '"${ENGINE}" rm -f "${NAME}" >/dev/null 2>&1 || true' EXIT
+[[ "${KEEP:-0}" == 1 ]] || trap '"${ENGINE}" rm -f "${NAME}" >/dev/null 2>&1 || true' EXIT
 
 log "Starting ${BASE_IMAGE%%@*} container ${NAME}"
 "${ENGINE}" run -d --name "${NAME}" -v "${DISTRO_DIR}:/src/distro:ro" "${BASE_IMAGE}" sleep infinity >/dev/null
@@ -36,7 +36,8 @@ install -m 0644 /src/distro/rootfs/etc/pam.d/alpha-admin /etc/pam.d/alpha-admin
 install -m 0644 /src/distro/rootfs/etc/samba/smb.conf /etc/samba/smb.conf
 install -d /etc/samba/smb.conf.d
 systemd-sysusers /src/distro/rootfs/usr/lib/sysusers.d/alpha.conf /src/distro/rootfs/usr/lib/sysusers.d/alpha-admin.conf
-systemd-tmpfiles --create /src/distro/rootfs/usr/lib/tmpfiles.d/alpha.conf || true
+cp /src/distro/rootfs/usr/lib/tmpfiles.d/alpha.conf /usr/lib/tmpfiles.d/alpha.conf
+systemd-tmpfiles --create 2>/dev/null || true   # also samba.conf: /var/lib/samba/private…
 # The installer's first user: an administrator.
 useradd -m -G wheel anna
 echo 'anna:Anna-pass-1' | chpasswd

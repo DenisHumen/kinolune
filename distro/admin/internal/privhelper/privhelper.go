@@ -700,13 +700,14 @@ func (h *Helper) RenderBoot(ctx context.Context) error {
 		return err
 	}
 	if _, err := os.Stat(h.Paths.Import); err == nil {
+		// Kept on failure: the next boot tries again.
 		if _, err := h.Run.Run(ctx, "", "pdbedit", "-i", "smbpasswd:"+h.Paths.Import, "-e", "tdbsam"); err != nil {
 			h.log().Error("import of the installer's Samba password failed", "err", err)
 		} else {
 			h.log().Info("installer's Samba password imported")
-		}
-		if err := os.Remove(h.Paths.Import); err != nil {
-			return err
+			if err := os.Remove(h.Paths.Import); err != nil {
+				return err
+			}
 		}
 	}
 	accts, members, err := h.humans()

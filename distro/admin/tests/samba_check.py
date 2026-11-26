@@ -98,7 +98,7 @@ def main():
     uid = sh("id -u anna")[1]
     nt = md4(ANNA[1].encode("utf-16-le")).hex().upper()
     with open("/var/lib/alpha/samba/import.smbpasswd", "w") as f:
-        f.write(f"anna:{uid}:{'X' * 32}:{nt}:[U          ]:LCT-00000000:\n")
+        f.write(f"anna:{uid}:{'X' * 32}:{nt}:[U          ]:LCT-{int(time.time()):08X}:\n")
     os.chmod("/var/lib/alpha/samba/import.smbpasswd", 0o600)
     code, out = sh("/usr/libexec/alpha/alpha-admin-priv render-samba")
     if code != 0:
@@ -112,8 +112,9 @@ def main():
         if st.st_uid != int(uid) or st.st_mode & 0o777 != 0o700:
             fail(f"{d}: owner {st.st_uid} mode {oct(st.st_mode)}")
     code, out = sh("testparm -s 2>/dev/null")
-    if "server string = Kinolune OS (%h)" not in out or "map to guest = Never" not in out or "restrict anonymous = 2" not in out:
-        fail(f"testparm:\n{out}")
+    guest = sh("testparm -s --parameter-name='map to guest' 2>/dev/null")[1]
+    if "server string = Kinolune OS (%h)" not in out or guest != "Never" or "restrict anonymous = 2" not in out:
+        fail(f"testparm (map to guest = {guest}):\n{out}")
     ok("render-samba: config rendered, installer's password imported, folders 0700, testparm OK")
 
     sh("smbd -D")
