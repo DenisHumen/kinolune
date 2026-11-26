@@ -8376,5 +8376,23 @@
   "twitchSearchRecent": "Recent searches",
   "@twitchSearchRecent": {
     "description": "TWI-034: recent searches of the Streams section (this device only)."
+  },
+  "twitchChatSentBubble": "Message sent",
+  "@twitchChatSentBubble": {
+    "description": "TWI-039: the screen reader's text of the bubble that shows after Twitch posted the user's chat message."
+  },
+  "twitchChatNotSentBubble": "Message not sent: {reason}",
+  "@twitchChatNotSentBubble": {
+    "description": "TWI-039: the screen reader's text of the bubble when Twitch dropped the message; the reason is already localised.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "Only subscribers can chat right now"
+      }
+    }
+  },
+  "twitchChatBubbleHide": "Hide",
+  "@twitchChatBubbleHide": {
+    "description": "TWI-039: the screen reader's hint of what a tap on the sent bubble does."
   }
 }

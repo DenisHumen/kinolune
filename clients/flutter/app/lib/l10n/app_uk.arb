@@ -2380,5 +2380,8 @@
   "twitchLanguageOther": "Інша мова",
   "twitchCategoryVodsTitle": "Записи обраних із цією грою",
   "twitchStreamOpenChannel": "Відкрити канал",
-  "twitchSearchRecent": "Нещодавні запити"
+  "twitchSearchRecent": "Нещодавні запити",
+  "twitchChatSentBubble": "Повідомлення надіслано",
+  "twitchChatNotSentBubble": "Повідомлення не надіслано: {reason}",
+  "twitchChatBubbleHide": "Сховати"
 }
