@@ -89,5 +89,6 @@ jobs:
             --accept 200,206,429
             --exclude '^https://github\.com/DenisHumen/kinolune/(actions|security)'
             --exclude '^https://img\.shields\.io/'
+            --exclude '^https://github\.com/DenisHumen/kinolune/blob/progress/'
             README.md README.en.md .github/CONTRIBUTING.md .github/SECURITY.md .github/CODE_OF_CONDUCT.md AGENTS.md .claude/CLAUDE.md
           fail: true
