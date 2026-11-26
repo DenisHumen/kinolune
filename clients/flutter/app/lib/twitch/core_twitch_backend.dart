@@ -93,13 +93,61 @@ class CoreTwitchBackend implements TwitchBackend {
   }
 
   @override
-  Future<TwitchDeviceLogin> startLogin({bool chat = false}) => _call(() async {
-    final d = chat ? await _core.startChatLogin() : await _core.startLogin();
+  Future<TwitchDeviceLogin> startLogin({
+    bool chat = false,
+    bool clips = false,
+  }) => _call(() async {
+    // The core keeps the scopes granted before, so one extra is enough.
+    final d = clips
+        ? await _core.startClipsLogin()
+        : chat
+        ? await _core.startChatLogin()
+        : await _core.startLogin();
     return TwitchDeviceLogin(
       userCode: d.userCode,
       verificationUri: d.verificationUri,
       expiresIn: Duration(seconds: d.expiresInSecs),
       interval: Duration(seconds: d.intervalSecs),
+    );
+  });
+
+  @override
+  bool get canMakeClips => _core.canMakeClips();
+
+  @override
+  Future<TwitchClipResult> makeClip(String broadcasterId) => _call(() async {
+    final r = await _core.makeClip(broadcasterId: broadcasterId);
+    final c = r.clip;
+    return TwitchClipResult(
+      switch (r.outcome) {
+        core.CoreTwitchClipOutcome.ready => TwitchClipOutcome.ready,
+        core.CoreTwitchClipOutcome.signInRequired =>
+          TwitchClipOutcome.signInRequired,
+        core.CoreTwitchClipOutcome.scopeRequired =>
+          TwitchClipOutcome.scopeRequired,
+        core.CoreTwitchClipOutcome.disabled => TwitchClipOutcome.disabled,
+        core.CoreTwitchClipOutcome.offline => TwitchClipOutcome.offline,
+        core.CoreTwitchClipOutcome.notReady => TwitchClipOutcome.notReady,
+        core.CoreTwitchClipOutcome.rateLimited => TwitchClipOutcome.rateLimited,
+        core.CoreTwitchClipOutcome.network => TwitchClipOutcome.network,
+        core.CoreTwitchClipOutcome.failed => TwitchClipOutcome.failed,
+      },
+      message: r.message,
+      retryAfter: Duration(seconds: r.retryAfterSecs),
+      clip: c == null
+          ? null
+          : TwitchNewClip(
+              slug: c.slug,
+              url: c.url,
+              editUrl: c.editUrl,
+              embedUrl: c.embedUrl,
+              title: c.title,
+              broadcasterName: c.broadcasterName,
+              thumbnailUrl: c.thumbnailUrl,
+              duration: Duration(
+                milliseconds: (c.durationSecs * 1000).round(),
+              ),
+            ),
     );
   });
 

@@ -437,12 +437,71 @@ class FakeTwitchBackend implements TwitchBackend {
   TwitchAccount? get account =>
       signedIn ? TwitchAccount(userId: me.userId!, login: me.login) : null;
 
+  // ----- clips (TWI-040) ----------------------------------------------------
+
+  /// The sign-in granted `clips:edit`.
+  bool clipsScope = false;
+
+  /// Asked for `clips:edit` in the pending sign-in.
+  bool _pendingClips = false;
+
+  /// Channels whose clips are off (403 from Twitch).
+  final Set<String> clipsDisabled = {};
+
+  /// Answers of the next presses, in order; empty: a made clip.
+  final List<TwitchClipResult> clipAnswers = [];
+
+  /// Broadcaster ids [makeClip] was called with.
+  final List<String> clipRequests = [];
+
   @override
-  Future<TwitchDeviceLogin> startLogin({bool chat = false}) async {
+  bool get canMakeClips => signedIn && !expired && clipsScope;
+
+  @override
+  Future<TwitchClipResult> makeClip(String broadcasterId) async {
+    if (!canSignIn) {
+      throw const TwitchUnavailable(TwitchUnavailableReason.notConfigured);
+    }
+    if (!signedIn || expired) {
+      return const TwitchClipResult(TwitchClipOutcome.signInRequired);
+    }
+    if (!clipsScope) return const TwitchClipResult(TwitchClipOutcome.scopeRequired);
+    clipRequests.add(broadcasterId);
+    if (clipsDisabled.contains(broadcasterId)) {
+      return const TwitchClipResult(
+        TwitchClipOutcome.disabled,
+        message:
+            'The specified broadcaster has not enabled clips on their channel',
+      );
+    }
+    if (clipAnswers.isNotEmpty) return clipAnswers.removeAt(0);
+    final channel = channels.where((c) => c.userId == broadcasterId);
+    final name = channel.isEmpty ? 'PixelHeron' : channel.first.displayName;
+    const slug = 'DemoClipFromKinolune';
+    return TwitchClipResult(
+      TwitchClipOutcome.ready,
+      clip: TwitchNewClip(
+        slug: slug,
+        url: 'https://clips.twitch.tv/$slug', // l10n-ignore
+        editUrl: 'https://clips.twitch.tv/$slug/edit', // l10n-ignore
+        embedUrl: 'https://clips.twitch.tv/embed?clip=$slug', // l10n-ignore
+        title: '$name live',
+        broadcasterName: name,
+        duration: const Duration(seconds: 30),
+      ),
+    );
+  }
+
+  @override
+  Future<TwitchDeviceLogin> startLogin({
+    bool chat = false,
+    bool clips = false,
+  }) async {
     if (!canSignIn) {
       throw const TwitchUnavailable(TwitchUnavailableReason.notConfigured);
     }
     _pendingLogin = true;
+    _pendingClips = clips;
     return const TwitchDeviceLogin(
       userCode: 'KTWQ-PLMN',
       verificationUri: 'https://www.twitch.tv/activate?device-code=KTWQPLMN',
@@ -457,6 +516,8 @@ class FakeTwitchBackend implements TwitchBackend {
       throw const TwitchUnavailable(TwitchUnavailableReason.signIn);
     }
     _pendingLogin = false;
+    if (_pendingClips) clipsScope = true;
+    _pendingClips = false;
     signedIn = true;
     expired = false;
     return account;

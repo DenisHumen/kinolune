@@ -242,6 +242,12 @@ typedef TwitchPlayerHook = Future<void> Function(
   TwitchPlayTarget target,
 );
 
+/// Plays a clip made from the app inside it (TWI-040).
+typedef TwitchClipHook = Future<void> Function(
+  BuildContext context,
+  TwitchNewClip clip,
+);
+
 /// Chooses the player (TWI-004, ADR-0039/0041): store builds never play
 /// natively; full builds do when the signed remote config allows it and a
 /// native player is there. Otherwise the official embed, else "Open on
@@ -1165,8 +1171,59 @@ class TwitchService extends ChangeNotifier {
 
   // ----- sign-in -------------------------------------------------------------
 
-  Future<TwitchDeviceLogin> startLogin({bool chat = false}) =>
-      backend.startLogin(chat: chat);
+  Future<TwitchDeviceLogin> startLogin({
+    bool chat = false,
+    bool clips = false,
+  }) => backend.startLogin(chat: chat, clips: clips);
+
+  // ----- clips (TWI-040) -----------------------------------------------------
+
+  /// «Смотреть» of a made clip inside the app: the official clip embed,
+  /// registered with the embed player (TWI-005, TWI-029). Null: the clip
+  /// opens on Twitch.
+  TwitchClipHook? clipPlayer;
+
+  /// The signed-in account may make clips (`clips:edit`). No network.
+  bool get canMakeClips => backend.canMakeClips;
+
+  /// Channels (by login) whose clips are off, with Twitch's reason: the
+  /// button stays off until the app restarts.
+  final Map<String, String> _clipsOff = {};
+
+  /// Why clips of [login] are off, or null.
+  String? clipsOffReason(String login) => _clipsOff[login];
+
+  /// Makes a clip of the live stream of [login] (TWI-040).
+  Future<TwitchClipResult> makeClip(String login) async {
+    var userId = channelOf(login).userId;
+    if (userId == null) {
+      try {
+        final found = await backend.users(logins: [login]);
+        for (final c in found) {
+          _channels[c.login] = c;
+        }
+        userId = found.where((c) => c.login == login).firstOrNull?.userId;
+      } on TwitchUnavailable catch (e) {
+        if (e.reason == TwitchUnavailableReason.signedOut ||
+            e.reason == TwitchUnavailableReason.signIn) {
+          return const TwitchClipResult(TwitchClipOutcome.signInRequired);
+        }
+        return TwitchClipResult(
+          e.reason == TwitchUnavailableReason.network
+              ? TwitchClipOutcome.network
+              : TwitchClipOutcome.failed,
+          message: e.message ?? '',
+        );
+      }
+    }
+    if (userId == null) return const TwitchClipResult(TwitchClipOutcome.offline);
+    final r = await backend.makeClip(userId);
+    if (r.outcome == TwitchClipOutcome.disabled) {
+      _clipsOff[login] = r.message;
+      notifyListeners();
+    }
+    return r;
+  }
 
   /// Polls once; on success refreshes the section.
   Future<TwitchAccount?> pollLogin() async {
