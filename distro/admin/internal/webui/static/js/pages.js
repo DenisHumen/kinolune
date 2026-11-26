@@ -221,7 +221,7 @@ async function updates(main) {
         [t('upd.channel'), t(`upd.channel.${s.settings?.channel || 'stable'}`)],
         [t('upd.last_check'), dateTime(u.last_check)],
         s.next_window ? [t('upd.next_window'), dateTime(s.next_window)] : null,
-        s.last_apply ? [t('upd.last_apply'), `${s.last_apply.version || s.last_apply.digest || ''} · ${dateTime(s.last_apply.at)}${s.last_apply.result ? ` · ${s.last_apply.result}` : ''}`] : null,
+        s.last_apply ? [t('upd.last_apply'), `${s.last_apply.version || s.last_apply.digest || ''} · ${dateTime(s.last_apply.at)}${s.last_apply.result ? ` · ${t(`upd.result.${s.last_apply.result}`)}` : ''}`] : null,
       ]),
       u.last_error ? h('div.alert.bad', { 'data-testid': 'upd-error' }, `${t(`upd.op.${u.last_error.op}`)}: ${u.last_error.message}`) : null,
       s.bootc_error ? h('div.alert.warn', s.bootc_error) : null,

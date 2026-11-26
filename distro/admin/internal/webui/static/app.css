@@ -81,6 +81,8 @@ button svg.icon, .btn svg.icon { width: 16px; height: 16px; }
 .nav .who { padding: 8px 12px; font: var(--pa-type-caption); color: var(--pa-text-secondary); display: flex; flex-direction: column; gap: 8px; }
 .main { min-width: 0; display: flex; flex-direction: column; gap: 20px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 8px 4px 0; }
+.page-head h1 { margin: 0; }
+.page-head p { margin: 4px 0 0; }
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .grid.wide { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
 .panel { border-radius: var(--pa-shape-panel); padding: 20px; min-width: 0; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }

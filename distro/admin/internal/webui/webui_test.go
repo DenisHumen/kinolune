@@ -110,6 +110,7 @@ func TestI18nComplete(t *testing.T) {
 	dyn := map[string][]string{
 		"upd.state.":   {"up-to-date", "available", "downloaded", "staged", "rollback-queued", "unknown"},
 		"upd.op.":      {"check", "download", "apply", "switch", "rollback"},
+		"upd.result.":  {"pending", "booted", "not-booted"},
 		"upd.channel.": {"stable", "beta"},
 		"upd.auto.":    {"off", "download", "install"},
 		"net.conn.":    {"none", "portal", "limited", "full", "unknown"},
