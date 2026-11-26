@@ -107,7 +107,7 @@ curl -s --unix-socket $S -X POST -d '{"when":"maintenance"}' http://localhost/v1
 
 ## Снапшоты `/var` (DIST-010)
 
-bootc не откатывает `/var`, поэтому перед каждой перезагрузкой в обновление агент делает read-only снапшот сабволюма `@var`. Если обновление не удержалось, `/var` возвращается к этому снапшоту ещё до монтирования. Решение — [ADR-NNNN](../../docs/adr/NNNN-var-snapshots.md).
+bootc не откатывает `/var`, поэтому перед каждой перезагрузкой в обновление агент делает read-only снапшот сабволюма `@var`. Если обновление не удержалось, `/var` возвращается к этому снапшоту ещё до монтирования. Решение — [ADR-0174](../../docs/adr/0174-var-snapshots.md).
 
 - **Перед перезагрузкой** (после вето): `btrfs subvolume snapshot -r @var @var-snapshots/<UTC>` и маркер `@var-snapshots/pending.json` (checksum старого и нового деплоймента). Снапшот не удался — перезагрузки нет, ошибка видна в `update.last_error`. Хранятся 3 последних снапшота.
 - **При каждой загрузке** `alpha-var-restore.service` (до `var.mount`) запускает `alpha-updated var-restore`:
