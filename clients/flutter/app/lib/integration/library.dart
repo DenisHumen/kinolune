@@ -114,6 +114,11 @@ export 'package:pa_library/pa_library.dart'
         MediaExtra,
         MediaExtraKind,
         TechInfo,
+        // UI-057 ongoing shows: when the next episode airs
+        AiringStatus,
+        LibraryAiring,
+        NextAiring,
+        ShowAiring,
         // UI-010 show detail: episode orders
         EpisodeOrder,
         LibraryEpisodes,

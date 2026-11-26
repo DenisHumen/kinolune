@@ -297,6 +297,16 @@ impl TmdbClient {
         self.get_json(&format!("/{}/{id}", kind.as_str()), self.lang(), class)
     }
 
+    /// `/tv/{id}` for the airing schedule (UI-057): a cached answer is used
+    /// while fresh (a day for series that still air), but an expired one is
+    /// never returned in place of a failed request, so the caller knows it
+    /// is offline.
+    pub fn tv_airing(&self, id: u64) -> Result<Details, TmdbError> {
+        let path = format!("/tv/{id}");
+        let body = self.get_body_with(&path, self.lang(), TtlClass::TvDetails, false)?;
+        serde_json::from_str(&body).map_err(|e| TmdbError::Decode(format!("{path}: {e}")))
+    }
+
     /// `/{kind}/{id}/translations`: titles and overviews in every language
     /// (e.g. `ru-RU` via [`Translations::find`]).
     pub fn translations(&self, kind: MediaKind, id: u64) -> Result<Translations, TmdbError> {
@@ -476,6 +486,18 @@ impl TmdbClient {
         query: Vec<(String, String)>,
         class: TtlClass,
     ) -> Result<String, TmdbError> {
+        self.get_body_with(path, query, class, true)
+    }
+
+    /// [`get_body`](Self::get_body); with `stale_ok == false` a network
+    /// failure is an error even when an expired cached body exists.
+    fn get_body_with(
+        &self,
+        path: &str,
+        query: Vec<(String, String)>,
+        class: TtlClass,
+        stale_ok: bool,
+    ) -> Result<String, TmdbError> {
         let mut request = HttpRequest {
             base: self.config.base_url.trim_end_matches('/').to_owned(),
             path: path.to_owned(),
@@ -496,7 +518,9 @@ impl TmdbClient {
             Some(entry) if entry.is_fresh(self.clock.unix_secs()) => return Ok(entry.body),
             fresher => fresher.or(cached),
         };
-        let stale = cached.filter(|e| e.is_usable(now)).map(|e| e.body);
+        let stale = cached
+            .filter(|e| stale_ok && e.is_usable(now))
+            .map(|e| e.body);
 
         let secret = {
             let keys = self.keys.read().unwrap_or_else(|e| e.into_inner());

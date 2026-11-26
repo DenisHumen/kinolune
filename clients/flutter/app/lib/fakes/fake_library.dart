@@ -35,7 +35,8 @@ class FakeLibrary
         LibraryContentKinds,
         LibraryTrailers,
         LibraryAudiobooks,
-        LibraryWatchMarks {
+        LibraryWatchMarks,
+        LibraryAiring {
   FakeLibrary({this.scanStepDelay = const Duration(milliseconds: 60)});
 
   /// A library of exactly [items] (tests: large grids), with [progress] and
@@ -660,6 +661,44 @@ class FakeLibrary
 
   @override
   Future<void> stopWatching() async => watching = false;
+
+  // -------------------------------------------------------------------
+  // UI-057: when the next episode airs (tests set the answers)
+
+  final _airing = <String, ShowAiring>{};
+  final _airingChanges = StreamController<void>.broadcast();
+
+  /// Shows whose airing was refreshed (tests: the page asks on open).
+  final airingRefreshes = <String>[];
+
+  /// New files found by a scan (tests: the next episode arrives).
+  void addItems(List<LibraryItem> items) {
+    _items.value = [..._items.value, ...items];
+  }
+
+  /// What the providers answer for [ShowAiring.showId] from now on.
+  void setAiring(ShowAiring a) {
+    _airing[a.showId] = a;
+    _airingChanges.add(null);
+  }
+
+  @override
+  Future<ShowAiring?> showAiring(String showId) async => _airing[showId];
+
+  @override
+  Future<ShowAiring?> refreshAiring(String showId) async {
+    airingRefreshes.add(showId);
+    return _airing[showId];
+  }
+
+  @override
+  Future<List<ShowAiring>> airingAll() async => _airing.values.toList();
+
+  @override
+  Future<int> refreshAiringDue() async => 0;
+
+  @override
+  Stream<void> get airingChanges => _airingChanges.stream;
 
   @override
   Future<void> close() async {}
