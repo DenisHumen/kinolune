@@ -31,9 +31,13 @@ class TwitchChatInput extends StatefulWidget {
     this.onSignIn,
     this.onAllowSending,
     this.ownAvatar,
+    this.onSendResult,
   });
 
   final ChatController controller;
+
+  /// Every answer to a send with its text (the "Sent" bubble, TWI-039).
+  final void Function(String text, ChatSendResult result)? onSendResult;
 
   /// The sender's own avatar before the field (TWI-032); null: none.
   final Widget? ownAvatar;
@@ -188,6 +192,7 @@ class TwitchChatInputState extends State<TwitchChatInput> {
     final l = context.l10n;
     final result = await _feed.send(text);
     if (!mounted) return;
+    widget.onSendResult?.call(text, result);
     setState(() {
       _sending = false;
       switch (result) {
@@ -196,7 +201,7 @@ class TwitchChatInputState extends State<TwitchChatInput> {
           final slow = _c.roomModes.slowSeconds;
           if (slow > 0 && !_ownChannel) _startWait(slow);
         case ChatDropped(:final code, :final message):
-          _error = _dropText(l, code, message);
+          _error = chatDropText(l, code, message);
           if (code == 'msg_slowmode' && _c.roomModes.slowSeconds > 0) {
             _startWait(_c.roomModes.slowSeconds);
           }
@@ -393,7 +398,8 @@ List<String> _modeTexts(AppLocalizations l, ChatRoomModes m) => [
   if (m.uniqueChat) l.twitchChatModeUnique,
 ];
 
-String _dropText(AppLocalizations l, String code, String message) =>
+/// Twitch's reason for a dropped message in the user's language.
+String chatDropText(AppLocalizations l, String code, String message) =>
     switch (code) {
       'msg_slowmode' => l.twitchChatDropSlow,
       'msg_subsonly' => l.twitchChatDropSubsOnly,

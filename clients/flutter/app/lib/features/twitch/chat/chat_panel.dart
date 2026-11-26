@@ -7,6 +7,8 @@
 // input with room modes and autocomplete, and line actions (mention,
 // block).
 
+import 'dart:io';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:pa_core/pa_core.dart';
 import 'package:pa_library/pa_library.dart' show RustLibrary;
@@ -25,6 +27,7 @@ import 'chat_settings.dart';
 import 'chat_settings_page.dart';
 import 'chat_view.dart';
 import 'core_chat_feed.dart';
+import 'sent_bubble.dart';
 
 /// Lines kept per form factor (research 06 §3.3: 500–1000; TV shows
 /// fewer and thins the flow).
@@ -119,7 +122,7 @@ class TwitchChatPanel extends StatefulWidget {
 class _TwitchChatPanelState extends State<TwitchChatPanel> {
   /// The signed-in user's avatar at the input (TWI-032); null outside the
   /// app (the chat bench) or signed out.
-  Widget? _ownAvatar(BuildContext context) {
+  Widget? _ownAvatar(BuildContext context, {double size = 24}) {
     final twitch = context
         .getInheritedWidgetOfExactType<Services>()
         ?.notifier
@@ -137,7 +140,7 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
             login: a.login,
             name: name,
             url: twitch.accountProfile?.avatarUrl,
-            size: 24,
+            size: size,
           ),
         );
       },
@@ -146,6 +149,34 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
 
   ChatController? _controller;
   final _input = GlobalKey<TwitchChatInputState>();
+  final _bubbles = SentBubbleOverlay();
+  final _emoteImages = <String, ImageProvider>{};
+
+  /// The "Sent" bubble (TWI-039): only after Twitch posted the message
+  /// (`is_sent=true`); a dropped one gets the "!" variant with the reason.
+  void _sendResult(String text, ChatSendResult result) {
+    if (!mounted) return;
+    final c = _controller!;
+    final tv = FormFactorScope.of(context) == FormFactor.tv;
+    final data = switch (result) {
+      ChatSent() => SentBubbleData(
+        kind: SentBubbleKind.sent,
+        pieces: sentPieces(text, widget.feed.emotes, (key) {
+          final img = c.image(key);
+          if (img == null) return null;
+          return _emoteImages[key] ??= FileImage(File(img.path));
+        }),
+        avatar: _ownAvatar(context, size: tv ? 32 : 24),
+      ),
+      ChatDropped(:final code, :final message) => SentBubbleData(
+        kind: SentBubbleKind.dropped,
+        reason: chatDropText(context.l10n, code, message),
+        avatar: _ownAvatar(context, size: tv ? 32 : 24),
+      ),
+      ChatSendFailed() => null,
+    };
+    if (data != null) _bubbles.show(context, data);
+  }
 
   @override
   void didChangeDependencies() {
@@ -233,6 +264,7 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
 
   @override
   void dispose() {
+    _bubbles.dispose();
     _controller?.dispose();
     super.dispose();
   }
@@ -313,6 +345,7 @@ class _TwitchChatPanelState extends State<TwitchChatPanel> {
             onSignIn: widget.onSignIn,
             onAllowSending: widget.onAllowSending,
             ownAvatar: _ownAvatar(context),
+            onSendResult: _sendResult,
           ),
       ],
     );
