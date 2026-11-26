@@ -127,6 +127,11 @@ twitch-record-live-recording  # row of the recording indicator; its parts are ci
 live-upload-status-*  # status line inside a grey card (LIB-028); the card is cited as OFF-39
 live-upload-detail-*  # bytes, speed and time left inside a grey card (LIB-028, OFF-39)
 live-upload-guess-text  # text of the guess snack bar (LIB-028); the snack bar is cited as OFF-37
+twitch-archive-calendar-dialog  # day picker dialog container, opened by twitch-archive-calendar (TWI-189)
+twitch-archive-library-empty  # empty-state text of the archive library (TWI-186)
+twitch-archive-no-matches  # «Ничего не нашлось» status text of the archive search (TWI-187)
+twitch-archive-row-*  # dynamic prefix; row container of a streamer's playthroughs (TWI-186)
+twitch-playthrough-parts  # row container of a playthrough's parts (TWI-190)
 twitch-clip-busy  # spinner while Twitch makes a clip (TWI-040); the button is cited as TWI-196
 twitch-clip-url  # selectable link text on the clip card (TWI-040); the card is cited as TWI-198
 twitch-sign-in-clips-note  # line in the sign-in dialog (TWI-040); the flow is cited as TWI-197

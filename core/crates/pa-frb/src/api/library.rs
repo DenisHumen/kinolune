@@ -395,8 +395,9 @@ pub(crate) fn label_target(id: &str) -> Result<c::LabelTarget> {
 
 /// `twitch:vod:<id>`: the item id of a Twitch VOD in the app, which is its
 /// media key (TWI-005). `None` for catalog items and anything else.
+/// Also a saved live recording, `twitch:rec:<stream_id>` (TWI-026).
 pub(crate) fn twitch_vod_key(id: &str) -> Option<pa_model::MediaKey> {
-    if !id.starts_with("twitch:vod:") {
+    if !id.starts_with("twitch:vod:") && !id.starts_with("twitch:rec:") {
         return None;
     }
     id.parse::<pa_model::MediaKey>().ok()
@@ -982,6 +983,19 @@ impl CoreLibrary {
     }
 
     pub fn progress(&self, item_id: String) -> Result<Option<CoreProgress>> {
+        // A Twitch VOD or saved recording (TWI-026): stored by its key.
+        if let Some(key) = twitch_vod_key(&item_id) {
+            return Ok(self.catalog.key_progress(&key)?.map(|p| CoreProgress {
+                item_id,
+                position_ms: i64::try_from(p.position_ms).unwrap_or(i64::MAX),
+                duration_ms: p
+                    .duration_ms
+                    .and_then(|d| i64::try_from(d).ok())
+                    .unwrap_or(0),
+                updated_at_ms: p.updated_at_ms,
+                watched: p.watched,
+            }));
+        }
         let Ok(id) = item_id.parse::<c::ItemRef>() else {
             return Ok(None);
         };

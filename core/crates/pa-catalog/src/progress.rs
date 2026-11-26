@@ -293,6 +293,8 @@ impl Catalog {
     ) -> Result<(), Error> {
         let kind = match key {
             MediaKey::TwitchVod { .. } if key.is_valid() => MediaKind::TwitchVod,
+            // A saved live recording played from the archive library (TWI-026).
+            MediaKey::TwitchRecording { .. } if key.is_valid() => MediaKind::TwitchRecording,
             _ => return Err(Error::Invalid(format!("progress key {key}"))),
         };
         let mut conn = self.lock();
@@ -308,6 +310,20 @@ impl Catalog {
                 watched,
             )
         })
+    }
+
+    /// Stored progress of a title by its media key ([`Self::save_key_progress`]:
+    /// a Twitch VOD or recording) on the active profile.
+    pub fn key_progress(&self, key: &MediaKey) -> Result<Option<pa_model::PlaybackItem>, Error> {
+        if !matches!(
+            key,
+            MediaKey::TwitchVod { .. } | MediaKey::TwitchRecording { .. }
+        ) || !key.is_valid()
+        {
+            return Err(Error::Invalid(format!("progress key {key}")));
+        }
+        let conn = self.lock();
+        Ok(pa_library::progress::get(&conn, profile(&conn)?, key)?)
     }
 
     /// A position report through the sync replica (or locally when sync is

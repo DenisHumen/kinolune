@@ -169,6 +169,30 @@ fn twitch_downloader_folder_matches_by_video_id_and_pulls_chapters() {
     assert_eq!(entries.len(), 2);
     assert!(entries.iter().all(|e| e.has_chat && e.chapters == 2));
     assert!(entries[0].path.is_file());
+    // TWI-026: the categories of the file, the longest first.
+    let vod = entries
+        .iter()
+        .find(|e| e.video_id.as_deref() == Some("777000111"))
+        .unwrap();
+    let games: Vec<_> = vod
+        .games
+        .iter()
+        .map(|g| {
+            (
+                g.game_id.as_str(),
+                g.name.as_deref(),
+                g.duration_ms,
+                g.start_ms,
+            )
+        })
+        .collect();
+    assert_eq!(
+        games,
+        [
+            ("1159690097", Some("Hades II"), 7_200_000, 3_600_000),
+            ("512953", games[1].1, 3_600_000, 0),
+        ]
+    );
     let kinds: Vec<String> = conn
         .prepare("SELECT kind FROM sources")
         .unwrap()

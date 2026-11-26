@@ -114,6 +114,80 @@ class FakeTwitchArchive implements TwitchArchive {
     );
   }
 
+  /// TWI-026: an archive library — PixelHeron's 12-stream playthrough of
+  /// one game with breaks, a second game and a talk stream, LunaForge's
+  /// short run and an imported VOD.
+  factory FakeTwitchArchive.series(DateTime now) {
+    const gb = 1024 * 1024 * 1024;
+    const quest = TwitchSavedGame(
+      id: '1159690097',
+      name: 'Starfall Tactics',
+      duration: Duration(hours: 3, minutes: 10),
+      start: Duration(minutes: 35),
+    );
+    const talk = TwitchSavedGame(
+      id: '509658',
+      name: 'Just Chatting',
+      duration: Duration(minutes: 35),
+    );
+    const drift = TwitchSavedGame(
+      id: '512953',
+      name: 'Neon Drift',
+      duration: Duration(hours: 2, minutes: 40),
+    );
+    final start = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      19,
+    ).subtract(const Duration(days: 40));
+    const gaps = [0, 1, 3, 4, 8, 9, 15, 16, 20, 27, 30, 36];
+    TwitchSavedFile file(
+      int id,
+      int day, {
+      String userId = '7001',
+      String login = 'pixelheron',
+      String name = 'PixelHeron',
+      List<TwitchSavedGame> games = const [quest, talk],
+      String title = 'Night shift',
+      TwitchSavedKind kind = TwitchSavedKind.recording,
+    }) => TwitchSavedFile(
+      assetId: id,
+      kind: kind,
+      userId: userId,
+      login: login,
+      displayName: name,
+      streamId: kind == TwitchSavedKind.recording ? '9$id' : null,
+      videoId: kind == TwitchSavedKind.vod ? '88$id' : null,
+      title: '$title #${id % 100 + 1}',
+      recordedAt: start.add(Duration(days: day)),
+      duration: const Duration(hours: 3, minutes: 45),
+      sizeBytes: 8 * gb,
+      path: '/media/twitch/recordings/$login/$id.mkv',
+      origin: kind == TwitchSavedKind.recording ? 'recording' : 'download',
+      hasChat: true,
+      games: games,
+    );
+    return FakeTwitchArchive(
+      saved: [
+        for (final (i, d) in gaps.indexed) file(100 + i, d),
+        file(200, 2, games: const [drift], title: 'Drift break'),
+        file(201, 10, games: const [talk], title: 'Q&A'),
+        for (final (i, d) in const [5, 6, 13].indexed)
+          file(
+            300 + i,
+            d,
+            userId: '7002',
+            login: 'lunaforge',
+            name: 'LunaForge',
+            games: const [drift],
+            title: 'Any% practice',
+            kind: TwitchSavedKind.vod,
+          ),
+      ],
+    );
+  }
+
   final List<TwitchRecordingItem> _recordings;
   final List<TwitchSavedFile> _saved;
   TwitchArchiveSettings _settings;

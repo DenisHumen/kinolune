@@ -11,7 +11,7 @@ import 'twitch.dart';
 import 'twitch_live.dart';
 
 // These functions are ignored because they are not marked as `pub`: `new`, `rule_guard`, `store_build`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// Default name templates (06 §4.3): `(folder, vod, live)`.
 List<String> archiveDefaultTemplates() =>
@@ -393,6 +393,9 @@ class CoreSavedFile {
   final int chapters;
   final bool hasAdsMarked;
 
+  /// The categories on air in the file, the longest first (TWI-026).
+  final List<CoreSavedGame> games;
+
   const CoreSavedFile({
     required this.assetId,
     required this.kind,
@@ -411,6 +414,7 @@ class CoreSavedFile {
     required this.hasChat,
     required this.chapters,
     required this.hasAdsMarked,
+    required this.games,
   });
 
   @override
@@ -431,7 +435,8 @@ class CoreSavedFile {
       origin.hashCode ^
       hasChat.hashCode ^
       chapters.hashCode ^
-      hasAdsMarked.hashCode;
+      hasAdsMarked.hashCode ^
+      games.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -454,7 +459,48 @@ class CoreSavedFile {
           origin == other.origin &&
           hasChat == other.hasChat &&
           chapters == other.chapters &&
-          hasAdsMarked == other.hasAdsMarked;
+          hasAdsMarked == other.hasAdsMarked &&
+          games == other.games;
+}
+
+/// A category of a saved file (TWI-026): the archive library groups by it.
+class CoreSavedGame {
+  final String gameId;
+  final String? name;
+  final String? boxArtUrl;
+
+  /// Time on air in this category.
+  final PlatformInt64 durationMs;
+
+  /// Where its first chapter starts in the file.
+  final PlatformInt64 startMs;
+
+  const CoreSavedGame({
+    required this.gameId,
+    this.name,
+    this.boxArtUrl,
+    required this.durationMs,
+    required this.startMs,
+  });
+
+  @override
+  int get hashCode =>
+      gameId.hashCode ^
+      name.hashCode ^
+      boxArtUrl.hashCode ^
+      durationMs.hashCode ^
+      startMs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreSavedGame &&
+          runtimeType == other.runtimeType &&
+          gameId == other.gameId &&
+          name == other.name &&
+          boxArtUrl == other.boxArtUrl &&
+          durationMs == other.durationMs &&
+          startMs == other.startMs;
 }
 
 /// One download or recording in the list.

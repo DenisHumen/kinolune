@@ -411,6 +411,9 @@ void main() {
       ),
     );
     await settle(t);
+    // TWI-026: the archive opens on «Медиатека».
+    await t.tap(find.byKey(const ValueKey('twitch-archive-tab-recordings')));
+    await settle(t);
     expect(find.byKey(const ValueKey('twitch-saved-1007')), findsOneWidget);
     expect(find.text('Neon Drift any%'), findsOneWidget);
     await t.pumpWidget(const SizedBox());

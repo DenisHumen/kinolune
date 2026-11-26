@@ -185,6 +185,20 @@ pub struct CoreSavedFile {
     pub has_chat: bool,
     pub chapters: u32,
     pub has_ads_marked: bool,
+    /// The categories on air in the file, the longest first (TWI-026).
+    pub games: Vec<CoreSavedGame>,
+}
+
+/// A category of a saved file (TWI-026): the archive library groups by it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreSavedGame {
+    pub game_id: String,
+    pub name: Option<String>,
+    pub box_art_url: Option<String>,
+    /// Time on air in this category.
+    pub duration_ms: i64,
+    /// Where its first chapter starts in the file.
+    pub start_ms: i64,
 }
 
 /// Result of an import.
@@ -518,7 +532,8 @@ mod imp {
 
     use super::{
         CoreArchiveSettings, CoreArchiveUsage, CoreDownloadError, CoreDownloadRequest,
-        CoreLiveChannel, CoreRecordRule, CoreSavedFile, CoreTwitchDownload, CoreTwitchImportReport,
+        CoreLiveChannel, CoreRecordRule, CoreSavedFile, CoreSavedGame, CoreTwitchDownload,
+        CoreTwitchImportReport,
     };
     use crate::api::remote_config::CoreRemoteConfig;
     use crate::api::twitch::CoreTwitch;
@@ -1194,6 +1209,17 @@ mod imp {
                     has_chat: e.has_chat,
                     chapters: u32::try_from(e.chapters).unwrap_or(u32::MAX),
                     has_ads_marked: e.has_ads_marked,
+                    games: e
+                        .games
+                        .into_iter()
+                        .map(|g| CoreSavedGame {
+                            game_id: g.game_id,
+                            name: g.name,
+                            box_art_url: g.box_art_url,
+                            duration_ms: i64::try_from(g.duration_ms).unwrap_or(i64::MAX),
+                            start_ms: i64::try_from(g.start_ms).unwrap_or(i64::MAX),
+                        })
+                        .collect(),
                 })
                 .collect())
         }

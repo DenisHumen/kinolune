@@ -1460,6 +1460,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSavedFile dco_decode_core_saved_file(dynamic raw);
 
   @protected
+  CoreSavedGame dco_decode_core_saved_game(dynamic raw);
+
+  @protected
   CoreScanPhase dco_decode_core_scan_phase(dynamic raw);
 
   @protected
@@ -2026,6 +2029,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreSavedFile> dco_decode_list_core_saved_file(dynamic raw);
+
+  @protected
+  List<CoreSavedGame> dco_decode_list_core_saved_game(dynamic raw);
 
   @protected
   List<CoreSearchGroup> dco_decode_list_core_search_group(dynamic raw);
@@ -3994,6 +4000,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSavedFile sse_decode_core_saved_file(SseDeserializer deserializer);
 
   @protected
+  CoreSavedGame sse_decode_core_saved_game(SseDeserializer deserializer);
+
+  @protected
   CoreScanPhase sse_decode_core_scan_phase(SseDeserializer deserializer);
 
   @protected
@@ -4768,6 +4777,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CoreSavedFile> sse_decode_list_core_saved_file(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreSavedGame> sse_decode_list_core_saved_game(
     SseDeserializer deserializer,
   );
 
@@ -7344,6 +7358,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_core_saved_file(CoreSavedFile self, SseSerializer serializer);
 
   @protected
+  void sse_encode_core_saved_game(CoreSavedGame self, SseSerializer serializer);
+
+  @protected
   void sse_encode_core_scan_phase(CoreScanPhase self, SseSerializer serializer);
 
   @protected
@@ -8357,6 +8374,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_core_saved_file(
     List<CoreSavedFile> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_saved_game(
+    List<CoreSavedGame> self,
     SseSerializer serializer,
   );
 

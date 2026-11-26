@@ -50,6 +50,27 @@ fn vod_progress_feeds_twitch_continue_watching() {
 }
 
 #[test]
+fn recording_position_is_stored_by_key() {
+    // TWI-026: a saved live recording played from the archive library.
+    let dir = tempfile::tempdir().unwrap();
+    let cat = Catalog::open(dir.path().join("library.db")).unwrap();
+    let rec = MediaKey::TwitchRecording {
+        stream_id: "41000".into(),
+    };
+    assert!(cat.key_progress(&rec).unwrap().is_none());
+    cat.save_key_progress(&rec, 900_000, 7_200_000, 1_763_000_000_000, false)
+        .unwrap();
+    let p = cat.key_progress(&rec).unwrap().expect("stored");
+    assert_eq!(
+        (p.position_ms, p.duration_ms, p.watched),
+        (900_000, Some(7_200_000), false)
+    );
+    let v = cat.key_progress(&vod("2001")).unwrap();
+    assert!(v.is_none());
+    assert!(cat.key_progress(&MediaKey::TmdbMovie { id: 603 }).is_err());
+}
+
+#[test]
 fn only_twitch_vod_keys_are_accepted() {
     let dir = tempfile::tempdir().unwrap();
     let cat = Catalog::open(dir.path().join("library.db")).unwrap();

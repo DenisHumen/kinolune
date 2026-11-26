@@ -120,6 +120,7 @@ class TwitchSavedFile {
     this.hasChat = false,
     this.chapters = 0,
     this.hasAdsMarked = false,
+    this.games = const [],
   });
 
   final int assetId;
@@ -141,7 +142,46 @@ class TwitchSavedFile {
   final int chapters;
   final bool hasAdsMarked;
 
+  /// The categories on air in the file, the longest first (TWI-026).
+  final List<TwitchSavedGame> games;
+
   String get channel => displayName ?? login ?? userId;
+
+  /// The progress key: a downloaded VOD shares `twitch:vod:<id>` with the
+  /// online one, a recording has `twitch:rec:<stream_id>`; null: neither.
+  String? get progressKey => switch ((kind, videoId, streamId)) {
+    (TwitchSavedKind.vod, final v?, _) => 'twitch:vod:$v', // l10n-ignore
+    (TwitchSavedKind.recording, _, final s?) => 'twitch:rec:$s', // l10n-ignore
+    (TwitchSavedKind.recording, final v?, null) =>
+      'twitch:vod:$v', // l10n-ignore
+    _ => null,
+  };
+}
+
+/// A category of a saved file (TWI-026).
+class TwitchSavedGame {
+  const TwitchSavedGame({
+    required this.id,
+    this.name,
+    this.boxArtUrl,
+    this.duration = Duration.zero,
+    this.start = Duration.zero,
+  });
+
+  /// Twitch category id.
+  final String id;
+
+  /// Null when the category was never fetched.
+  final String? name;
+
+  /// Template with `{width}`/`{height}`.
+  final String? boxArtUrl;
+
+  /// Time on air in this category.
+  final Duration duration;
+
+  /// Where its first chapter starts in the file.
+  final Duration start;
 }
 
 /// Automatic recording of one favourite channel for the profile.
@@ -480,6 +520,16 @@ class CoreTwitchArchive implements TwitchArchive {
         hasChat: f.hasChat,
         chapters: f.chapters,
         hasAdsMarked: f.hasAdsMarked,
+        games: [
+          for (final g in f.games)
+            TwitchSavedGame(
+              id: g.gameId,
+              name: g.name,
+              boxArtUrl: g.boxArtUrl,
+              duration: Duration(milliseconds: g.durationMs.toInt()),
+              start: Duration(milliseconds: g.startMs.toInt()),
+            ),
+        ],
       ),
   ];
 

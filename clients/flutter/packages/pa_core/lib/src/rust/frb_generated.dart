@@ -27585,8 +27585,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreSavedFile dco_decode_core_saved_file(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 17)
-      throw Exception('unexpected arr length: expect 17 but see ${arr.length}');
+    if (arr.length != 18)
+      throw Exception('unexpected arr length: expect 18 but see ${arr.length}');
     return CoreSavedFile(
       assetId: dco_decode_i_64(arr[0]),
       kind: dco_decode_String(arr[1]),
@@ -27605,6 +27605,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       hasChat: dco_decode_bool(arr[14]),
       chapters: dco_decode_u_32(arr[15]),
       hasAdsMarked: dco_decode_bool(arr[16]),
+      games: dco_decode_list_core_saved_game(arr[17]),
+    );
+  }
+
+  @protected
+  CoreSavedGame dco_decode_core_saved_game(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return CoreSavedGame(
+      gameId: dco_decode_String(arr[0]),
+      name: dco_decode_opt_String(arr[1]),
+      boxArtUrl: dco_decode_opt_String(arr[2]),
+      durationMs: dco_decode_i_64(arr[3]),
+      startMs: dco_decode_i_64(arr[4]),
     );
   }
 
@@ -29622,6 +29638,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<CoreSavedFile> dco_decode_list_core_saved_file(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_core_saved_file).toList();
+  }
+
+  @protected
+  List<CoreSavedGame> dco_decode_list_core_saved_game(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_core_saved_game).toList();
   }
 
   @protected
@@ -35094,6 +35116,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_hasChat = sse_decode_bool(deserializer);
     var var_chapters = sse_decode_u_32(deserializer);
     var var_hasAdsMarked = sse_decode_bool(deserializer);
+    var var_games = sse_decode_list_core_saved_game(deserializer);
     return CoreSavedFile(
       assetId: var_assetId,
       kind: var_kind,
@@ -35112,6 +35135,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       hasChat: var_hasChat,
       chapters: var_chapters,
       hasAdsMarked: var_hasAdsMarked,
+      games: var_games,
+    );
+  }
+
+  @protected
+  CoreSavedGame sse_decode_core_saved_game(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_gameId = sse_decode_String(deserializer);
+    var var_name = sse_decode_opt_String(deserializer);
+    var var_boxArtUrl = sse_decode_opt_String(deserializer);
+    var var_durationMs = sse_decode_i_64(deserializer);
+    var var_startMs = sse_decode_i_64(deserializer);
+    return CoreSavedGame(
+      gameId: var_gameId,
+      name: var_name,
+      boxArtUrl: var_boxArtUrl,
+      durationMs: var_durationMs,
+      startMs: var_startMs,
     );
   }
 
@@ -37940,6 +37981,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <CoreSavedFile>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_core_saved_file(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CoreSavedGame> sse_decode_list_core_saved_game(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CoreSavedGame>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_core_saved_game(deserializer));
     }
     return ans_;
   }
@@ -43785,6 +43840,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.hasChat, serializer);
     sse_encode_u_32(self.chapters, serializer);
     sse_encode_bool(self.hasAdsMarked, serializer);
+    sse_encode_list_core_saved_game(self.games, serializer);
+  }
+
+  @protected
+  void sse_encode_core_saved_game(
+    CoreSavedGame self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.gameId, serializer);
+    sse_encode_opt_String(self.name, serializer);
+    sse_encode_opt_String(self.boxArtUrl, serializer);
+    sse_encode_i_64(self.durationMs, serializer);
+    sse_encode_i_64(self.startMs, serializer);
   }
 
   @protected
@@ -46006,6 +46075,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_core_saved_file(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_core_saved_game(
+    List<CoreSavedGame> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_core_saved_game(item, serializer);
     }
   }
 

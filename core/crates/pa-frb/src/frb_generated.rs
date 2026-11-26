@@ -31681,6 +31681,8 @@ impl SseDecode for crate::api::twitch_archive::CoreSavedFile {
         let mut var_hasChat = <bool>::sse_decode(deserializer);
         let mut var_chapters = <u32>::sse_decode(deserializer);
         let mut var_hasAdsMarked = <bool>::sse_decode(deserializer);
+        let mut var_games =
+            <Vec<crate::api::twitch_archive::CoreSavedGame>>::sse_decode(deserializer);
         return crate::api::twitch_archive::CoreSavedFile {
             asset_id: var_assetId,
             kind: var_kind,
@@ -31699,6 +31701,25 @@ impl SseDecode for crate::api::twitch_archive::CoreSavedFile {
             has_chat: var_hasChat,
             chapters: var_chapters,
             has_ads_marked: var_hasAdsMarked,
+            games: var_games,
+        };
+    }
+}
+
+impl SseDecode for crate::api::twitch_archive::CoreSavedGame {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_gameId = <String>::sse_decode(deserializer);
+        let mut var_name = <Option<String>>::sse_decode(deserializer);
+        let mut var_boxArtUrl = <Option<String>>::sse_decode(deserializer);
+        let mut var_durationMs = <i64>::sse_decode(deserializer);
+        let mut var_startMs = <i64>::sse_decode(deserializer);
+        return crate::api::twitch_archive::CoreSavedGame {
+            game_id: var_gameId,
+            name: var_name,
+            box_art_url: var_boxArtUrl,
+            duration_ms: var_durationMs,
+            start_ms: var_startMs,
         };
     }
 }
@@ -34728,6 +34749,20 @@ impl SseDecode for Vec<crate::api::twitch_archive::CoreSavedFile> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::twitch_archive::CoreSavedFile>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::twitch_archive::CoreSavedGame> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::twitch_archive::CoreSavedGame>::sse_decode(
                 deserializer,
             ));
         }
@@ -43264,6 +43299,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::twitch_archive::CoreSavedFile
             self.has_chat.into_into_dart().into_dart(),
             self.chapters.into_into_dart().into_dart(),
             self.has_ads_marked.into_into_dart().into_dart(),
+            self.games.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -43276,6 +43312,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::twitch_archive::CoreSavedFile
     for crate::api::twitch_archive::CoreSavedFile
 {
     fn into_into_dart(self) -> crate::api::twitch_archive::CoreSavedFile {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::twitch_archive::CoreSavedGame {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.game_id.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.box_art_url.into_into_dart().into_dart(),
+            self.duration_ms.into_into_dart().into_dart(),
+            self.start_ms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::twitch_archive::CoreSavedGame
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::twitch_archive::CoreSavedGame>
+    for crate::api::twitch_archive::CoreSavedGame
+{
+    fn into_into_dart(self) -> crate::api::twitch_archive::CoreSavedGame {
         self
     }
 }
@@ -49124,6 +49184,18 @@ impl SseEncode for crate::api::twitch_archive::CoreSavedFile {
         <bool>::sse_encode(self.has_chat, serializer);
         <u32>::sse_encode(self.chapters, serializer);
         <bool>::sse_encode(self.has_ads_marked, serializer);
+        <Vec<crate::api::twitch_archive::CoreSavedGame>>::sse_encode(self.games, serializer);
+    }
+}
+
+impl SseEncode for crate::api::twitch_archive::CoreSavedGame {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.game_id, serializer);
+        <Option<String>>::sse_encode(self.name, serializer);
+        <Option<String>>::sse_encode(self.box_art_url, serializer);
+        <i64>::sse_encode(self.duration_ms, serializer);
+        <i64>::sse_encode(self.start_ms, serializer);
     }
 }
 
@@ -51272,6 +51344,16 @@ impl SseEncode for Vec<crate::api::twitch_archive::CoreSavedFile> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::twitch_archive::CoreSavedFile>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::twitch_archive::CoreSavedGame> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::twitch_archive::CoreSavedGame>::sse_encode(item, serializer);
         }
     }
 }
