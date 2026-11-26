@@ -76,7 +76,10 @@ export function icon(name) {
   span.className = 'icon';
   span.setAttribute('aria-hidden', 'true');
   span.innerHTML = ICONS[name] || '';
-  return span.firstElementChild || span;
+  const el = span.firstElementChild;
+  if (!el) return span;
+  el.classList.add('icon');
+  return el;
 }
 
 const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;

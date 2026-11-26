@@ -102,13 +102,19 @@ export async function waitForService({ timeoutMs = 15 * 60 * 1000, onTick } = {}
   while (Date.now() - start < timeoutMs) {
     await new Promise((r) => setTimeout(r, 3000));
     let up = false;
+    // A request to a machine that is going down can hang for minutes: give up after 5 s.
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 5000);
     try {
-      const res = await fetch('/healthz', { cache: 'no-store' });
+      const res = await fetch('/healthz', { cache: 'no-store', signal: ctl.signal });
       up = res.ok;
-    } catch { up = false; }
+    } catch { up = false; } finally { clearTimeout(timer); }
     if (!up) wentDown = true;
     if (onTick) onTick({ up, wentDown, elapsed: Date.now() - start });
     if (up && wentDown) return true;
+    // A fast reboot may slip between two polls: sessions live in memory, so a lost
+    // session after the first minute also means the machine has restarted.
+    if (up && Date.now() - start > 60 * 1000 && (await session().catch(() => 'error')) === null) return true;
   }
   return false;
 }
