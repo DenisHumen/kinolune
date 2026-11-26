@@ -50,6 +50,7 @@ import '../../twitch/twitch_embed.dart';
 import '../../twitch/twitch_service.dart';
 import '../../widgets/error_boundary.dart';
 import 'twitch_embed_desktop.dart';
+import 'twitch_follow.dart';
 import 'twitch_player_screen.dart'
     show
         KColorsChat,
@@ -605,6 +606,14 @@ class TwitchEmbedScreenState extends State<TwitchEmbedScreen>
                       login: login,
                       userId: _services.twitch.channelOf(login).userId,
                       compact: _phone,
+                    ),
+                  // TWI-033: follow the channel on Twitch.
+                  if (login != null &&
+                      login.isNotEmpty &&
+                      _services.twitch.account != null)
+                    TwitchFollowButton(
+                      channel: _services.twitch.channelOf(login),
+                      compact: true,
                     ),
                   ListenableBuilder(
                     listenable: sleepTimer,

@@ -370,7 +370,9 @@ class FakeTwitchBackend implements TwitchBackend {
   final List<TwitchClip> allClips;
   final Map<String, List<TwitchScheduleSegment>> schedules;
   final List<TwitchCategory> categories;
-  final List<String> follows;
+  /// User ids the user follows; tests change it (TWI-033: followed on
+  /// Twitch itself).
+  List<String> follows;
   final List<TwitchProgressEntry> progress;
 
   /// `games/top` in order (TWI-034).

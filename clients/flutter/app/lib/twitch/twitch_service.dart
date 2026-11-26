@@ -15,7 +15,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/foundation.dart' show ValueListenable, setEquals;
 import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart' show Progress;
@@ -743,6 +743,7 @@ class TwitchService extends ChangeNotifier {
       try {
         final followed = await backend.followed();
         _remember(followed);
+        _setFollowed(followed);
         final missing = [
           for (final c in followed)
             if (c.userId != null && !live.containsKey(c.userId)) c.userId!,
@@ -933,6 +934,47 @@ class TwitchService extends ChangeNotifier {
     return c.stream;
   }
 
+  // ----- Follow on Twitch (TWI-033, ADR-NNNN) --------------------------------
+
+  /// Logins the signed-in user follows on Twitch, as Helix last said
+  /// (`channels/followed`); null: not known yet.
+  Set<String>? _followed;
+  String? _followedOf;
+
+  /// Whether the signed-in user follows [login] on Twitch: null without a
+  /// sign-in or before the first `channels/followed` answer. Helix can only
+  /// read follows; following happens on Twitch itself (ADR-NNNN).
+  bool? followsOnTwitch(String login) {
+    final a = account;
+    if (a == null || _followedOf != a.userId) return null;
+    return _followed?.contains(login);
+  }
+
+  void _setFollowed(List<TwitchChannel> followed) {
+    final next = {for (final c in followed) c.login};
+    final of = account?.userId;
+    if (of == _followedOf && setEquals(next, _followed)) return;
+    _followed = next;
+    _followedOf = of;
+    notifyListeners();
+  }
+
+  /// Asks Helix again whom the user follows (after the user came back from
+  /// Twitch). Returns [followsOnTwitch] of [login]; null when offline or
+  /// signed out.
+  Future<bool?> refreshFollowed([String? login]) async {
+    if (account == null) return null;
+    try {
+      final followed = await backend.followed();
+      _remember(followed);
+      _setFollowed(followed);
+    } on TwitchUnavailable catch (e) {
+      debugPrint('Twitch follows: $e');
+      return null;
+    }
+    return login == null ? null : followsOnTwitch(login);
+  }
+
   // ----- Following, channel page, search, categories -----------------------
 
   /// Channels the signed-in user follows with live status.
@@ -942,6 +984,7 @@ class TwitchService extends ChangeNotifier {
   }) async {
     final followed = await backend.followed();
     _remember(followed);
+    _setFollowed(followed);
     final streams = await backend.liveStreams([
       for (final c in followed) ?c.userId,
     ]);
@@ -1195,6 +1238,7 @@ class TwitchService extends ChangeNotifier {
     } finally {
       await _forgetProfile();
       _live.clear();
+      _followed = null;
       _liveKnown = false;
       notifyListeners();
       if (userId != null) {

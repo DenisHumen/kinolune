@@ -68,6 +68,7 @@ import '../../twitch/twitch_native.dart';
 import '../../twitch/twitch_service.dart';
 import '../../twitch/twitch_skip_chatting.dart';
 import '../../widgets/error_boundary.dart';
+import 'twitch_follow.dart';
 import 'twitch_record_live.dart';
 import 'twitch_widgets.dart';
 
@@ -1047,6 +1048,13 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
           login: widget.target.login!,
           userId: _services.twitch.channelOf(widget.target.login!).userId,
           compact: compact,
+        ),
+      // TWI-033: follow the channel on Twitch.
+      if ((widget.target.login ?? '').isNotEmpty &&
+          _services.twitch.account != null)
+        TwitchFollowButton(
+          channel: _services.twitch.channelOf(widget.target.login!),
+          compact: true,
         ),
       if ((isLive && _chat != null) || _replay != null) ...[
         if (wide && (_chatOn ?? true))
