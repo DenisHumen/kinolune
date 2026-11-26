@@ -1271,9 +1271,58 @@ jobs:
         # `dnf upgrade`, tampered and unsigned repositories refused.
         run: packaging/linux/test/repo-test.sh "$RUNNER_TEMP/linux/kinolune-$VERSION-linux-$ARCH.tar.gz"
 
+  linux-smoke:
+    name: Linux ${{ matrix.arch }} on Wayland (apt install, play a file, SMB)
+    needs: [meta, linux]
+    # PKG-026: the installed package on the runner itself (arm64 natively on
+    # the ARM runner): GNOME users run Wayland, so no X server here.
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, deb: amd64, artifact: linux, runner: ubuntu-24.04 }
+          - { arch: aarch64, deb: arm64, artifact: linux-arm64, runner: ubuntu-24.04-arm }
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ runner.temp }}/linux
+      - name: Install the .deb with apt, headless sway and grim
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sway grim \
+            "$RUNNER_TEMP/linux/kinolune-$VERSION-linux-${{ matrix.deb }}.deb"
+          dpkg-query -W -f '${Package} ${Version} ${Architecture}\n' kinolune
+          file -bL /opt/kinolune/kinolune
+      - name: Start on Wayland and play a local file (30 s, screenshots)
+        run: packaging/linux/test/wayland-smoke.sh "$RUNNER_TEMP/smoke"
+      - name: SMB with the packaged libsmb2 against Samba (pa-vfs contract suite)
+        env:
+          # The library from the installed package, not a separate build.
+          PA_SMB2_LIB: /opt/kinolune/lib/libsmb2.so.1
+          PA_SMB_COMPOSE_PROJECT: pa-smb-${{ matrix.arch }}
+        # Throughput (netem, bench) is NET-021's business, not this job's.
+        run: core/crates/pa-vfs-smb/tests/servers/run.sh -- --skip stream_bench --skip stream_wifi_netem_80_mbit
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: linux-wayland-smoke-${{ matrix.arch }}
+          path: |
+            ${{ runner.temp }}/smoke/*.png
+            ${{ runner.temp }}/smoke/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
   assemble:
     name: Assemble release
-    needs: [meta, libmpv, libsmb2, linux, linux-packages, android, macos, windows]
+    needs: [meta, libmpv, libsmb2, linux, linux-packages, linux-smoke, android, macos, windows]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
