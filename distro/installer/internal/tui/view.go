@@ -474,9 +474,9 @@ func (m *Model) taskDetail(k *install.Task) string {
 		return ""
 	case k.Total > 0 && k.Speed > 0:
 		eta, _ := k.ETA()
-		return tr(m.lang, "prog.copy", size(k.Done), size(k.Total), size(int64(k.Speed)), dur(eta))
+		return tr(m.lang, "prog.copy", size(k.Done), size(k.Total), speed(k.Speed), dur(eta))
 	case k.Done > 0:
-		return tr(m.lang, "prog.written", size(k.Done), size(int64(k.Speed)))
+		return tr(m.lang, "prog.written", size(k.Done), speed(k.Speed))
 	}
 	return ""
 }
@@ -508,6 +508,14 @@ func percent(f float64) string {
 // dur rounds to seconds: 3m05s.
 func dur(d time.Duration) string {
 	return d.Round(time.Second).String()
+}
+
+// speed is a write speed: 8.5 MB, 120 MB (the "/s" is in the text).
+func speed(v float64) string {
+	if v >= 1e6 && v < 100e6 {
+		return fmt.Sprintf("%.1f MB", v/1e6)
+	}
+	return size(int64(v))
 }
 
 // size is a decimal size for amounts and speeds: 612 MB, 1.4 GB.
