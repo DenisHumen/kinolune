@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/airing.dart';
 import 'api/anime_db.dart';
 import 'api/app_update.dart';
 import 'api/audiobooks.dart';
@@ -867,6 +868,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSetupReceived dco_decode_box_autoadd_core_setup_received(dynamic raw);
 
   @protected
+  CoreShowAiring dco_decode_box_autoadd_core_show_airing(dynamic raw);
+
+  @protected
   CoreSidecarSubtitle dco_decode_box_autoadd_core_sidecar_subtitle(dynamic raw);
 
   @protected
@@ -958,6 +962,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int dco_decode_box_autoadd_u_8(dynamic raw);
+
+  @protected
+  CoreAiringStatus dco_decode_core_airing_status(dynamic raw);
 
   @protected
   CoreAlphabetEntry dco_decode_core_alphabet_entry(dynamic raw);
@@ -1461,6 +1468,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSetupReceived dco_decode_core_setup_received(dynamic raw);
+
+  @protected
+  CoreShowAiring dco_decode_core_show_airing(dynamic raw);
 
   @protected
   CoreShowEpisode dco_decode_core_show_episode(dynamic raw);
@@ -1974,6 +1984,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreServiceKind> dco_decode_list_core_service_kind(dynamic raw);
 
   @protected
+  List<CoreShowAiring> dco_decode_list_core_show_airing(dynamic raw);
+
+  @protected
   List<CoreShowEpisode> dco_decode_list_core_show_episode(dynamic raw);
 
   @protected
@@ -2228,6 +2241,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSetupReceived? dco_decode_opt_box_autoadd_core_setup_received(
     dynamic raw,
   );
+
+  @protected
+  CoreShowAiring? dco_decode_opt_box_autoadd_core_show_airing(dynamic raw);
 
   @protected
   CoreSidecarSubtitle? dco_decode_opt_box_autoadd_core_sidecar_subtitle(
@@ -3178,6 +3194,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreShowAiring sse_decode_box_autoadd_core_show_airing(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreSidecarSubtitle sse_decode_box_autoadd_core_sidecar_subtitle(
     SseDeserializer deserializer,
   );
@@ -3307,6 +3328,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int sse_decode_box_autoadd_u_8(SseDeserializer deserializer);
+
+  @protected
+  CoreAiringStatus sse_decode_core_airing_status(SseDeserializer deserializer);
 
   @protected
   CoreAlphabetEntry sse_decode_core_alphabet_entry(
@@ -3914,6 +3938,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreSetupReceived sse_decode_core_setup_received(
     SseDeserializer deserializer,
   );
+
+  @protected
+  CoreShowAiring sse_decode_core_show_airing(SseDeserializer deserializer);
 
   @protected
   CoreShowEpisode sse_decode_core_show_episode(SseDeserializer deserializer);
@@ -4621,6 +4648,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<CoreShowAiring> sse_decode_list_core_show_airing(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreShowEpisode> sse_decode_list_core_show_episode(
     SseDeserializer deserializer,
   );
@@ -4989,6 +5021,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreSetupReceived? sse_decode_opt_box_autoadd_core_setup_received(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreShowAiring? sse_decode_opt_box_autoadd_core_show_airing(
     SseDeserializer deserializer,
   );
 
@@ -6135,6 +6172,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_show_airing(
+    CoreShowAiring self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_sidecar_subtitle(
     CoreSidecarSubtitle self,
     SseSerializer serializer,
@@ -6298,6 +6341,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_airing_status(
+    CoreAiringStatus self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_core_alphabet_entry(
@@ -7148,6 +7197,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_core_setup_received(
     CoreSetupReceived self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_show_airing(
+    CoreShowAiring self,
     SseSerializer serializer,
   );
 
@@ -8061,6 +8116,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_show_airing(
+    List<CoreShowAiring> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_show_episode(
     List<CoreShowEpisode> self,
     SseSerializer serializer,
@@ -8516,6 +8577,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_setup_received(
     CoreSetupReceived? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_show_airing(
+    CoreShowAiring? self,
     SseSerializer serializer,
   );
 
