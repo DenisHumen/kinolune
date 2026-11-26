@@ -22,7 +22,10 @@
 #                 in a container sharing the host network and distro/.work;
 #      OVMF_CODE, OVMF_VARS  firmware paths as seen by QEMU;
 #      CONTAINER_PREFIX      names of the helper containers (default alpha-os-test);
-#      KEEP=1                leave the VM and the registry running.
+#      KEEP=1                leave the VM and the registry running;
+#      VM_SMB_PORT, SMB_EXEC also log in to the installed system's Samba share
+#                            with the installer's password from outside the VM
+#                            (smbclient, e.g. SMB_EXEC="docker exec <c> smbclient").
 set -euo pipefail
 source "$(dirname "$0")/../scripts/lib.sh"
 
@@ -84,7 +87,7 @@ vm_start() {
         -drive "if=pflash,format=raw,readonly=on,file=${OVMF_CODE}" \
         -drive "if=pflash,format=raw,file=${W}/OVMF_VARS.fd" \
         "$@" \
-        -netdev "user,id=n0,hostfwd=tcp:127.0.0.1:${VM_SSH_PORT}-:22" \
+        -netdev "user,id=n0,hostfwd=tcp:127.0.0.1:${VM_SSH_PORT}-:22${VM_SMB_PORT:+,hostfwd=tcp:127.0.0.1:${VM_SMB_PORT}-:445}" \
         -device virtio-net-pci,netdev=n0 \
         -display none -serial "file:${W}/serial-${name}.log" \
         -daemonize -pidfile "${W}/qemu.pid"
@@ -220,6 +223,20 @@ check "install.json" python3 -c 'import json,sys; d=json.load(sys.stdin); assert
 check "SELinux enforcing" test "$(vm getenforce)" = Enforcing
 check "/etc/hostname labeled" grep -q hostname_etc_t <<< "$(vm ls -Z /etc/hostname)"
 check "no failed units" test -z "$(vm systemctl --failed --no-legend --plain | grep -v '^$' || true)"
+# DIST-018: the installer's clear-text password also opens the shares; keys were given, so SSH is on.
+check "installer's Samba password imported at first boot" grep -q '^admin:' <<< "$(vm pdbedit -L)"
+check "Samba import file removed" test "$(vm 'test -e /var/lib/alpha/samba/import.smbpasswd && echo left || echo gone')" = gone
+check "admin's share folders" test "$(vm stat -c '%U:%a' /var/srv/users/admin)" = admin:700
+check "SSH on (keys were given), keys only" test "$(vm systemctl is-enabled sshd.service)" = enabled
+if [[ -n "${VM_SMB_PORT:-}" ]]; then
+    read -r -a smb_exec <<< "${SMB_EXEC:-smbclient}"
+    check "smbclient with the installer's password (Media, Users/admin)" \
+        "${smb_exec[@]}" -p "${VM_SMB_PORT}" -m SMB3 -U 'admin%kinolune-test-pw' //127.0.0.1/Users -c 'put /etc/hostname admin/from-install-test.txt'
+    if "${smb_exec[@]}" -p "${VM_SMB_PORT}" -m SMB3 -N //127.0.0.1/Media -c ls >/dev/null 2>&1; then
+        die "FAILED: anonymous access to Media"
+    fi
+    log "OK anonymous access to Media refused"
+fi
 
 # --- 6. the installed system follows the registry -----------------------------------------
 vm "printf '[[registry]]\nlocation = \"10.0.2.2:${REGISTRY_PORT}\"\ninsecure = true\n' \
