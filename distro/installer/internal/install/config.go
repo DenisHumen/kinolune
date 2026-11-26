@@ -191,6 +191,24 @@ func (in *Installer) configure(ctx context.Context) (err error) {
 	if err := os.WriteFile(infoPath, append(data, '\n'), 0o644); err != nil {
 		return err
 	}
+	// The same password for the shares (DIST-018): Samba needs its NT hash,
+	// which only a clear-text password gives. The file is imported and
+	// deleted at the first boot; with password_hash the Samba password is set
+	// at the first log-in to the admin UI instead.
+	if a.User.Password != "" {
+		uid, err := uidOf(filepath.Join(etc, "passwd"), a.User.Name)
+		if err != nil {
+			return err
+		}
+		p := filepath.Join(deploy, SambaImportPath)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			return err
+		}
+		line := SambaImportLine(a.User.Name, uid, a.User.Password, in.Now().Unix())
+		if err := os.WriteFile(p, []byte(line), 0o600); err != nil {
+			return err
+		}
+	}
 	relabel = append(relabel, varDir)
 
 	return in.relabel(ctx, deploy, relabel)

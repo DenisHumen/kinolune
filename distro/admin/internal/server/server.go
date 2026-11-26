@@ -108,8 +108,10 @@ type Server struct {
 	Disks       Disks
 	Power       Power
 	Updates     *updproxy.Client
-	Info        Info
-	Log         *slog.Logger
+	// Accounts: users, Samba and SSH through the root helper (DIST-018).
+	Accounts Accounts
+	Info     Info
+	Log      *slog.Logger
 	// ConfirmTTL is how long a reboot/power-off confirmation is valid.
 	ConfirmTTL time.Duration
 	Now        func() time.Time
@@ -185,6 +187,18 @@ func (s *Server) routes() {
 
 	m.HandleFunc("GET /api/v1/firewall", s.admin(s.firewallStatus))
 	m.HandleFunc("PUT /api/v1/firewall/openings/{name}", s.admin(s.setOpening))
+
+	m.HandleFunc("GET /api/v1/users", s.admin(s.listUsers))
+	m.HandleFunc("POST /api/v1/users", s.admin(s.createUser))
+	m.HandleFunc("PUT /api/v1/users/{name}/password", s.admin(s.setUserPassword))
+	m.HandleFunc("PUT /api/v1/users/{name}/admin", s.admin(s.setUserAdmin))
+	m.HandleFunc("DELETE /api/v1/users/{name}", s.admin(s.deleteUser))
+
+	m.HandleFunc("GET /api/v1/sharing", s.admin(s.sharing))
+	m.HandleFunc("PUT /api/v1/sharing", s.admin(s.setSharing))
+
+	m.HandleFunc("GET /api/v1/ssh", s.admin(s.sshStatus))
+	m.HandleFunc("PUT /api/v1/ssh", s.admin(s.setSSH))
 
 	m.HandleFunc("GET /api/v1/disks", s.admin(s.disks))
 	m.HandleFunc("POST /api/v1/disks/{device}/mount", s.admin(s.mount))

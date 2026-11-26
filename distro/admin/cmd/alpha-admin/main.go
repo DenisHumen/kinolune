@@ -24,6 +24,7 @@ import (
 	"github.com/DenisHumen/kinolune/distro/admin/internal/auth"
 	"github.com/DenisHumen/kinolune/distro/admin/internal/authhelper"
 	"github.com/DenisHumen/kinolune/distro/admin/internal/netpolicy"
+	"github.com/DenisHumen/kinolune/distro/admin/internal/privhelper"
 	"github.com/DenisHumen/kinolune/distro/admin/internal/server"
 	"github.com/DenisHumen/kinolune/distro/admin/internal/system"
 	"github.com/DenisHumen/kinolune/distro/admin/internal/tlscert"
@@ -35,6 +36,7 @@ type options struct {
 	httpListen    string
 	stateDir      string
 	authSocket    string
+	privSocket    string
 	updatedSocket string
 	installInfo   string
 	versionFile   string
@@ -50,6 +52,7 @@ func main() {
 	flag.StringVar(&o.httpListen, "http-listen", ":80", "plain HTTP address that only redirects to HTTPS and answers /health (empty: off)")
 	flag.StringVar(&o.stateDir, "state-dir", "/var/lib/alpha/admin", "state directory (TLS certificate)")
 	flag.StringVar(&o.authSocket, "auth-socket", "/run/alpha-admin/auth.sock", "socket of the password helper (alpha-admin-auth)")
+	flag.StringVar(&o.privSocket, "priv-socket", "/run/alpha-admin/priv.sock", "socket of the users/Samba/SSH helper (alpha-admin-priv)")
 	flag.StringVar(&o.updatedSocket, "updated-socket", updproxy.DefaultSocket, "API socket of alpha-updated")
 	flag.StringVar(&o.installInfo, "install-info", server.InstallInfoPath, "install.json written by the installer")
 	flag.StringVar(&o.versionFile, "version-file", "/usr/share/alpha/version", "OS version file")
@@ -101,6 +104,7 @@ func run(o options, log *slog.Logger) error {
 		Disks:       &system.UDisks{Bus: bus, SystemUUIDs: install.SystemUUIDs()},
 		Power:       &system.Logind{Bus: bus},
 		Updates:     updproxy.New(o.updatedSocket),
+		Accounts:    &privhelper.Client{Socket: o.privSocket},
 		Info: server.Info{
 			OSVersion:      server.ReadOSVersion(o.versionFile),
 			TLSFingerprint: cert.Fingerprint,

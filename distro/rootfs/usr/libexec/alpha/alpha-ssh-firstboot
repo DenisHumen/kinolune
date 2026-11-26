@@ -1,0 +1,31 @@
+#!/usr/bin/bash
+# SPDX-License-Identifier: MPL-2.0
+# Kinolune OS (DIST-018): SSH is off by default. Once, at the first boot of a
+# system (or of the first image with this rule), turn it on with its firewall
+# opening if keys were given at installation (the installer's
+# ssh_authorized_keys, `bootc install --root-ssh-authorized-keys`); otherwise
+# make sure it is off. Afterwards the admin UI decides (PUT /api/v1/ssh).
+# Runs before firewalld, so the firewall is changed offline.
+set -euo pipefail
+
+marker=/var/lib/alpha/ssh-firstboot.done
+keys=0
+for f in /root/.ssh/authorized_keys /var/home/*/.ssh/authorized_keys; do
+    if [[ -f "${f}" ]] && grep -qE '^[[:space:]]*[^#[:space:]]' "${f}"; then
+        keys=1
+    fi
+done
+
+zone="$(firewall-offline-cmd --get-default-zone)"
+if [[ "${keys}" == 1 ]]; then
+    echo "SSH keys found: turning SSH on (keys only)"
+    firewall-offline-cmd --zone="${zone}" --add-service=ssh >/dev/null
+    systemctl enable sshd.service
+    systemctl start --no-block sshd.service
+else
+    echo "no SSH keys: SSH stays off"
+    firewall-offline-cmd --zone="${zone}" --remove-service=ssh >/dev/null || true
+    systemctl disable --now sshd.service || true
+fi
+mkdir -p "$(dirname "${marker}")"
+touch "${marker}"
