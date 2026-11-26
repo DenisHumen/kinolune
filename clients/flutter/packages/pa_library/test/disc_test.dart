@@ -21,9 +21,10 @@ void main() {
       'edl://%25%/d/BDMV/STREAM/00001.m2ts;%25%/d/BDMV/STREAM/00002.m2ts',
       'edl://%25%/d/BDMV/STREAM/00001.m2ts;%25%/d/BDMV/STREAM/00003.m2ts',
     ]);
-    expect(discUri(['http://127.0.0.1:1/t/1/Film.iso/BDMV/STREAM/1.m2ts']), [
-      'http://127.0.0.1:1/t/1/Film.iso/BDMV/STREAM/1.m2ts',
-    ].single);
+    expect(
+      discUri(['http://127.0.0.1:1/t/1/Film.iso/BDMV/STREAM/1.m2ts']),
+      ['http://127.0.0.1:1/t/1/Film.iso/BDMV/STREAM/1.m2ts'].single,
+    );
     // Lengths count UTF-8 bytes.
     expect(discUri(['/д/1', '/д/2']), 'edl://%5%/д/1;%5%/д/2');
   });
@@ -53,7 +54,9 @@ void main() {
 
   test('a protected disc has its code', () {
     expect(Unplayable.fromCode('protected_disc'), Unplayable.protectedDisc);
-    expect(const DiscPlayback(bluRay: true, protection: 'aacs').protection,
-        'aacs');
+    expect(
+      const DiscPlayback(bluRay: true, protection: 'aacs').protection,
+      'aacs',
+    );
   });
 }

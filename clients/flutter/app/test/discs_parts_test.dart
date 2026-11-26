@@ -87,7 +87,10 @@ void main() {
 
     expect(find.byKey(const ValueKey('unplayable-dialog')), findsOneWidget);
     expect(find.text("This file can't be played"), findsOneWidget);
-    expect(find.textContaining('Disc images play from the library'), findsOneWidget);
+    expect(
+      find.textContaining('Disc images play from the library'),
+      findsOneWidget,
+    );
     expect(find.byType(PlayerScreen), findsNothing);
     expect(engine.calls, isEmpty);
     expect(library.asked, isEmpty);

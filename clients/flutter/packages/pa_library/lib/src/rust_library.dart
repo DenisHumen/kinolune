@@ -14,6 +14,7 @@ import 'anime_db.dart';
 import 'audiobooks.dart';
 import 'auto_recognition.dart';
 import 'content_kinds.dart';
+import 'disc.dart';
 import 'episode_order.dart';
 import 'item_details.dart';
 import 'library.dart';

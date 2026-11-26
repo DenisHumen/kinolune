@@ -36,6 +36,7 @@ class TrackPanelStrings {
   String get tracks => _t('Tracks', 'Дорожки', 'Доріжки');
 
   String get videoTrack => _t('Video track', 'Видеодорожка', 'Відеодоріжка');
+
   /// Angles of a Blu-ray or DVD title (PLAY-017).
   String get angle => _t('Angle', 'Ракурс', 'Ракурс');
 

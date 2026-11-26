@@ -279,7 +279,8 @@ Future<DiscPlayback?> discOf(Library library, LibraryItem item) async {
 
 /// The chapters of a disc title for the player's chapter list.
 List<PlaybackChapter> discChapters(DiscTitle title) => [
-  for (final ms in title.chaptersMs) PlaybackChapter(start: Duration(milliseconds: ms)),
+  for (final ms in title.chaptersMs)
+    PlaybackChapter(start: Duration(milliseconds: ms)),
 ];
 
 /// The HLS URL of [item] when its Jellyfin server streams it for this
