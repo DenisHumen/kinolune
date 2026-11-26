@@ -170,9 +170,7 @@ void main() {
     await _close(t);
   });
 
-  testWidgets('401 without the scope signs in again, then the clip', (
-    t,
-  ) async {
+  testWidgets('401 without the scope signs in again, then the clip', (t) async {
     setSurface(t, _desktop);
     final backend = _backend()..clipsScope = true;
     backend.clipAnswers.add(
@@ -235,9 +233,8 @@ void main() {
       await settle(t, 6);
       expect(find.text(text), findsOneWidget);
       expect(find.byKey(const ValueKey('twitch-clip-ready')), findsNothing);
-      ScaffoldMessenger.of(
-        t.element(find.byType(Scaffold).last),
-      ).hideCurrentSnackBar();
+      ScaffoldMessenger.of(t.element(find.byType(Scaffold).last))
+          .hideCurrentSnackBar();
       await settle(t, 6);
     }
     await _close(t);
@@ -327,9 +324,7 @@ void main() {
       await _close(t);
     });
 
-    testWidgets('TV: QR code, «Смотреть» focused, edit link as QR', (
-      t,
-    ) async {
+    testWidgets('TV: QR code, «Смотреть» focused, edit link as QR', (t) async {
       setSurface(t, _tv);
       await show(t, FormFactor.tv);
       expect(find.byType(QrCodeView), findsOneWidget);

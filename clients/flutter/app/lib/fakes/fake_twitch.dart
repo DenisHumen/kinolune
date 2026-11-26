@@ -465,7 +465,9 @@ class FakeTwitchBackend implements TwitchBackend {
     if (!signedIn || expired) {
       return const TwitchClipResult(TwitchClipOutcome.signInRequired);
     }
-    if (!clipsScope) return const TwitchClipResult(TwitchClipOutcome.scopeRequired);
+    if (!clipsScope) {
+      return const TwitchClipResult(TwitchClipOutcome.scopeRequired);
+    }
     clipRequests.add(broadcasterId);
     if (clipsDisabled.contains(broadcasterId)) {
       return const TwitchClipResult(

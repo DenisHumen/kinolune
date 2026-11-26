@@ -605,9 +605,7 @@ class TwitchEmbedScreenState extends State<TwitchEmbedScreen>
                 ),
                 actions: [
                   // TWI-040: a clip of the last seconds (store and full).
-                  if (widget.target.isLive &&
-                      login != null &&
-                      login.isNotEmpty)
+                  if (widget.target.isLive && login != null && login.isNotEmpty)
                     TwitchClipButton(login: login, compact: _phone),
                   // TWI-035: record this broadcast (full builds).
                   if (AppFlavor.twitchArchive &&

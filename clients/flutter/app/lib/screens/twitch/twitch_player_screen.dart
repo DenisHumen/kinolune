@@ -909,45 +909,45 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
             return KeyEventResult.handled;
           },
           child: PlayerScreen(
-          key: _playerKey,
-          request: request,
-          engineFactory: ({bool video = true}) => _createEngine(),
-          onProgress: progress == null ? (_, _) {} : progress.report,
-          onFinished: progress == null
-              ? null
-              : () => progress.finished(
-                  _engine?.state.value.duration.inMilliseconds ?? 0,
-                ),
-          seekStep: Duration(seconds: _services.skipSeconds.value),
-          // From the start the VOD may play faster to catch up.
-          speeds: playingLive ? kTwitchLiveSpeeds : kTwitchVodSpeeds,
-          osdActions: _osdActions,
-          liveBar: isLive ? _liveBar : null,
-          canSeek: playingLive
-              ? () => _controller?.status.value.seekAllowed ?? true
-              : null,
-          onLiveSeek: isLive ? liveSeekBy : null,
-          onGoLive: isLive ? () => unawaited(goToLive()) : null,
-          // PLAY-022: the app's timer; it goes on over a quality switch
-          // (a new player), «в конце серии» is not offered on Twitch.
-          sleepTimer: _services.sleepTimer,
-          sleepEndOfItem: false,
-          arrowChapters:
-              !isLive &&
-              _chapters.length > 1 &&
-              FormFactorScope.of(context) == FormFactor.tv,
-          timelineHeader: isLive || _chapters.length < 2
-              ? null
-              : (context, s) => TwitchChapterStrip(
-                  chapters: _chapters,
-                  duration: s.duration,
-                  position: s.position,
-                  onSeek: seekTo,
-                  height: FormFactorScope.of(context) == FormFactor.tv
-                      ? 40
-                      : 30,
-                ),
-        ),
+            key: _playerKey,
+            request: request,
+            engineFactory: ({bool video = true}) => _createEngine(),
+            onProgress: progress == null ? (_, _) {} : progress.report,
+            onFinished: progress == null
+                ? null
+                : () => progress.finished(
+                    _engine?.state.value.duration.inMilliseconds ?? 0,
+                  ),
+            seekStep: Duration(seconds: _services.skipSeconds.value),
+            // From the start the VOD may play faster to catch up.
+            speeds: playingLive ? kTwitchLiveSpeeds : kTwitchVodSpeeds,
+            osdActions: _osdActions,
+            liveBar: isLive ? _liveBar : null,
+            canSeek: playingLive
+                ? () => _controller?.status.value.seekAllowed ?? true
+                : null,
+            onLiveSeek: isLive ? liveSeekBy : null,
+            onGoLive: isLive ? () => unawaited(goToLive()) : null,
+            // PLAY-022: the app's timer; it goes on over a quality switch
+            // (a new player), «в конце серии» is not offered on Twitch.
+            sleepTimer: _services.sleepTimer,
+            sleepEndOfItem: false,
+            arrowChapters:
+                !isLive &&
+                _chapters.length > 1 &&
+                FormFactorScope.of(context) == FormFactor.tv,
+            timelineHeader: isLive || _chapters.length < 2
+                ? null
+                : (context, s) => TwitchChapterStrip(
+                    chapters: _chapters,
+                    duration: s.duration,
+                    position: s.position,
+                    onSeek: seekTo,
+                    height: FormFactorScope.of(context) == FormFactor.tv
+                        ? 40
+                        : 30,
+                  ),
+          ),
         ),
         if (q.audioOnly) const _AudioOnlyNote(),
         if (playingLive) _AdBadgeLayer(state: this),

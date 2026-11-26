@@ -144,9 +144,7 @@ class CoreTwitchBackend implements TwitchBackend {
               title: c.title,
               broadcasterName: c.broadcasterName,
               thumbnailUrl: c.thumbnailUrl,
-              duration: Duration(
-                milliseconds: (c.durationSecs * 1000).round(),
-              ),
+              duration: Duration(milliseconds: (c.durationSecs * 1000).round()),
             ),
     );
   });
