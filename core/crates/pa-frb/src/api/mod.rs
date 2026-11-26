@@ -8,6 +8,7 @@ pub mod availability;
 pub mod cloud;
 pub mod content_kind;
 pub mod details;
+pub mod disc;
 pub mod diagnostics;
 pub mod discovery;
 pub mod dlna;

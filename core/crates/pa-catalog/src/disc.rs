@@ -12,9 +12,11 @@
 
 use std::sync::Arc;
 
-use pa_scanner::disc::{DiscKind, DiscPlan, DiscSegment, DiscStream, DiscTitle, Protection};
-use pa_vfs::iso::{IsoFs, is_image_name};
+use pa_scanner::disc::{DiscPlan, DiscSegment, DiscTitle};
+pub use pa_scanner::disc::{DiscKind, DiscStream, Protection};
+pub use pa_scanner::mpls::StreamKind;
 use pa_vfs::VfsPath;
+use pa_vfs::iso::{IsoFs, is_image_name};
 
 use crate::items::{local_path, relative};
 use crate::{Error, SourceOpener};
