@@ -11,7 +11,7 @@
 # Target names and minimum OS versions are the same as tools/ffmpeg, so one
 # client target picks the same slice of every native library.
 
-PA_SMB2_TARGETS="linux-x86_64 windows-x86_64 \
+PA_SMB2_TARGETS="linux-x86_64 linux-arm64 windows-x86_64 \
 android-arm64-v8a android-armeabi-v7a android-x86_64 \
 macos-arm64 macos-x86_64 ios-arm64 ios-sim-arm64 tvos-arm64 tvos-sim-arm64"
 
@@ -26,6 +26,8 @@ _reset_target() {
 }
 
 _setup_linux_native() {
+    # Native builds only: linux-arm64 is built on an arm64 host (PKG-026).
+    [ "$(uname -m)" = "$1" ] || die "linux-${2} must be built natively on a $1 host (this is $(uname -m))"
     T_OS=linux T_KIND=linux T_RUNNABLE=1
     CC="${CC:-gcc}"
 }
@@ -86,7 +88,8 @@ _setup_apple() {
 setup_target() {
     _reset_target
     case "$1" in
-        linux-x86_64)        _setup_linux_native ;;
+        linux-x86_64)        _setup_linux_native x86_64 x86_64 ;;
+        linux-arm64)         _setup_linux_native aarch64 arm64 ;;
         windows-x86_64)      _setup_windows ;;
         android-arm64-v8a)   _setup_android arm64-v8a ;;
         android-armeabi-v7a) _setup_android armeabi-v7a ;;
