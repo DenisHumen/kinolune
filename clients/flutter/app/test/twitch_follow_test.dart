@@ -21,6 +21,7 @@ import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/twitch/twitch_backend.dart';
 import 'package:kinolune/twitch/twitch_service.dart';
+import 'package:kinolune/widgets/focusable.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'support/test_app.dart';
@@ -65,7 +66,9 @@ Future<(AppServices, FakeTwitchBackend, List<Uri>)> _channelPage(
     testApp(services, formFactor: ff, section: Section.twitch),
   );
   await settle(t);
-  final context = t.element(find.byType(TwitchAttribution).first);
+  final context = t.element(
+    find.byKey(const ValueKey('twitch-favorite-quietkettle')),
+  );
   openTwitchChannel(context, services.twitch.channelOf(_login));
   await settle(t, 16);
   expect(
@@ -76,6 +79,7 @@ Future<(AppServices, FakeTwitchBackend, List<Uri>)> _channelPage(
 }
 
 Future<void> _close(WidgetTester t) async {
+  TwitchFollowReturn.cancel();
   await t.pumpWidget(const SizedBox());
   await settle(t, 2);
 }
@@ -229,7 +233,7 @@ void main() {
 
   testWidgets('the live card menu follows on Twitch', (t) async {
     setSurface(t, _desktop);
-    final helix = FakeTwitchBackend.demo(now: demoNow)..follows = ['7001'];
+    final helix = FakeTwitchBackend.demo(now: demoNow)..follows = [];
     final opened = <Uri>[];
     final before = openExternalLink;
     openExternalLink = (url) async {
@@ -252,6 +256,7 @@ void main() {
     await settle(t, 10);
     expect(opened, [Uri.parse('https://www.twitch.tv/$login')]);
     expect(services.twitch.isFavorite(login), isTrue);
+    TwitchFollowReturn.cancel();
     await _close(t);
   });
 

@@ -195,6 +195,9 @@ class TwitchFollowReturn {
   /// Is a check waiting (tests).
   static bool get pending => _pending != null;
 
+  /// Drops the waiting check (tests, sign-out).
+  static void cancel() => _pending?._stop();
+
   static void watch(TwitchService twitch, String login) {
     _pending?._stop();
     _pending = TwitchFollowReturn._(twitch);
