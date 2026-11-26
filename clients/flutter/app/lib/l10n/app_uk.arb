@@ -589,7 +589,7 @@
   "settingsTakeoverPause": "Пауза під час переходу на інший пристрій",
   "settingsTakeoverPauseSubtitle": "Якщо ввімкнути те саме відео на іншому пристрої родини, тут воно стане на паузу.",
   "libraryUnplayableTitle": "Цей файл не відтворюється",
-  "libraryUnplayableDiscImage": "Образи дисків (.iso) не відтворюються. Розпакуйте диск у папку (BDMV або VIDEO_TS) або перепакуйте основний фільм у MKV.",
+  "libraryUnplayableDiscImage": "Образи дисків грають із медіатеки: додайте теку з цим образом як джерело, і фільм відкриється з усіма доріжками.",
   "libraryUnplayableOther": "Kinolune поки не вміє відтворювати цей файл.",
   "libraryUnplayableOk": "Зрозуміло",
   "settingsLibrarySourcesTitle": "Медіатека та джерела",
@@ -2397,5 +2397,7 @@
   "twitchRecordReadyTitle": "Запис ефіру {channel} готовий",
   "twitchRecordReadyBody": "Він у розділі «Записи й завантаження».",
   "twitchRecordDiskFullTitle": "Диск заповнено: запис {channel} зупинено",
-  "twitchRecordDiskFullBody": "Записане збережено як є, без перепакування (файл .ts)."
+  "twitchRecordDiskFullBody": "Записане збережено як є, без перепакування (файл .ts).",
+  "libraryUnplayableProtectedDisc": "Цей диск захищений від копіювання (AACS, BD+ або CSS). Kinolune не знімає захист, тому не може його відтворити. Диски та образи без захисту грають самі.",
+  "detailExtraDiscTitle": "З диска"
 }

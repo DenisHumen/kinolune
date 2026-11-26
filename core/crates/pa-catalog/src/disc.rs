@@ -12,8 +12,8 @@
 
 use std::sync::Arc;
 
-use pa_scanner::disc::{DiscPlan, DiscSegment, DiscTitle};
 pub use pa_scanner::disc::{DiscKind, DiscStream, Protection};
+use pa_scanner::disc::{DiscPlan, DiscSegment, DiscTitle};
 pub use pa_scanner::mpls::StreamKind;
 use pa_vfs::VfsPath;
 use pa_vfs::iso::{IsoFs, is_image_name};
