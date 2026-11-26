@@ -2441,5 +2441,19 @@
   "airingBadgeTomorrow": "Новая серия завтра",
   "airingBadgeOn": "Новая серия {date}",
   "airingCardTitle": "Ещё не вышла",
-  "airingCardLabel": "{code}, выйдет {when}"
+  "airingCardLabel": "{code}, выйдет {when}",
+  "twitchClip": "Клип",
+  "twitchClipTooltip": "Клип последних секунд эфира",
+  "twitchClipShortcut": "Клип последних секунд эфира (Alt+X)",
+  "twitchClipMaking": "Twitch делает клип…",
+  "twitchClipReady": "Клип готов",
+  "twitchClipWatch": "Смотреть",
+  "twitchClipShare": "Поделиться",
+  "twitchClipEditHint": "На Twitch клип можно обрезать и дать ему название.",
+  "twitchClipsOff": "Канал отключил клипы.",
+  "twitchClipOffline": "Канал не в эфире — клип сделать нельзя.",
+  "twitchClipNotReady": "Twitch ещё не закончил клип. Он появится среди клипов канала позже.",
+  "twitchClipRateLimited": "Слишком много клипов подряд. Попробуйте через {seconds} с.",
+  "twitchClipFailed": "Не удалось сделать клип. Попробуйте ещё раз.",
+  "twitchSignInClipsNote": "Twitch также спросит разрешение создавать клипы из Kinolune."
 }

@@ -88,19 +88,22 @@ Future<void> playTwitchVideo(
 
 /// Device Code Flow: the code, a QR code of the activation page, polling
 /// until the user confirms. Returns the account or null.
-/// With [chat] the sign-in also asks to send chat messages (TWI-024).
+/// With [chat] the sign-in also asks to send chat messages (TWI-024),
+/// with [clips] to make clips (TWI-040).
 Future<TwitchAccount?> showTwitchSignIn(
   BuildContext context, {
   bool chat = false,
+  bool clips = false,
 }) => showDialog<TwitchAccount>(
   context: context,
-  builder: (_) => _SignInDialog(chat: chat),
+  builder: (_) => _SignInDialog(chat: chat, clips: clips),
 );
 
 class _SignInDialog extends StatefulWidget {
-  const _SignInDialog({this.chat = false});
+  const _SignInDialog({this.chat = false, this.clips = false});
 
   final bool chat;
+  final bool clips;
 
   @override
   State<_SignInDialog> createState() => _SignInDialogState();
@@ -120,7 +123,10 @@ class _SignInDialogState extends State<_SignInDialog> {
   Future<void> _start() async {
     final twitch = Services.read(context).twitch;
     try {
-      final login = await twitch.startLogin(chat: widget.chat);
+      final login = await twitch.startLogin(
+        chat: widget.chat,
+        clips: widget.clips,
+      );
       if (!mounted) return;
       setState(() => _login = login);
       _timer = Timer.periodic(login.interval, (_) => _poll());
@@ -169,6 +175,14 @@ class _SignInDialogState extends State<_SignInDialog> {
                 child: CircularProgressIndicator(),
               )
             else ...[
+              if (widget.clips) ...[
+                Text(
+                  l.twitchSignInClipsNote,
+                  key: const ValueKey('twitch-sign-in-clips-note'),
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 8),
+              ],
               Text(
                 l.twitchSignInSteps('twitch.tv/activate'), // l10n-ignore
                 style: theme.textTheme.bodyMedium,

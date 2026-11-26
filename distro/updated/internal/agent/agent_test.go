@@ -5,6 +5,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -17,6 +18,7 @@ import (
 	"github.com/DenisHumen/kinolune/distro/updated/internal/bootc"
 	"github.com/DenisHumen/kinolune/distro/updated/internal/fakebootc"
 	"github.com/DenisHumen/kinolune/distro/updated/internal/settings"
+	"github.com/DenisHumen/kinolune/distro/updated/internal/varsnap"
 )
 
 const ref = "ghcr.io/denishumen/alpha-os:stable"
@@ -75,7 +77,9 @@ type env struct {
 	reboots atomic.Int32
 	// onReboot simulates what happens on reboot (default: fb.Boot).
 	onReboot func()
-	a        *Agent
+	// cfgHook adjusts the config of every restart.
+	cfgHook func(*Config)
+	a       *Agent
 }
 
 func newEnv(t *testing.T, bootRef string) *env {
@@ -88,11 +92,15 @@ func newEnv(t *testing.T, bootRef string) *env {
 
 // restart builds a new agent on the same state dir (daemon restart or boot).
 func (e *env) restart() {
-	e.a = New(Config{
+	cfg := Config{
 		StateDir:    e.dir,
 		DefaultRepo: "ghcr.io/denishumen/alpha-os",
 		Now:         e.clk.Now,
-	}, bootc.Client{R: e.fb}, e.veto, RebootFunc(func(context.Context) error {
+	}
+	if e.cfgHook != nil {
+		e.cfgHook(&cfg)
+	}
+	e.a = New(cfg, bootc.Client{R: e.fb}, e.veto, RebootFunc(func(context.Context) error {
 		e.reboots.Add(1)
 		e.onReboot()
 		return nil
@@ -606,5 +614,131 @@ func TestStateSurvivesCorruptFiles(t *testing.T) {
 	}
 	if got := e.state(); got != PhaseUpToDate {
 		t.Fatalf("state = %s", got)
+	}
+}
+
+// --- /var snapshots (DIST-010) ---
+
+type fakeVarSnap struct {
+	mu       sync.Mutex
+	st       varsnap.State
+	prepared []varsnap.Pending
+	confirms int
+	err      error
+}
+
+func (f *fakeVarSnap) Prepare(_ context.Context, p varsnap.Pending) (varsnap.Pending, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.err != nil {
+		return p, f.err
+	}
+	p.Snapshot = fmt.Sprintf("snap-%d", len(f.prepared)+1)
+	f.prepared = append(f.prepared, p)
+	f.st.Pending = &p
+	f.st.Snapshots = append(f.st.Snapshots, varsnap.Snapshot{Name: p.Snapshot, Kind: varsnap.KindPreUpdate})
+	return p, nil
+}
+
+func (f *fakeVarSnap) Confirm(context.Context) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.confirms++
+	f.st.Pending = nil
+	return nil
+}
+
+func (f *fakeVarSnap) State(context.Context) (varsnap.State, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if errors.Is(f.err, varsnap.ErrNoLayout) {
+		return varsnap.State{}, f.err
+	}
+	return f.st, nil
+}
+
+func newVarEnv(t *testing.T) (*env, *fakeVarSnap, *atomic.Bool) {
+	e := newEnv(t, ref)
+	vs := &fakeVarSnap{}
+	var healthy atomic.Bool
+	e.cfgHook = func(c *Config) {
+		c.VarSnap = vs
+		c.BootHealthy = func(context.Context) bool { return healthy.Load() }
+	}
+	e.restart()
+	return e, vs, &healthy
+}
+
+func TestApplySnapshotsVarThenConfirms(t *testing.T) {
+	e, vs, healthy := newVarEnv(t)
+	e.fb.Publish(ref, v2)
+	if _, err := e.a.Apply("now"); err != nil {
+		t.Fatal(err)
+	}
+	e.a.Wait()
+	if e.reboots.Load() != 1 || len(vs.prepared) != 1 {
+		t.Fatalf("reboots=%d prepared=%+v", e.reboots.Load(), vs.prepared)
+	}
+	p := vs.prepared[0]
+	if p.FromChecksum != fakebootc.Checksum(v1) || p.ToChecksum != fakebootc.Checksum(v2) ||
+		p.FromVersion != v1.Version || p.ToVersion != v2.Version || p.ToDigest != v2.Digest {
+		t.Fatalf("pending = %+v", p)
+	}
+	e.restart() // booted into v2
+	st := e.a.Status(context.Background())
+	if st.LastApply == nil || st.LastApply.VarSnapshot != "snap-1" || st.VarSnapshots == nil || st.VarSnapshots.Pending == nil {
+		t.Fatalf("status: last_apply=%+v var=%+v", st.LastApply, st.VarSnapshots)
+	}
+	// Not healthy yet (greenboot still checking): the marker stays.
+	e.a.Tick(context.Background(), day(14, 5))
+	if vs.confirms != 0 {
+		t.Fatal("confirmed before boot-complete")
+	}
+	healthy.Store(true)
+	e.a.Tick(context.Background(), day(14, 6))
+	if vs.confirms != 1 || e.a.Status(context.Background()).VarSnapshots.Pending != nil {
+		t.Fatalf("confirms = %d", vs.confirms)
+	}
+}
+
+func TestNoConfirmOnOldDeployment(t *testing.T) {
+	e, vs, healthy := newVarEnv(t)
+	healthy.Store(true)
+	e.onReboot = e.fb.GreenbootRollback
+	e.fb.Publish(ref, v2)
+	e.a.Apply("now")
+	e.a.Wait()
+	e.restart() // v1 again: the early-boot restore owns the marker
+	e.a.Tick(context.Background(), day(14, 5))
+	if vs.confirms != 0 {
+		t.Fatal("marker dropped on the old deployment")
+	}
+}
+
+func TestSnapshotFailureBlocksReboot(t *testing.T) {
+	e, vs, _ := newVarEnv(t)
+	vs.err = errors.New("no space left on device")
+	e.fb.Publish(ref, v2)
+	e.a.Apply("now")
+	e.a.Wait()
+	st := e.a.Status(context.Background())
+	if e.reboots.Load() != 0 || st.Update.LastError == nil || !strings.Contains(st.Update.LastError.Message, "snapshot of /var") {
+		t.Fatalf("reboots=%d last_error=%+v", e.reboots.Load(), st.Update.LastError)
+	}
+	if st.Update.State != PhaseStaged {
+		t.Fatalf("state = %s", st.Update.State)
+	}
+}
+
+func TestNoVarLayoutStillUpdates(t *testing.T) {
+	e, vs, _ := newVarEnv(t)
+	vs.err = fmt.Errorf("%w: test", varsnap.ErrNoLayout)
+	e.restart()
+	e.fb.Publish(ref, v2)
+	e.a.Apply("now")
+	e.a.Wait()
+	st := e.a.Status(context.Background())
+	if e.reboots.Load() != 1 || st.VarSnapshots != nil || st.LastApply.VarSnapshot != "" {
+		t.Fatalf("reboots=%d var=%+v", e.reboots.Load(), st.VarSnapshots)
 	}
 }

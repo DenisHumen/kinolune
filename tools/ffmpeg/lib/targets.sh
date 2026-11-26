@@ -10,10 +10,11 @@
 #   ASS_FONT_FLAGS    libass meson flags for the platform font provider
 #
 # All targets are built in CI (.github/workflows/ffmpeg.yml): linux-x86_64 and
-# windows-x86_64 in the Docker image, android-* with the NDK on Linux, Apple
+# windows-x86_64 in the Docker image, linux-arm64 in the same image natively on
+# an arm64 runner (no emulation, PKG-026), android-* with the NDK on Linux, Apple
 # targets on a macOS runner with Xcode (see README.md).
 
-PA_FF_TARGETS="linux-x86_64 windows-x86_64 \
+PA_FF_TARGETS="linux-x86_64 linux-arm64 windows-x86_64 \
 android-arm64-v8a android-armeabi-v7a android-x86_64 \
 macos-arm64 macos-x86_64 ios-arm64 ios-sim-arm64 tvos-arm64 tvos-sim-arm64"
 
@@ -29,7 +30,11 @@ _reset_target() {
 }
 
 _setup_linux_native() {
-    T_OS=linux T_CPU_FAMILY=x86_64 T_CPU=x86_64 T_RUNNABLE=1
+    # Native builds only: linux-arm64 is built on an arm64 host (PKG-026),
+    # never cross-compiled or emulated, so the runtime check runs as is.
+    local cpu="$1"
+    [ "$(uname -m)" = "$cpu" ] || die "linux-${2} must be built natively on a $cpu host (this is $(uname -m))"
+    T_OS=linux T_CPU_FAMILY=$cpu T_CPU=$cpu T_RUNNABLE=1
     CC="${CC:-gcc}" CXX="${CXX:-g++}" AR="${AR:-ar}" NM="${NM:-nm}"
     STRIP="${STRIP:-strip}" RANLIB="${RANLIB:-ranlib}"
     # vaapi + libdrm are linked dynamically against the system libva/libdrm (MIT).
@@ -120,7 +125,8 @@ _setup_apple() {
 setup_target() {
     _reset_target
     case "$1" in
-        linux-x86_64)        _setup_linux_native ;;
+        linux-x86_64)        _setup_linux_native x86_64 x86_64 ;;
+        linux-arm64)         _setup_linux_native aarch64 arm64 ;;
         windows-x86_64)      _setup_windows ;;
         android-arm64-v8a)   _setup_android arm64-v8a ;;
         android-armeabi-v7a) _setup_android armeabi-v7a ;;

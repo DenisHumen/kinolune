@@ -30,7 +30,7 @@ on:
   # ABIs, macOS arm64 and x86_64, sources); `apple_only` skips Linux, Windows
   # and Android (macOS-only dry runs of the app, PKG-019); `windows_only`
   # builds only Windows x86_64 and the sources (Windows-only dry runs, PKG-020);
-  # `linux_only` only Linux x86_64 and the sources (the Linux update test, PKG-024).
+  # `linux_only` only Linux (x86_64, arm64) and the sources (the Linux update test, PKG-024).
   # prebuilt.yml (CI-008): `publish` also uploads every new build (and the
   # sources) as `prebuilt-*` workflow artifacts for the release `prebuilt`.
   workflow_call:
@@ -132,14 +132,15 @@ jobs:
     if: ${{ !inputs.apple_only && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: ${{ matrix.target }}
     needs: sources
-    runs-on: ubuntu-24.04
+    # linux-arm64 natively on GitHub's free arm64 runner, no emulation (PKG-026).
+    runs-on: ${{ startsWith(matrix.target, 'linux-arm64') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     env:
       TARGET: ${{ matrix.target }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        target: ${{ fromJSON(inputs.windows_only && '["windows-x86_64"]' || inputs.linux_only && '["linux-x86_64"]' || '["linux-x86_64","windows-x86_64"]') }}
+        target: ${{ fromJSON(inputs.windows_only && '["windows-x86_64"]' || inputs.linux_only && '["linux-x86_64","linux-arm64"]' || '["linux-x86_64","linux-arm64","windows-x86_64"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -178,7 +179,7 @@ jobs:
       - name: Licence check
         run: tools/mpv/check-license.sh --artifact "tools/mpv/out/${TARGET}"
       - name: Runtime check (mpv_client_api_version)
-        if: matrix.target == 'linux-x86_64'
+        if: startsWith(matrix.target, 'linux-')
         run: |
           # The build already ran it inside the image; repeat it on the runner
           # with the runner's own system libraries (libva, libpulse, ...).

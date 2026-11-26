@@ -1028,6 +1028,10 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 | TWI-171 | Встроенный плеер Twitch: «Скрыть чат» / «Показать чат» в шапке (`twitch-embed-chat-toggle`) или клавиша C → панель скрывается и плеер занимает всю ширину; снова → панель с теми же сообщениями | ⬜ | — | — | ⬜ | — | 🤖 | 🤖 | 🤖 |
 | TWI-172 | Встроенный плеер Twitch: потянуть полоску между видео и чатом (`twitch-chat-resize`) → ширина меняется и запоминается (одна настройка с нативным плеером); Linux (X11 и Wayland): окно WebKitGTK сужается вместе с видео и не закрывает чат | — | — | — | — | — | 🤖 | 🤖 | 🤖 |
 | TWI-173 | Встроенный плеер Twitch с чатом: полный экран (F или кнопка плеера Twitch) → только плеер, после выхода чат на месте; без входа — «Войдите в Twitch, чтобы писать в чат» и «Войти»; буквы, пробел, K, F и C в поле чата печатаются и не управляют плеером, Escape выходит из поля | — | — | — | — | — | 🤖 | 🤖 | 🤖 |
+| TWI-196 | Эфир (нативный и встроенный плеер): «Клип» (`twitch-clip`) в шапке плеера рядом с «Записать» и таймером сна, не перекрывает их; в VOD кнопки нет; без client id Twitch кнопки нет; на ТВ кнопка в панели плеера, на компьютере ещё Alt+X | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-197 | Первое нажатие «Клип» → вход Twitch с пометкой «Twitch также спросит разрешение создавать клипы» (scope clips:edit); после подтверждения — карточка «Клип готов» (`twitch-clip-ready`); следующее нажатие — сразу клип, без входа; без входа — сначала вход; ответ 401 без scope → вход снова и клип | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-198 | Карточка «Клип готов»: «Смотреть» (`twitch-clip-watch`), «Скопировать ссылку» (`twitch-clip-copy`), «Открыть на Twitch» (`twitch-clip-edit`; обрезать и назвать), «Закрыть» (`twitch-clip-close`); на телефоне «Поделиться» (`twitch-clip-share`) → системное меню; на ТВ — QR-код ссылки, фокус на «Смотреть», «Открыть на Twitch» показывает QR | 🤖 | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-199 | Канал отключил клипы → «Канал отключил клипы.», кнопка неактивна с этой подсказкой; 429 → «Слишком много клипов подряд. Попробуйте через N с.»; канал не в эфире / клип не готов за 15 с / ошибка сети → понятное сообщение; токен и scope не попадают в логи (тест pa-twitch) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
 
 Автотесты: TWI-42, TWI-43, TWI-44, TWI-45, TWI-116, TWI-117 — `test/twitch_embed_test.dart` (desktop); TWI-46…TWI-54, TWI-56, TWI-57 — `test/twitch_player_test.dart` (desktop); TWI-110, TWI-111, TWI-113 — `test/twitch_skip_chatting_test.dart` (desktop); TWI-140…TWI-144 — `test/twitch_chat_replay_test.dart` (desktop); TWI-112 — `test/twitch_skip_chatting_test.dart` (desktop, tv). TWI-135, TWI-136 — `test/twitch_gray_screen_test.dart` (desktop). TWI-170…TWI-173 — `test/twitch_embed_test.dart` (desktop).
 
@@ -1642,8 +1646,10 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 | UPD-37 | (только full, PKG-024) На ТВ приложение никогда не перезапускается само: обновление ждёт следующего запуска | — | ⬜ | — | — | — | — | — | — |
 | UPD-38 | (только full, PKG-024) Первый запуск новой версии → короткая полоса «Kinolune обновлён до версии X» (`update-whats-new`), «Что нового» (`update-whats-new-notes`) → список изменений (`update-whats-new-changelog`), «Закрыть» (`update-whats-new-close`) → больше не показывается | ⬜ | ⬜ | — | — | — | 🤖 | 🤖 | 🤖 |
 | UPD-39 | (только full, PKG-024) Android: по Wi-Fi APK скачивается и проверяется в фоне → полоса «Версия X скачана и проверена.» и «Установить» (`update-banner-install`) → проверка ещё раз и системный установщик; по мобильным данным — только предложение, как раньше | 🤖 | ⬜ | — | — | — | — | — | — |
+| UPD-40 | (PKG-026) Linux на ARM (aarch64: Raspberry Pi 5, ARM-ноутбук, GNOME Wayland): команды из README «Установка на Linux» (apt / dnf) ставят arm64-пакет; приложение запускается под Wayland, играет локальный файл и файл с SMB; kinolune-<v>-aarch64.AppImage из релиза тоже запускается | — | — | — | — | — | — | — | ⬜ |
+| UPD-41 | (только full, PKG-026) Linux на ARM: новая версия → AppImage обновляется своим …-aarch64.AppImage и перезапускается; копия из .deb/.rpm → «Скачать» ведёт на …-linux-arm64.deb / …-linux-aarch64.rpm, никогда на x86_64 | — | — | — | — | — | — | — | 🤖 |
 
-Автотесты: UPD-01, UPD-03, UPD-04, UPD-12, UPD-13, UPD-23, UPD-29 — `app/test/updates_screens_test.dart`; UPD-13 — `app/test/updates_test.dart`; UPD-21, UPD-23, UPD-24, UPD-25, UPD-26 — `app/test/updates_desktop_screens_test.dart`. UPD-35, UPD-36, UPD-38, UPD-39 — `app/test/updates_silent_screens_test.dart` и `app/test/updates_desktop_test.dart`; UPD-35 end-to-end на Windows, macOS и Linux (AppImage) — джобы `windows-update`, `macos-update` и `linux-update` в `release-app.yml`. UPD-01 (текст каждого магазина) — `app/test/catalog_fixes_test.dart`.
+Автотесты: UPD-01, UPD-03, UPD-04, UPD-12, UPD-13, UPD-23, UPD-29 — `app/test/updates_screens_test.dart`; UPD-13 — `app/test/updates_test.dart`; UPD-21, UPD-23, UPD-24, UPD-25, UPD-26 — `app/test/updates_desktop_screens_test.dart`. UPD-35, UPD-36, UPD-38, UPD-39 — `app/test/updates_silent_screens_test.dart` и `app/test/updates_desktop_test.dart`; UPD-35 end-to-end на Windows, macOS и Linux (AppImage) — джобы `windows-update`, `macos-update` и `linux-update` в `release-app.yml`. UPD-41 — `app/test/updates_desktop_test.dart` (выбор файла своей архитектуры) и `linux-update` на `ubuntu-24.04-arm` (AppImage aarch64). UPD-40 частично автоматизирован на `ubuntu-24.04` и `ubuntu-24.04-arm`: джоба `linux-smoke` в `release-app.yml` ставит .deb через `apt`, запускает приложение на headless-Wayland (sway, без X-сервера) и играет локальный файл (`packaging/linux/test/wayland-smoke.sh`, скриншоты в артефакте), а SMB проверяет контракт-сьютом pa-vfs против Samba с libsmb2 из пакета; установка из APT/DNF-репозитория — джоба `linux-packages`; живой прогон на Raspberry Pi 5 / ARM-ноутбуке остаётся ручным. UPD-01 (текст каждого магазина) — `app/test/catalog_fixes_test.dart`.
 
 ## 17. Настройки
 
@@ -2194,7 +2200,7 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 
 ## 24. Kinolune OS: установщик (DIST-006)
 
-Полноэкранный установщик на ISO Kinolune OS (`alpha-installer tui`, ADR-NNNN); только клавиатура, консоль Linux и последовательная консоль 80×24. К приложению Kinolune не относится: отметки — в колонке Linux, остальные платформы «—».
+Полноэкранный установщик на ISO Kinolune OS (`alpha-installer tui`, ADR-0174); только клавиатура, консоль Linux и последовательная консоль 80×24. К приложению Kinolune не относится: отметки — в колонке Linux, остальные платформы «—».
 
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
 |---|---|---|---|---|---|---|---|---|---|
@@ -2216,7 +2222,7 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 
 ## 25. Kinolune OS: общие папки, пользователи, firewall (DIST-018)
 
-Samba на NAS с Kinolune OS (ADR-NNNN). Проверки делаются с компьютера в той же сети: колонки macOS, Windows и Linux — откуда подключаются к шаре (Finder, Проводник, файловый менеджер или `smbclient`). К приложению Kinolune не относится: остальные платформы «—».
+Samba на NAS с Kinolune OS (ADR-0174). Проверки делаются с компьютера в той же сети: колонки macOS, Windows и Linux — откуда подключаются к шаре (Finder, Проводник, файловый менеджер или `smbclient`). К приложению Kinolune не относится: остальные платформы «—».
 
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
 |---|---|---|---|---|---|---|---|---|---|
@@ -2230,3 +2236,32 @@ Samba на NAS с Kinolune OS (ADR-NNNN). Проверки делаются с �
 
 Автотесты: NAS-01…NAS-04, NAS-06, NAS-07 — `distro/admin/tests/vm-admin-e2e.sh` (QEMU, `smbclient` снаружи VM через проброс порта и firewall VM, `tests/vm_samba_check.py`), NAS-02…NAS-04 также `distro/admin/tests/samba-container.sh`; API — `distro/admin/internal/server/accounts_test.go`, помощник — `distro/admin/internal/privhelper/privhelper_test.go`.
 Автотесты: INST-02…INST-10 — `distro/installer/internal/tui/tui_test.go` (вызовы Update() на снимках дисков, эталонные экраны 80×24 на uk/en/ru в `testdata/golden/`) и `distro/installer/cmd/alpha-installer/tui_test.go`; INST-01, INST-02, INST-06, INST-10 — `distro/tests/iso-boot.sh` (ISO в QEMU/OVMF по последовательной консоли, пробная установка через все экраны). INST-07, INST-12 — `distro/installer/internal/tui/progress_test.go` (записанный поток прогресса установки из QEMU: эталонные экраны, teatest) и `distro/installer/internal/install/progress_test.go`; `INSTALL=tui distro/tests/iso-boot.sh` ждёт строку копирования со скоростью и проверяет поток командой «alpha-installer progress».
+
+## 26. Kinolune OS: снапшоты `/var` при обновлении (DIST-010)
+
+Агент обновлений `alpha-updated` перед перезагрузкой в обновление снимает `@var`, а если ОС откатилась — возвращает `/var` к снимку до монтирования (ADR-0174). К приложению Kinolune не относится: отметки — в колонке Linux.
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| VARSNAP-01 | «Обновить сейчас» (POST /v1/update/apply) → перед перезагрузкой в @var-snapshots/ появляется read-only снапшот и pending.json; в /v1/status — last_apply.var_snapshot; хранятся 3 последних | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-02 | Новая версия загрузилась и прошла проверки (boot-complete.target) → маркер снят; ручной откат ОС после этого /var не трогает | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-03 | Новая версия загрузилась, изменила базу медиасервера, ОС откатилась → после загрузки старой версии база как до обновления, медиасервер старой версии отвечает; /var неудачного обновления лежит в @var-snapshots/<время>-replaced; в /v1/status — var_snapshots.last_restore | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-04 | Снапшот не удался (нет места на корне) → перезагрузки нет, обновление остаётся staged, ошибка в update.last_error | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-05 | Настоящий откат greenboot (обновление с проваленной проверкой required.d) на реальном NAS → ОС и база вернулись, данные пула не тронуты | — | — | — | — | — | — | — | ⬜ |
+
+Автотесты: VARSNAP-01…04 — `distro/updated/internal/varsnap/varsnap_test.go`, `distro/updated/internal/agent/agent_test.go` (`TestApplySnapshotsVarThenConfirms`, `TestSnapshotFailureBlocksReboot` и др.); VARSNAP-01, VARSNAP-03 — QEMU, шаг 7 `distro/tests/vm-install.sh` (установка с `@var`, применение через агент, откат `bootc rollback` вместо greenboot).
+## 26. Сайт (SITE-001)
+
+Сайт проекта на GitHub Pages (denishumen.github.io/kinolune/, ADR-NNNN). Колонки — браузер на этой платформе (на ТВ-платформах сайта нет: «—»).
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| SITE-01 | Открыть корень сайта → переход на язык: запомненный выбор, иначе язык браузера (uk, en, ru), иначе English; без JavaScript видны три ссылки на языки | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-02 | Переключатель «UK / EN / RU» в шапке → та же страница на другом языке, выбор запоминается для корня сайта | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-03 | «Завантажити / Download / Скачать» → страница GitHub Releases; «Код на GitHub» → репозиторий | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-04 | Раздел «Встановити»: команды APT и DNF из README, после их выполнения kinolune ставится из /apt и /rpm того же сайта | — | — | — | — | — | — | — | ⬜ |
+| SITE-05 | После деплоя сайта /apt/dists/stable/InRelease, /rpm/kinolune.repo и /kinolune.asc по-прежнему открываются | — | — | — | — | — | — | — | ⬜ |
+| SITE-06 | Несуществующий адрес → страница 404 на трёх языках со ссылками на главную | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-07 | Узкий экран (телефон): нет горизонтальной прокрутки, меню и кнопки помещаются; «Уменьшить движение» и «Уменьшить прозрачность» убирают анимацию и стекло | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+
+Автотесты: SITE-01…SITE-06 частично — `docs/site/scripts/check.mjs` в CI (`site.yml`, `linux-repo.yml`): одинаковые ключи во всех языках, нет литералов цвета, все внутренние ссылки и якоря живые, нет сторонних скриптов и шрифтов, сайт не пишет в `/apt`, `/rpm`, `/kinolune.asc`.

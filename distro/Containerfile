@@ -98,7 +98,7 @@ RUN set -eux; \
     # Enable/disable services according to rootfs/usr/lib/systemd/system-preset/.
     # Cockpit is shipped but off; the admin UI turns it on for LAN only (05 §5.1).
     systemctl preset alpha-media.service alpha-admin.service alpha-admin-auth.socket alpha-updated.service alpha-updated.socket \
-        alpha-admin-priv.socket alpha-samba-config.service alpha-ssh-firstboot.service \
+        alpha-admin-priv.socket alpha-samba-config.service alpha-ssh-firstboot.service alpha-var-restore.service \
         smb.service wsdd.service avahi-daemon.service firewalld.service smartd.service \
         chronyd.service sshd.service cockpit.socket; \
     # Firewall: default zone "home", only what we need (05 §5.2, DIST-018):

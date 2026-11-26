@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MPL-2.0
+# /var after a failed update (DIST-010): before /var is mounted, put the @var
+# subvolume back to the snapshot alpha-updated took right before the update,
+# if the OS came back to the old deployment (greenboot rollback). The /var
+# that the failed update left is kept as a read-only snapshot.
+# Does nothing without a marker; never blocks the boot (var.mount does not
+# require it).
+[Unit]
+Description=Restore /var to its pre-update snapshot after an OS rollback
+Documentation=https://github.com/DenisHumen/kinolune/tree/main/distro/updated
+DefaultDependencies=no
+ConditionPathExists=/run/ostree-booted
+After=local-fs-pre.target sysroot.mount
+Before=var.mount local-fs.target shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/alpha/alpha-updated var-restore
+TimeoutStartSec=5min
+
+[Install]
+WantedBy=local-fs.target

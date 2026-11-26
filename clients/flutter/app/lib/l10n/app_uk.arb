@@ -2441,5 +2441,19 @@
   "airingBadgeTomorrow": "Нова серія завтра",
   "airingBadgeOn": "Нова серія {date}",
   "airingCardTitle": "Ще не вийшла",
-  "airingCardLabel": "{code}, вийде {when}"
+  "airingCardLabel": "{code}, вийде {when}",
+  "twitchClip": "Кліп",
+  "twitchClipTooltip": "Кліп останніх секунд ефіру",
+  "twitchClipShortcut": "Кліп останніх секунд ефіру (Alt+X)",
+  "twitchClipMaking": "Twitch робить кліп…",
+  "twitchClipReady": "Кліп готовий",
+  "twitchClipWatch": "Дивитися",
+  "twitchClipShare": "Поділитися",
+  "twitchClipEditHint": "На Twitch кліп можна обрізати й дати йому назву.",
+  "twitchClipsOff": "Канал вимкнув кліпи.",
+  "twitchClipOffline": "Канал не в ефірі — кліп зробити не можна.",
+  "twitchClipNotReady": "Twitch ще не закінчив кліп. Він з'явиться серед кліпів каналу пізніше.",
+  "twitchClipRateLimited": "Забагато кліпів поспіль. Спробуйте через {seconds} с.",
+  "twitchClipFailed": "Не вдалося зробити кліп. Спробуйте ще раз.",
+  "twitchSignInClipsNote": "Twitch також запитає дозвіл створювати кліпи з Kinolune."
 }

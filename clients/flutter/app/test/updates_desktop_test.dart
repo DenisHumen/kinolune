@@ -178,6 +178,11 @@ void main() {
       'kinolune-$ver-linux-x86_64.tar.gz',
       'kinolune-$ver-linux-amd64.deb',
       'kinolune-$ver-linux-x86_64.rpm',
+      // Linux arm64 (PKG-026): same names with the arm64 architecture.
+      'kinolune-$ver-aarch64.AppImage',
+      'kinolune-$ver-linux-aarch64.tar.gz',
+      'kinolune-$ver-linux-arm64.deb',
+      'kinolune-$ver-linux-aarch64.rpm',
       'SHA256SUMS',
     ];
     final release = AppRelease(
@@ -305,6 +310,31 @@ void main() {
       final arm = await detect('linux', exe, abi: Abi.linuxArm64);
       expect(arm.kind, UpdateKind.linuxArchive);
       expect(arm.arch, 'aarch64');
+      expect(arm.assetIn(release)?.name, 'kinolune-$ver-linux-aarch64.tar.gz');
+
+      // An arm64 machine never gets the x86_64 file (PKG-026).
+      final armImage = await detect(
+        'linux',
+        exe,
+        abi: Abi.linuxArm64,
+        env: {'APPIMAGE': '/home/u/Kinolune.AppImage'},
+      );
+      expect(armImage.kind, UpdateKind.appImage);
+      expect(armImage.assetIn(release)?.name, 'kinolune-$ver-aarch64.AppImage');
+      final armDeb = await detect(
+        'linux',
+        exe,
+        abi: Abi.linuxArm64,
+        read: {'/usr/lib/kinolune/package-type': 'deb'},
+      );
+      expect(armDeb.assetIn(release)?.name, 'kinolune-$ver-linux-arm64.deb');
+      final armRpm = await detect(
+        'linux',
+        exe,
+        abi: Abi.linuxArm64,
+        read: {'/usr/lib/kinolune/package-type': 'rpm'},
+      );
+      expect(armRpm.assetIn(release)?.name, 'kinolune-$ver-linux-aarch64.rpm');
     });
   });
 

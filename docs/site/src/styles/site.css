@@ -1,0 +1,467 @@
+/* SPDX-License-Identifier: MPL-2.0 */
+/* Website styles (SITE-001). Colours come only from the semantic design tokens
+   (design/tokens -> generated/web/tokens.css): no colour literals here,
+   scripts/check.mjs fails the build on one. Changing the palette (v2, DSN-017)
+   is a token change; the site follows on the next build. */
+
+:root {
+  /* Site roles mapped onto semantic tokens. */
+  --site-bg: var(--pa-bg-base);
+  --site-surface: var(--pa-bg-elevated);
+  --site-surface-2: var(--pa-bg-elevated-2);
+  --site-text: var(--pa-text-primary);
+  --site-text-muted: var(--pa-text-secondary);
+  --site-link: var(--pa-text-link);
+  --site-accent: var(--pa-accent-default);
+  --site-accent-pressed: var(--pa-accent-pressed);
+  --site-on-accent: var(--pa-text-on-accent);
+  --site-border: var(--pa-border-subtle);
+  --site-border-strong: var(--pa-border-strong);
+  --site-focus: var(--pa-focus-ring);
+  --site-radius-card: var(--pa-shape-card, 12px);
+  --site-radius-panel: var(--pa-shape-panel, 24px);
+  --site-radius-pill: var(--pa-shape-control, 9999px);
+
+  --site-max: 72rem;
+  --site-pad: clamp(1rem, 4vw, 2rem);
+  --site-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --site-mono: ui-monospace, "JetBrains Mono", "Cascadia Mono", "DejaVu Sans Mono", monospace;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--site-bg);
+  color: var(--site-text);
+  font: 400 1.0625rem/1.6 var(--site-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Soft light spots over the background, like a lamp on a concrete wall
+   (palette v2, requirement 3). Very slow drift, off for reduced motion. */
+.ambient {
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 35% at 20% 15%, color-mix(in oklab, var(--site-accent) 14%, transparent), transparent 70%),
+    radial-gradient(35% 30% at 85% 30%, color-mix(in oklab, var(--site-link) 8%, transparent), transparent 70%),
+    radial-gradient(45% 40% at 60% 95%, color-mix(in oklab, var(--site-accent) 10%, transparent), transparent 70%);
+  animation: drift 50s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .ambient {
+    animation: none;
+  }
+}
+
+a {
+  color: var(--site-link);
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: var(--pa-focus-ring-width, 3px) solid var(--site-focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: clamp(2.25rem, 6vw, 4rem);
+  font-weight: 700;
+  margin: 0.5rem 0 1rem;
+}
+
+h2 {
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  margin: 0 0 1.25rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+p {
+  max-width: 68ch;
+}
+
+.muted {
+  color: var(--site-text-muted);
+}
+
+.small {
+  font-size: 0.875rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.skip {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+  border-radius: var(--site-radius-pill);
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+}
+
+.skip:focus {
+  top: 1rem;
+}
+
+/* Liquid glass (palette v2, requirement 2): translucent blurred panel with a
+   thin edge and a top highlight. Falls back to an opaque surface where blur is
+   unsupported or the user asked for less transparency. */
+.glass {
+  background: var(--pa-glass-regular-fallback);
+  border: 1px solid var(--site-border);
+  box-shadow:
+    inset 0 1px 0 var(--pa-glass-regular-highlight),
+    0 10px 30px color-mix(in oklab, var(--site-bg) 60%, transparent);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass {
+    background: color-mix(in oklab, var(--site-surface) 50%, transparent);
+    -webkit-backdrop-filter: blur(22px) saturate(var(--pa-glass-regular-saturation, 1.2));
+    backdrop-filter: blur(22px) saturate(var(--pa-glass-regular-saturation, 1.2));
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--pa-glass-regular-fallback);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Header */
+.topbar {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  flex-wrap: wrap;
+  max-width: var(--site-max);
+  margin: 0.75rem auto 0;
+  padding: 0.5rem 0.75rem 0.5rem 1.25rem;
+  border-radius: var(--site-radius-pill);
+}
+
+.brand {
+  display: flex;
+  margin-right: auto;
+}
+
+.brand img {
+  display: block;
+  height: 2rem;
+  width: auto;
+}
+
+.topbar ul {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topbar nav a {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--site-radius-pill);
+  color: var(--site-text);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+
+.topbar nav a:hover {
+  background: var(--pa-bg-hover);
+}
+
+.langs {
+  display: flex;
+  gap: 0.125rem;
+}
+
+.langs a[aria-current="true"] {
+  background: var(--pa-bg-selected);
+  font-weight: 600;
+}
+
+@media (max-width: 52rem) {
+  .topbar {
+    position: static;
+    border-radius: var(--site-radius-panel);
+  }
+  .topbar nav:not(.langs) {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+  }
+}
+
+main {
+  max-width: var(--site-max);
+  margin: 0 auto;
+  padding: 0 var(--site-pad);
+}
+
+/* Hero */
+.hero {
+  padding: clamp(3rem, 10vw, 6rem) 0 2rem;
+}
+
+.badge {
+  display: inline-block;
+  margin: 0;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--site-border-strong);
+  border-radius: var(--site-radius-pill);
+  color: var(--site-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lead {
+  font-size: clamp(1.125rem, 2vw, 1.3125rem);
+  color: var(--site-text-muted);
+}
+
+.actions,
+.linkrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 1.375rem;
+  border: 1px solid var(--site-border-strong);
+  border-radius: var(--site-radius-pill);
+  background: var(--site-surface);
+  color: var(--site-text);
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform var(--pa-motion-press, 100ms ease-out);
+}
+
+.button:hover {
+  background: var(--site-surface-2);
+}
+
+.button:active {
+  transform: scale(var(--pa-focus-scale-press, 0.97));
+}
+
+.button.primary {
+  border-color: transparent;
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+}
+
+.button.primary:hover {
+  background: var(--site-accent-pressed);
+}
+
+/* Screenshots */
+.shot {
+  margin: 0;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-card);
+  box-shadow: 0 30px 80px color-mix(in oklab, var(--site-bg) 80%, transparent);
+}
+
+.shot-main {
+  margin-top: 3rem;
+}
+
+.shot figcaption {
+  margin-top: 0.5rem;
+  color: var(--site-text-muted);
+  font-size: 0.875rem;
+}
+
+.shots {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 14rem);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 40rem) {
+  .shots {
+    grid-template-columns: 1fr;
+  }
+  .shot-phone {
+    max-width: 14rem;
+  }
+}
+
+/* Sections */
+.section {
+  padding: clamp(2.5rem, 7vw, 4.5rem) 0;
+  border-top: 1px solid var(--site-border);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--site-radius-panel);
+}
+
+.card h3 {
+  margin-top: 0;
+}
+
+.card p {
+  margin-bottom: 0;
+  color: var(--site-text-muted);
+}
+
+/* Install commands */
+.install {
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  border-radius: var(--site-radius-panel);
+}
+
+.install-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.install-label {
+  margin: 0;
+  font-weight: 600;
+}
+
+.install pre {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+  border-radius: var(--site-radius-card);
+  background: var(--pa-bg-sunken);
+  font: 0.875rem/1.6 var(--site-mono);
+}
+
+.copy {
+  flex: none;
+  min-height: 2rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--site-border-strong);
+  border-radius: var(--site-radius-pill);
+  background: var(--site-surface);
+  color: var(--site-text);
+  font: 600 0.8125rem var(--site-font);
+  cursor: pointer;
+}
+
+.copy:hover {
+  background: var(--site-surface-2);
+}
+
+/* Footer */
+.footer {
+  max-width: var(--site-max);
+  margin: 0 auto;
+  padding: 2rem var(--site-pad) 3rem;
+  border-top: 1px solid var(--site-border);
+  font-size: 0.875rem;
+}
+
+.footer p {
+  margin: 0.25rem 0;
+}
+
+/* Root language picker and 404 */
+.picker {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1rem;
+  min-height: 100vh;
+  text-align: center;
+}
+
+.picker h1 {
+  font-size: 1.75rem;
+  margin: 1rem 0 0.25rem;
+}
+
+.picker .linkrow {
+  justify-content: center;
+}
