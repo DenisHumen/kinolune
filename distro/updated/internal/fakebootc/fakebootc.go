@@ -103,6 +103,9 @@ func (f *Fake) GreenbootRollback() {
 	f.cached = nil
 }
 
+// Checksum is the ostree checksum the fake reports for a deployment of img.
+func Checksum(img Image) string { return "cs-" + strings.TrimPrefix(img.Digest, "sha256:") }
+
 // Booted returns the booted digest.
 func (f *Fake) Booted() string {
 	f.mu.Lock()
@@ -199,6 +202,9 @@ func (f *Fake) entry(d *deployment, withCache bool) map[string]any {
 		"incompatible": false,
 		"pinned":       false,
 		"store":        "ostreeContainer",
+		"ostree": map[string]any{
+			"checksum": Checksum(d.img), "deploySerial": 0, "stateroot": "default",
+		},
 	}
 	if d.locked && !f.OldBootc {
 		e["downloadOnly"] = true

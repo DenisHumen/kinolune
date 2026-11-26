@@ -114,6 +114,19 @@ impl Fetcher {
         body: Option<&str>,
         hooks: &dyn Hooks,
     ) -> Result<String, FetchError> {
+        self.fetch_with(request, body, hooks, true)
+    }
+
+    /// [`fetch`](Self::fetch); with `stale_ok == false` a failed request
+    /// is an error even when an expired cached body exists (UI-057: the
+    /// caller must know it is offline to mark what it shows as old).
+    pub fn fetch_with(
+        &self,
+        request: &HttpRequest,
+        body: Option<&str>,
+        hooks: &dyn Hooks,
+        stale_ok: bool,
+    ) -> Result<String, FetchError> {
         let canonical = match body {
             Some(b) => request.canonical_post(b),
             None => request.canonical(),
@@ -132,7 +145,9 @@ impl Fetcher {
             Some(entry) if entry.is_fresh(self.clock.unix_secs()) => return Ok(entry.body),
             fresher => fresher.or(cached),
         };
-        let stale = cached.filter(|e| e.is_usable(now)).map(|e| e.body);
+        let stale = cached
+            .filter(|e| stale_ok && e.is_usable(now))
+            .map(|e| e.body);
 
         let result = self
             .send_with_retries(request, body, hooks)

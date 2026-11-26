@@ -10,7 +10,7 @@
 #
 # The base is pinned by the digest of the multi-arch manifest list.
 # Bump it deliberately (one PR per bump) and re-run the VM checks in distro/README.md.
-ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:45@sha256:f3afa8b1d590ba2842366e0bca4f921ba4a0c7b5ee72679b632aeaa08f170a1e
+ARG BASE_IMAGE=ghcr.io/denishumen/fedora-bootc:45@sha256:f3afa8b1d590ba2842366e0bca4f921ba4a0c7b5ee72679b632aeaa08f170a1e
 
 # Our Go daemons are built with the Go toolchain of the same pinned Fedora base
 # (no second base image to pin); only the static binaries reach the OS image.
@@ -98,7 +98,7 @@ RUN set -eux; \
     # Enable/disable services according to rootfs/usr/lib/systemd/system-preset/.
     # Cockpit is shipped but off; the admin UI turns it on for LAN only (05 §5.1).
     systemctl preset alpha-media.service alpha-admin.service alpha-admin-auth.socket alpha-updated.service alpha-updated.socket \
-        alpha-admin-priv.socket alpha-samba-config.service alpha-ssh-firstboot.service \
+        alpha-admin-priv.socket alpha-samba-config.service alpha-ssh-firstboot.service alpha-var-restore.service \
         smb.service wsdd.service avahi-daemon.service firewalld.service smartd.service \
         chronyd.service sshd.service cockpit.socket; \
     # Firewall: default zone "home", only what we need (05 §5.2, DIST-018):

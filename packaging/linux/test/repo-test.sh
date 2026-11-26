@@ -75,7 +75,9 @@ docker exec -u "$uidgid" -e HOME=/w -e PA_REPO_URL="$url" -e URL="$url" "$builde
     for v in 0.0.1 0.0.2 0.0.3-rc.1; do
         PA_REPO_KEY=/w/test-key.asc /src/packaging/linux/build-packages.sh "$in" "$v" /w/pkgs
     done
-    p() { echo "$1 /w/pkgs/kinolune-$1-linux-amd64.deb /w/pkgs/kinolune-$1-linux-x86_64.rpm"; }
+    # The architecture of the bundle (x86_64 or aarch64, PKG-026) names the files.
+    p() { echo "$1" /w/pkgs/kinolune-"$1"-linux-*.deb /w/pkgs/kinolune-"$1"-linux-*.rpm; }
+    rpmarch=$(uname -m) debarch=$(dpkg --print-architecture)
     p 0.0.1 > /w/first.txt
     { p 0.0.3-rc.1; p 0.0.2; p 0.0.1; } > /w/next.txt
     export PA_REPO_SIGN_KEY="$fpr" PA_REPO_KEY=/w/test-key.asc
@@ -84,9 +86,9 @@ docker exec -u "$uidgid" -e HOME=/w -e PA_REPO_URL="$url" -e URL="$url" "$builde
     # Checks of the repositories themselves.
     grep -q "^Suites: stable" /w/site-next/apt/kinolune.sources
     gpg --batch --verify /w/site-next/apt/dists/stable/InRelease 2>/dev/null
-    gpg --batch --verify /w/site-next/rpm/stable/x86_64/repodata/repomd.xml.asc /w/site-next/rpm/stable/x86_64/repodata/repomd.xml 2>/dev/null
-    if grep -q "0.0.3~rc.1" /w/site-next/apt/dists/stable/main/binary-amd64/Packages; then exit 1; fi
-    grep -q "0.0.3~rc.1" /w/site-next/apt/dists/beta/main/binary-amd64/Packages
+    gpg --batch --verify /w/site-next/rpm/stable/$rpmarch/repodata/repomd.xml.asc /w/site-next/rpm/stable/$rpmarch/repodata/repomd.xml 2>/dev/null
+    if grep -q "0.0.3~rc.1" /w/site-next/apt/dists/stable/main/binary-$debarch/Packages; then exit 1; fi
+    grep -q "0.0.3~rc.1" /w/site-next/apt/dists/beta/main/binary-$debarch/Packages
     grep -q "^Suites: beta" /w/site-first/apt/kinolune.sources && exit 1 || true
     # Tampered: one changed byte in the signed index. Unsigned: no signature at all.
     for bad in tampered unsigned; do
@@ -95,9 +97,9 @@ docker exec -u "$uidgid" -e HOME=/w -e PA_REPO_URL="$url" -e URL="$url" "$builde
     done
     sed -i "s/^Origin: Kinolune/Origin: Kinolunf/" /w/site-next/_tampered/apt/dists/stable/InRelease
     cmp -s /w/site-next/apt/dists/stable/InRelease /w/site-next/_tampered/apt/dists/stable/InRelease && { echo "tamper failed"; exit 1; }
-    sed -i "s|<revision>|<revision>1|" /w/site-next/_tampered/rpm/stable/x86_64/repodata/repomd.xml
+    sed -i "s|<revision>|<revision>1|" /w/site-next/_tampered/rpm/stable/$rpmarch/repodata/repomd.xml
     rm /w/site-next/_unsigned/apt/dists/stable/InRelease /w/site-next/_unsigned/apt/dists/stable/Release.gpg
-    rm /w/site-next/_unsigned/rpm/stable/x86_64/repodata/repomd.xml.asc
+    rm /w/site-next/_unsigned/rpm/stable/$rpmarch/repodata/repomd.xml.asc
     mkdir -p /w/www && cp -a /w/site-first /w/www/repo
     ls -la /w/pkgs
 '

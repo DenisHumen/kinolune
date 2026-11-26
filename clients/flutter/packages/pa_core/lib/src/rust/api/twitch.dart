@@ -7,9 +7,9 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'twitch_live.dart';
 
-// These functions are ignored because they are not marked as `pub`: `alert_gate`, `alerts_allowed`, `broadcaster_type`, `call`, `category_of`, `chat_access`, `db_path`, `db`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `remember_categories`, `runtime`, `signed_api`, `signed`, `start_login_with`, `stream_of`, `twitch_code`, `video_of`
+// These functions are ignored because they are not marked as `pub`: `alert_gate`, `alerts_allowed`, `broadcaster_type`, `call`, `category_of`, `chat_access`, `clip_result`, `db_path`, `db`, `failed`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `remember_categories`, `runtime`, `signed_api`, `signed`, `start_login_with`, `stream_of`, `twitch_code`, `video_of`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Api`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `with_helix`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreTwitch>>
@@ -25,6 +25,10 @@ abstract class CoreTwitch implements RustOpaqueInterface {
     required String userId,
     required int limit,
   });
+
+  /// The signed-in account may make clips (`clips:edit` granted). No
+  /// network.
+  bool canMakeClips();
 
   /// The signed-in account may send chat messages (`user:write:chat`
   /// granted). No network.
@@ -102,6 +106,12 @@ abstract class CoreTwitch implements RustOpaqueInterface {
   /// Live streams of these channels (≤ 100 per call).
   Future<List<CoreTwitchStream>> liveStreams({required List<String> userIds});
 
+  /// Makes a clip of the live stream of `broadcaster_id` and waits until
+  /// Twitch finished it (`POST /clips`, then `GET /clips?id=`, at most
+  /// 15 seconds). Without `clips:edit` nothing is sent:
+  /// [`CoreTwitchClipOutcome::ScopeRequired`].
+  Future<CoreTwitchClipResult> makeClip({required String broadcasterId});
+
   /// Opens the Twitch part of the library database at `db_path` (the
   /// same file as `CoreLibrary.open`). With `client_id` and `data_dir`
   /// Helix and sign-in are available and a stored sign-in is restored
@@ -168,6 +178,10 @@ abstract class CoreTwitch implements RustOpaqueInterface {
   /// Starts a sign-in that also asks for `user:write:chat`: the user
   /// turned on sending chat messages (TWI-024).
   Future<CoreTwitchDeviceLogin> startChatLogin();
+
+  /// Starts a sign-in that also asks for `clips:edit`: the first press
+  /// of "Clip" (TWI-040). Scopes granted before stay.
+  Future<CoreTwitchDeviceLogin> startClipsLogin();
 
   /// Starts a Device Code Flow sign-in.
   Future<CoreTwitchDeviceLogin> startLogin();
@@ -344,6 +358,75 @@ class CoreTwitchClip {
           gameId == other.gameId;
 }
 
+/// How pressing "Clip" ended (TWI-040).
+enum CoreTwitchClipOutcome {
+  /// The clip is made: `clip` is set.
+  ready,
+
+  /// No sign-in (or it expired): sign in, then press again.
+  signInRequired,
+
+  /// The sign-in lacks `clips:edit`: [`CoreTwitch::start_clips_login`],
+  /// then press again.
+  scopeRequired,
+
+  /// The channel turned clips off (or limits them to followers or
+  /// subscribers): keep the button off with `message`.
+  disabled,
+
+  /// The channel is not live.
+  offline,
+
+  /// Twitch did not finish the clip within 15 seconds.
+  notReady,
+
+  /// Twitch rate limit: retry after `retry_after_secs`.
+  rateLimited,
+
+  /// No network or Twitch unreachable.
+  network,
+
+  /// Any other failure (`message` says what).
+  failed,
+}
+
+/// Answer of [`CoreTwitch::make_clip`]: never an exception for the
+/// expected cases, so the player can explain each one.
+class CoreTwitchClipResult {
+  final CoreTwitchClipOutcome outcome;
+  final CoreTwitchNewClip? clip;
+
+  /// Twitch's explanation (`Disabled`) or the error (no tokens in it).
+  final String message;
+
+  /// `RateLimited`: seconds until Twitch accepts calls again.
+  final PlatformInt64 retryAfterSecs;
+
+  const CoreTwitchClipResult({
+    required this.outcome,
+    this.clip,
+    required this.message,
+    required this.retryAfterSecs,
+  });
+
+  @override
+  int get hashCode =>
+      outcome.hashCode ^
+      clip.hashCode ^
+      message.hashCode ^
+      retryAfterSecs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreTwitchClipResult &&
+          runtimeType == other.runtimeType &&
+          outcome == other.outcome &&
+          clip == other.clip &&
+          message == other.message &&
+          retryAfterSecs == other.retryAfterSecs;
+}
+
 /// A pending Device Code Flow sign-in: show `user_code` and a QR code of
 /// `verification_uri`, then call [`CoreTwitch::poll_login`] every
 /// `interval_secs`.
@@ -414,6 +497,60 @@ class CoreTwitchFavorite {
           notify == other.notify &&
           addedAtMs == other.addedAtMs &&
           user == other.user;
+}
+
+/// A clip made from the app (TWI-040).
+class CoreTwitchNewClip {
+  final String slug;
+
+  /// `clips.twitch.tv` page: "Copy link", "Share".
+  final String url;
+
+  /// Official clip embed ("Watch" inside the app).
+  final String embedUrl;
+
+  /// Twitch page to trim and title the clip ("Open on Twitch").
+  final String editUrl;
+  final String title;
+  final String broadcasterName;
+  final String? thumbnailUrl;
+  final double durationSecs;
+
+  const CoreTwitchNewClip({
+    required this.slug,
+    required this.url,
+    required this.embedUrl,
+    required this.editUrl,
+    required this.title,
+    required this.broadcasterName,
+    this.thumbnailUrl,
+    required this.durationSecs,
+  });
+
+  @override
+  int get hashCode =>
+      slug.hashCode ^
+      url.hashCode ^
+      embedUrl.hashCode ^
+      editUrl.hashCode ^
+      title.hashCode ^
+      broadcasterName.hashCode ^
+      thumbnailUrl.hashCode ^
+      durationSecs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreTwitchNewClip &&
+          runtimeType == other.runtimeType &&
+          slug == other.slug &&
+          url == other.url &&
+          embedUrl == other.embedUrl &&
+          editUrl == other.editUrl &&
+          title == other.title &&
+          broadcasterName == other.broadcasterName &&
+          thumbnailUrl == other.thumbnailUrl &&
+          durationSecs == other.durationSecs;
 }
 
 /// A started VOD for the Continue rows.

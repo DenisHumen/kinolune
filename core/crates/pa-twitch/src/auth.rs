@@ -27,7 +27,8 @@
 //! - **Validate** on start and hourly ([`TwitchAuth::validate_if_due`]), as
 //!   Twitch requires from apps that use OAuth.
 //! - **Minimal scopes**: [`DEFAULT_SCOPES`]; [`SCOPE_WRITE_CHAT`] only when
-//!   the user enables sending chat messages.
+//!   the user enables sending chat messages, [`SCOPE_CLIPS_EDIT`] only on the
+//!   first "Clip" press (TWI-040).
 //!
 //! [`AuthorizedHelix`] ties this to [`HelixClient`]: it hands the client a
 //! fresh token before each call and, when Helix answers `401`
@@ -53,6 +54,8 @@ pub const SCOPE_READ_FOLLOWS: &str = "user:read:follows";
 pub const SCOPE_READ_CHAT: &str = "user:read:chat";
 /// Send chat messages; request only when the user turns sending on.
 pub const SCOPE_WRITE_CHAT: &str = "user:write:chat";
+/// Make clips of live streams (TWI-040); request on the first "Clip" press.
+pub const SCOPE_CLIPS_EDIT: &str = "clips:edit";
 /// Scopes requested by default.
 pub const DEFAULT_SCOPES: &[&str] = &[SCOPE_READ_FOLLOWS, SCOPE_READ_CHAT];
 /// Refresh the access token when less than this is left.

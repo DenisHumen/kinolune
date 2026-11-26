@@ -1,0 +1,9 @@
+{
+  "status": 404,
+  "headers": {},
+  "body": {
+    "error": "Not Found",
+    "status": 404,
+    "message": "Clipping is not possible for an offline channel."
+  }
+}

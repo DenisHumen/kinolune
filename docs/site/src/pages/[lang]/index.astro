@@ -1,0 +1,125 @@
+---
+// SPDX-License-Identifier: MPL-2.0
+// Landing page, one per locale: /uk/, /en/, /ru/.
+import Base from '../../layouts/Base.astro';
+import { commands, links, locales, useStrings, href } from '../../i18n/strings.mjs';
+
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
+}
+
+const { lang } = Astro.params;
+const t = useStrings(lang);
+
+const features = ['recognition', 'playback', 'sources', 'music', 'twitch', 'devices'];
+const installs = [
+  { id: 'apt', label: t('install.apt'), lines: commands.apt },
+  { id: 'dnf', label: t('install.dnf'), lines: commands.dnf },
+];
+---
+<Base lang={lang} title={t('meta.title')} description={t('meta.description')}>
+  <section class="hero">
+    <p class="badge">{t('hero.badge')}</p>
+    <h1>{t('hero.title')}</h1>
+    <p class="lead">{t('hero.lead')}</p>
+    <div class="actions">
+      <a class="button primary" href={links.releases} rel="noopener">{t('hero.download')}</a>
+      <a class="button" href={links.repo} rel="noopener">{t('hero.source')}</a>
+    </div>
+    <p class="muted">{t('hero.note')}</p>
+    <figure class="shot shot-main">
+      <img
+        src={href('assets/desktop-home.png')}
+        alt={t('shots.desktop')}
+        width="1280"
+        height="800"
+        fetchpriority="high"
+      />
+    </figure>
+  </section>
+
+  <section id="features" class="section">
+    <h2>{t('features.title')}</h2>
+    <ul class="cards">
+      {features.map((f) => (
+        <li class="card glass">
+          <h3>{t(`features.${f}.title`)}</h3>
+          <p>{t(`features.${f}.text`)}</p>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>{t('shots.title')}</h2>
+    <div class="shots">
+      <figure class="shot">
+        <img src={href('assets/tv-home.png')} alt={t('shots.tv')} loading="lazy" width="1920" height="1080" />
+        <figcaption>{t('shots.tv')}</figcaption>
+      </figure>
+      <figure class="shot shot-phone">
+        <img src={href('assets/phone-home.png')} alt={t('shots.phone')} loading="lazy" width="780" height="1688" />
+        <figcaption>{t('shots.phone')}</figcaption>
+      </figure>
+    </div>
+    <p class="muted small">{t('shots.note')}</p>
+  </section>
+
+  <section id="install" class="section">
+    <h2>{t('install.title')}</h2>
+    <p>{t('install.lead')}</p>
+    <p><a class="button primary" href={links.releases} rel="noopener">{t('install.releases')}</a></p>
+    <h3>{t('install.linux')}</h3>
+    {installs.map((i) => (
+      <div class="install glass">
+        <div class="install-head">
+          <p class="install-label">{i.label}</p>
+          <button
+            type="button"
+            class="copy"
+            data-copy={`cmd-${i.id}`}
+            data-done={t('install.copied')}
+            hidden
+          >{t('install.copy')}</button>
+        </div>
+        <pre id={`cmd-${i.id}`}><code>{i.lines.join('\n')}</code></pre>
+      </div>
+    ))}
+    <p class="muted">{t('install.updates')}</p>
+  </section>
+
+  <section id="open-source" class="section">
+    <h2>{t('oss.title')}</h2>
+    <p>{t('oss.text')}</p>
+    <p>{t('oss.site')}</p>
+    <ul class="linkrow">
+      <li><a href={links.license} rel="noopener">{t('oss.license')}</a></li>
+      <li><a href={links.roadmap} rel="noopener">{t('oss.roadmap')}</a></li>
+      <li><a href={links.contributing} rel="noopener">{t('oss.contribute')}</a></li>
+    </ul>
+  </section>
+
+  <section id="donate" class="section">
+    <h2>{t('donate.title')}</h2>
+    <p>{t('donate.text')}</p>
+    <ul class="linkrow">
+      <li><a href={links.issues} rel="noopener">{t('donate.issue')}</a></li>
+      <li><a href={links.discussions} rel="noopener">{t('donate.discuss')}</a></li>
+    </ul>
+  </section>
+
+  <script is:inline>
+    // Copy buttons appear only where the Clipboard API works.
+    if (navigator.clipboard) {
+      document.querySelectorAll('[data-copy]').forEach((b) => {
+        b.hidden = false;
+        const label = b.textContent;
+        b.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(document.getElementById(b.dataset.copy).innerText);
+          b.textContent = b.dataset.done;
+          setTimeout(() => (b.textContent = label), 2000);
+        });
+      });
+    }
+  </script>
+</Base>

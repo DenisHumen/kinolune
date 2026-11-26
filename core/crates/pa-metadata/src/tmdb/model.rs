@@ -152,6 +152,23 @@ pub struct SeasonSummary {
     pub name: Option<String>,
 }
 
+/// `next_episode_to_air` / `last_episode_to_air` of `/tv/{id}`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AirEpisode {
+    /// Season number.
+    #[serde(default)]
+    pub season_number: u32,
+    /// Episode number within the season.
+    #[serde(default)]
+    pub episode_number: u32,
+    /// Air date `YYYY-MM-DD` (no time of day).
+    #[serde(default, deserialize_with = "empty_as_none")]
+    pub air_date: Option<String>,
+    /// Localized episode title.
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
 /// Movie or series details (`/movie/{id}`, `/tv/{id}`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Details {
@@ -202,6 +219,12 @@ pub struct Details {
     /// Collection (movies).
     #[serde(default)]
     pub belongs_to_collection: Option<CollectionRef>,
+    /// The next episode to air (TV, UI-057); TMDB gives only its date.
+    #[serde(default)]
+    pub next_episode_to_air: Option<AirEpisode>,
+    /// The last episode that aired (TV).
+    #[serde(default)]
+    pub last_episode_to_air: Option<AirEpisode>,
     /// Number of seasons (TV).
     #[serde(default)]
     pub number_of_seasons: Option<u32>,

@@ -21,12 +21,14 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/DenisHumen/kinolune/distro/updated/internal/agent"
 	"github.com/DenisHumen/kinolune/distro/updated/internal/api"
 	"github.com/DenisHumen/kinolune/distro/updated/internal/bootc"
+	"github.com/DenisHumen/kinolune/distro/updated/internal/varsnap"
 )
 
 func main() {
@@ -37,6 +39,9 @@ func main() {
 }
 
 func run() error {
+	if len(os.Args) > 1 && os.Args[1] == "var-restore" {
+		return varRestore()
+	}
 	stateDir := os.Getenv("STATE_DIRECTORY") // set by systemd StateDirectory=
 	if stateDir == "" {
 		stateDir = "/var/lib/alpha/updated"
@@ -56,6 +61,8 @@ func run() error {
 		tick      = flag.Duration("tick", time.Minute, "scheduler step")
 		delay     = flag.Duration("start-delay", 2*time.Minute, "wait before the first scheduler step (network, media server)")
 		logLevel  = flag.String("log-level", "info", "debug, info, warn or error")
+		varSnaps  = flag.Bool("var-snapshots", true, "snapshot the @var subvolume before an update and restore it after a failed one (DIST-010)")
+		varKeep   = flag.Int("var-keep", 3, "how many /var snapshots to keep")
 	)
 	flag.Parse()
 
@@ -82,13 +89,18 @@ func run() error {
 		return nil
 	})
 
-	a := agent.New(agent.Config{
+	cfg := agent.Config{
 		StateDir:      *state,
 		CheckInterval: *interval,
 		DefaultRepo:   ver["ALPHA_IMAGE_REPO"],
 		OSVersion:     ver["ALPHA_OS_VERSION"],
 		Logger:        log,
-	}, bootc.Client{R: bootc.ExecRunner{Path: *bootcPath}}, veto, rebooter)
+	}
+	if *varSnaps {
+		cfg.VarSnap = &lockedVarSnap{m: &varsnap.Manager{Keep: *varKeep, Log: log}}
+		cfg.BootHealthy = bootComplete
+	}
+	a := agent.New(cfg, bootc.Client{R: bootc.ExecRunner{Path: *bootcPath}}, veto, rebooter)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -188,4 +200,60 @@ func readVersion(path string) map[string]string {
 		}
 	}
 	return m
+}
+
+// lockedVarSnap serialises calls: Manager mounts one directory at a time.
+type lockedVarSnap struct {
+	mu sync.Mutex
+	m  *varsnap.Manager
+}
+
+func (l *lockedVarSnap) Prepare(ctx context.Context, p varsnap.Pending) (varsnap.Pending, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.m.Prepare(ctx, p)
+}
+
+func (l *lockedVarSnap) Confirm(ctx context.Context) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.m.Confirm(ctx)
+}
+
+func (l *lockedVarSnap) State(ctx context.Context) (varsnap.State, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.m.State(ctx)
+}
+
+// bootComplete: greenboot's required checks passed (boot-complete.target).
+func bootComplete(ctx context.Context) bool {
+	return exec.CommandContext(ctx, "systemctl", "is-active", "--quiet", "boot-complete.target").Run() == nil
+}
+
+// varRestore runs early in boot (alpha-var-restore.service, before
+// var.mount): it puts /var back to the pre-update snapshot when the OS came
+// back to the old deployment after the update had booted (DIST-010).
+func varRestore() error {
+	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	if _, err := os.Stat("/run/ostree-booted"); err != nil {
+		log.Info("not an ostree system, nothing to do")
+		return nil
+	}
+	booted, err := varsnap.BootedChecksum("/proc/cmdline", "/sysroot")
+	if err != nil {
+		log.Warn("cannot tell the booted deployment, the /var marker is kept", "err", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	act, err := (&varsnap.Manager{Log: log}).Boot(ctx, booted)
+	if errors.Is(err, varsnap.ErrNoLayout) {
+		log.Info("no @var subvolume, nothing to do", "reason", err)
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	log.Info("var-restore done", "booted", booted, "action", string(act))
+	return nil
 }

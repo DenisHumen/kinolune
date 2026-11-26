@@ -13,10 +13,13 @@
 
 FROM ubuntu:24.04@sha256:2198e4c65076e9cb0b3d695219df667c0e3b0072da64ca3c2648aca17dcecaf5
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+# The mingw-w64 cross compilers only on amd64: the arm64 image (linux-arm64,
+# built natively on an arm64 runner, PKG-026) never builds Windows targets.
+RUN mingw=""; [ "$(dpkg --print-architecture)" = amd64 ] && mingw="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev"; \
+    apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         bash ca-certificates curl xz-utils unzip patch file binutils \
         build-essential cmake ninja-build \
-        gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev \
+        $mingw \
     && rm -rf /var/lib/apt/lists/*
 
 # Optional Android NDK (~2 GB unpacked). Empty = not installed.

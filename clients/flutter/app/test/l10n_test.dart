@@ -213,6 +213,8 @@ void main() {
         'availability',
         // DIST-032: Wi-Fi and network from Home.
         'network',
+        // UI-057: when the next episode of an ongoing show airs.
+        'airing',
       ];
       for (final k in _keys(en)) {
         expect(
