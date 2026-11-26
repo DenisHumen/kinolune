@@ -2329,7 +2329,7 @@ class RustLibrary
                 f.localPath ?? streamUrl(base!, sourceId, f.relPath),
           ],
       ],
-      chaptersMs: t.chaptersMs.toList(),
+      chaptersMs: [for (final c in t.chaptersMs) c.toInt()],
       streams: [
         for (final s in t.streams)
           DiscStream(
