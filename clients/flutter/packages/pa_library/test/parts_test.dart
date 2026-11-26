@@ -119,12 +119,15 @@ void main() {
     expect(await lib.playParts(outside), isEmpty);
   });
 
-  test('a disc image is unplayable, with its versions', () async {
-    final image = await movie('Spirited Away');
-    expect(image.unplayable, Unplayable.discImage);
-    final versions = await lib.versions(image.id);
-    expect(versions.single.unplayable, Unplayable.discImage);
-  });
+  test(
+    'a disc image plays from the library, with its versions (PLAY-017)',
+    () async {
+      final image = await movie('Spirited Away');
+      expect(image.unplayable, isNull);
+      final versions = await lib.versions(image.id);
+      expect(versions.single.unplayable, isNull);
+    },
+  );
 
   test('unplayable codes', () {
     expect(Unplayable.fromCode(null), isNull);
