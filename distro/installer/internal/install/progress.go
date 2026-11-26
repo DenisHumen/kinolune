@@ -195,11 +195,12 @@ func (in *Installer) configureUnits() int64 {
 
 // --- the image copy --------------------------------------------------------
 
-// CopyRatio is the share of the unpacked payload size that the copy writes
-// to the disk: btrfs compresses the root with zstd:1, and ostree stores
-// each file once. Measured on the QEMU install of the ISO (DIST-034); the
-// bar never claims 100 % before bootc says the image is deployed.
-const CopyRatio = 0.55
+// CopyRatio is the bytes the copy writes to the disk per byte of the
+// unpacked payload: ostree objects plus the deployment, less what btrfs
+// zstd:1 saves. Measured on the QEMU install of the ISO (DIST-034): 2.22 GB
+// written for a 2.16 GB payload. The bar never claims 100 % before bootc
+// moves on to the bootloader.
+const CopyRatio = 1.05
 
 // sampleEvery is how often the copy measures the bytes written to the disk.
 const sampleEvery = time.Second
@@ -398,16 +399,19 @@ const (
 	Failed
 )
 
-// Expected is how long each task takes on a typical machine (the QEMU
-// install of the ISO, DIST-034): the weights of the overall bar and the ETA
-// of tasks that have not started or report no measurable progress.
+// Expected is how long each task takes when nothing better is known: the
+// ETA of tasks that have not started or report no measurable progress. The
+// copy takes almost all of the time and is measured by its speed; the
+// others took under a second each on the QEMU install of the ISO (DIST-034)
+// and get a few seconds for slower disks. The copy's own figure only
+// matters before its speed is known (a 2.2 GB write at ~20 MB/s).
 var Expected = map[StepID]time.Duration{
-	StepPartition:  3 * time.Second,
-	StepFormat:     5 * time.Second,
-	StepCopy:       150 * time.Second,
-	StepBootloader: 20 * time.Second,
-	StepConfigure:  10 * time.Second,
-	StepFinalize:   5 * time.Second,
+	StepPartition:  2 * time.Second,
+	StepFormat:     2 * time.Second,
+	StepCopy:       120 * time.Second,
+	StepBootloader: 3 * time.Second,
+	StepConfigure:  2 * time.Second,
+	StepFinalize:   2 * time.Second,
 }
 
 // speedWindow is how far back the speed of a task is measured.

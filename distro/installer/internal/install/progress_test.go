@@ -76,7 +76,7 @@ func progressSetup(t *testing.T, fail bool) (setup, *recorder, *bytes.Buffer) {
 	tk := &manualTicker{c: make(chan time.Time)}
 	s.in.Ticker = func(time.Duration) Ticker { return tk }
 	s.in.DiskWritten = func() (int64, error) { mu.Lock(); defer mu.Unlock(); return written, nil }
-	s.in.PayloadSize = func() int64 { return 2e9 } // 1.1 GB expected on the disk
+	s.in.PayloadSize = func() int64 { return 1e9 } // 1.05 GB expected on the disk
 	clock := time.Date(2026, 11, 26, 10, 0, 0, 0, time.UTC)
 	var cmu sync.Mutex
 	s.in.Now = func() time.Time { cmu.Lock(); defer cmu.Unlock(); clock = clock.Add(time.Second); return clock }
@@ -103,7 +103,7 @@ func TestRunReportsEveryTask(t *testing.T) {
 			copied = append(copied, e)
 		}
 	}
-	if len(copied) < 3 || !copied[0].Bytes || copied[0].Done != 100e6 || copied[0].Total != 1.1e9 {
+	if len(copied) < 3 || !copied[0].Bytes || copied[0].Done != 100e6 || copied[0].Total != 1.05e9 {
 		t.Fatalf("copy progress: %+v", copied)
 	}
 	if last := copied[len(copied)-1]; last.Done != 950e6 || last.Total != last.Done {
@@ -196,7 +196,7 @@ func TestTrackerSpeedAndETA(t *testing.T) {
 	if r := tr.Remaining(30000); r != want-3*time.Second {
 		t.Errorf("remaining 3 s later %v", r)
 	}
-	if f := tr.Overall(27000); f < 0.3 || f > 0.4 {
+	if f := tr.Overall(27000); f < 0.6 || f > 0.7 { // 27 s of 27 + 15
 		t.Errorf("overall %v", f)
 	}
 	tr.Apply(Event{At: 28000, Kind: EventFail, Step: StepCopy, Error: "boom"})
