@@ -546,6 +546,8 @@ fn build_graph(conn: &Connection) -> Graph {
         INSERT INTO work_credits (work_id, provider, role, position, person_ref, name, character)
             VALUES (30, 'tmdb', 'cast', 0, '17419', 'Actor', 'Hero');
         INSERT INTO work_ratings (work_id, provider, value, votes) VALUES (30, 'tmdb', 8.4, 1200);
+        INSERT INTO work_airing (work_id, status, next_season, next_episode, next_air_date, source, checked_at_ms)
+            VALUES (30, 'airing', 1, 4, '2026-12-01', 'tmdb', {now});
         INSERT INTO skip_segments (file_id, kind, origin, start_ms, end_ms, confidence, updated_at_ms)
             VALUES (100, 'intro', 'audio', 60000, 90000, 0.9, {now});
         INSERT INTO skip_analysis (file_id, version, size_bytes, duration_ms, intro_fp,
@@ -773,6 +775,7 @@ fn deleting_a_work_cascades_through_the_catalog() {
         "artwork",
         "version_prefs",
         "work_metadata",
+        "work_airing",
         "work_credits",
         "work_ratings",
         "work_certifications",

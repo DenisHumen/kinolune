@@ -202,7 +202,6 @@ class AiringPosterLabel extends StatelessWidget {
             child: Align(
               alignment: Alignment.bottomLeft,
               child: Container(
-                key: airingBadgeKey(item.id),
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: ended
@@ -212,6 +211,7 @@ class AiringPosterLabel extends StatelessWidget {
                 ),
                 child: Text(
                   text,
+                  key: airingBadgeKey(item.id),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(

@@ -13,6 +13,7 @@
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:kinolune/fakes/fake_library.dart';
 import 'package:kinolune/integration/library.dart';
@@ -164,7 +165,12 @@ Future<void> _showRowEnd(WidgetTester t) async {
 }
 
 void main() {
-  setUpAll(loadAppFonts);
+  setUpAll(() async {
+    await loadAppFonts();
+    // The app gets the date symbols with its localizations; plain tests
+    // load them here.
+    await initializeDateFormatting();
+  });
 
   group('formatting', () {
     final l = lookupAppLocalizations(const Locale('ru'));
