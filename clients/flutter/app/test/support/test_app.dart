@@ -32,6 +32,8 @@ import 'package:kinolune/sources/source_manager.dart';
 import 'package:kinolune/sources/subsonic_link.dart';
 import 'package:kinolune/sync/device_sync.dart';
 import 'package:kinolune/trakt/trakt_link.dart';
+import 'package:kinolune/twitch/live_notifications.dart'
+    show LiveNotifier, NoLiveNotifier;
 import 'package:kinolune/twitch/twitch_archive.dart';
 import 'package:kinolune/twitch/twitch_backend.dart';
 import 'package:kinolune/twitch/twitch_downloads.dart';
@@ -132,6 +134,8 @@ Future<AppServices> demoServices({
   AvailabilityService? availability,
   // DIST-032: Wi-Fi and network from Home, when a test gives it.
   NetworkController? network,
+  // TWI-035: system notifications, when a test records them.
+  LiveNotifier? liveNotifier,
 }) async {
   library ??= empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -182,6 +186,7 @@ Future<AppServices> demoServices({
     // UI-035: files of writable sources, when a test gives them.
     files: files,
     network: network,
+    liveNotifier: liveNotifier ?? const NoLiveNotifier(),
   );
   await s.init();
   if (advancedSettings) await s.setShowAdvancedSettings(true);
@@ -229,6 +234,7 @@ Future<AppServices> twitchServices({
   PlayerEngineFactory? engineFactory,
   bool twitchNative = false,
   UpdateController? updates,
+  TwitchArchive? twitchArchive,
 }) async {
   final s = await demoServices(
     twitch: twitch,
@@ -236,6 +242,7 @@ Future<AppServices> twitchServices({
     engineFactory: engineFactory,
     twitchNative: twitchNative,
     updates: updates,
+    twitchArchive: twitchArchive,
   );
   await s.setShowTwitch(true);
   await seedDemoTwitchFavorites(s.twitch);

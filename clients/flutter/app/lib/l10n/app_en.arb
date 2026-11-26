@@ -8376,5 +8376,86 @@
   "twitchSearchRecent": "Recent searches",
   "@twitchSearchRecent": {
     "description": "TWI-034: recent searches of the Streams section (this device only)."
+  },
+  "twitchRecordLive": "Record",
+  "@twitchRecordLive": {
+    "description": "Button of the live players that starts recording the broadcast (TWI-035, full builds)."
+  },
+  "twitchRecordLiveTooltip": "Record this broadcast from now on",
+  "@twitchRecordLiveTooltip": {
+    "description": "Tooltip of the Record button (TWI-035)."
+  },
+  "twitchRecordLiveStatus": "Recording {elapsed} · {size}",
+  "@twitchRecordLiveStatus": {
+    "description": "Indicator while a broadcast is recorded: time since the start and size so far (TWI-035).",
+    "placeholders": {
+      "elapsed": {
+        "type": "String",
+        "example": "1:23:45"
+      },
+      "size": {
+        "type": "String",
+        "example": "2.1 GB"
+      }
+    }
+  },
+  "twitchRecordLiveKeepsGoing": "Recording. It goes on after you close the player, as long as Kinolune is running.",
+  "@twitchRecordLiveKeepsGoing": {
+    "description": "Snack bar after Record and tooltip of the recording indicator (TWI-035)."
+  },
+  "twitchRecordLiveStopTitle": "Stop recording?",
+  "@twitchRecordLiveStopTitle": {
+    "description": "Title of the confirmation of Stop (TWI-035)."
+  },
+  "twitchRecordLiveStopBody": "What was recorded is kept and appears in Recordings.",
+  "@twitchRecordLiveStopBody": {
+    "description": "Body of the confirmation of Stop (TWI-035)."
+  },
+  "twitchRecordLiveStopped": "Recording stopped. It appears in Recordings in a moment.",
+  "@twitchRecordLiveStopped": {
+    "description": "Snack bar after Stop (TWI-035)."
+  },
+  "twitchRecordLiveNoSpace": "Not enough space for a recording. Free some up or choose another folder in the recording settings.",
+  "@twitchRecordLiveNoSpace": {
+    "description": "Snack bar when a recording cannot start for lack of space (TWI-035)."
+  },
+  "twitchRecordLiveOff": "Recording Twitch broadcasts is switched off right now.",
+  "@twitchRecordLiveOff": {
+    "description": "Snack bar when the remote config or native playback does not allow recording (TWI-035)."
+  },
+  "twitchRecordLiveError": "Could not start the recording: {error}",
+  "@twitchRecordLiveError": {
+    "description": "Snack bar when a recording could not start (TWI-035).",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "twitchRecordReadyTitle": "Recording of {channel} is ready",
+  "@twitchRecordReadyTitle": {
+    "description": "Notification when a recorded broadcast is finalised (TWI-035).",
+    "placeholders": {
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
+  "twitchRecordReadyBody": "It is in Recordings and downloads.",
+  "@twitchRecordReadyBody": {
+    "description": "Body of the notification of a finished recording (TWI-035)."
+  },
+  "twitchRecordDiskFullTitle": "Disk full: recording of {channel} stopped",
+  "@twitchRecordDiskFullTitle": {
+    "description": "Notification when a recording stopped because the disk is full (TWI-035).",
+    "placeholders": {
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
+  "twitchRecordDiskFullBody": "What was recorded is kept as is, without conversion (a .ts file).",
+  "@twitchRecordDiskFullBody": {
+    "description": "Body of the disk-full notification of a recording (TWI-035)."
   }
 }

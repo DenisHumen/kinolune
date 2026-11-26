@@ -33,8 +33,10 @@ enum TwitchDownloadState {
       this == queued || this == waiting || this == running || this == retrying;
 }
 
-/// What the user can do with a download.
-enum TwitchDownloadAction { pause, resume, cancel, retry, remove }
+/// What the user can do with a download. `stop` is for recordings only:
+/// it ends the recording and keeps what was recorded (TWI-035), where
+/// `cancel` throws it away.
+enum TwitchDownloadAction { pause, resume, cancel, retry, remove, stop }
 
 /// One download in the list.
 class TwitchDownloadItem {

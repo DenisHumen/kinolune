@@ -20,6 +20,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../integration/library.dart';
+import '../l10n/l10n.dart';
 import '../offline/offline_downloads.dart';
 import '../screens/playback.dart';
 import '../screens/routes.dart';
@@ -28,6 +29,8 @@ import '../screens/twitch/twitch_downloads_screen.dart';
 import '../screens/twitch/twitch_play.dart';
 import '../services/app_services.dart';
 import '../sync/device_sync.dart';
+import '../twitch/live_notifications.dart' show LiveAlertInfo;
+import '../twitch/twitch_archive.dart' show TwitchRecordingItem;
 import '../twitch/twitch_downloads.dart';
 import '../twitch/twitch_service.dart';
 import '../widgets/format.dart';
@@ -381,20 +384,56 @@ class NoticeFeeds {
               services.visibleArchive != null &&
               _finished(prev, r.state)) {
             final login = r.login ?? r.userId;
+            final channel = services.twitch.channelOf(login).displayName;
+            final full = r.diskFull;
             _post(
               InAppNotice(
                 id: 'twitch-$key',
                 kind: InAppNoticeKind.download,
-                title: (_) => login,
-                body: (l) => l.noticeRecordingSaved,
+                title: (l) => full
+                    ? l.twitchRecordDiskFullTitle(channel)
+                    : l.twitchRecordReadyTitle(channel),
+                body: (l) => full
+                    ? l.twitchRecordDiskFullBody
+                    : l.twitchRecordReadyBody,
                 onAction: openTwitchArchive,
               ),
             );
+            _notifyRecording(r, login, channel);
           }
         }
       } catch (_) {}
     }
     _twitchSeeded = true;
+  }
+
+  /// TWI-035: «Запись эфира <канал> готова» as a system notification too,
+  /// so it reaches the user away from the app; a tap opens the channel.
+  void _notifyRecording(TwitchRecordingItem r, String login, String channel) {
+    if (_disposed || services.onboardingPending) return;
+    final l = lookupAppLocalizations(
+      services.locale.value ?? services.systemLocale(),
+    );
+    final now = DateTime.now();
+    final alert = LiveAlertInfo(
+      userId: r.userId,
+      login: login,
+      displayName: channel,
+      // Its own notification id, apart from the broadcast's "is live".
+      streamId: 'recording-${r.jobId}',
+      startedAt: r.createdAt ?? now,
+      detectedAt: now,
+      source: 'recording',
+    );
+    unawaited(
+      services.liveNotifications.notifier.show(
+        alert,
+        title: r.diskFull
+            ? l.twitchRecordDiskFullTitle(channel)
+            : l.twitchRecordReadyTitle(channel),
+        body: r.diskFull ? l.twitchRecordDiskFullBody : l.twitchRecordReadyBody,
+      ),
+    );
   }
 
   // ----------------------------------------------------------------- live

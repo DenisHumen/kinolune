@@ -20,6 +20,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
+import '../../flavor.dart';
 import '../../integration/player.dart' show setWindowFullscreen;
 import '../../l10n/l10n.dart';
 import '../../platform/form_factor.dart';
@@ -29,6 +30,7 @@ import '../../twitch/twitch_embed.dart';
 import '../../twitch/twitch_service.dart';
 import '../../widgets/error_boundary.dart';
 import 'twitch_embed_desktop.dart';
+import 'twitch_record_live.dart';
 import 'twitch_widgets.dart';
 
 /// A web view that shows the embed page; tests use a fake one.
@@ -331,6 +333,17 @@ class _TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 actions: [
+                  // TWI-035: record this broadcast (full builds).
+                  if (AppFlavor.twitchArchive &&
+                      widget.target.isLive &&
+                      login != null &&
+                      login.isNotEmpty &&
+                      _services.visibleArchive != null)
+                    TwitchRecordLiveButton(
+                      login: login,
+                      userId: _services.twitch.channelOf(login).userId,
+                      compact: _phone,
+                    ),
                   if (_desktop)
                     IconButton(
                       key: const ValueKey('twitch-embed-fullscreen'),

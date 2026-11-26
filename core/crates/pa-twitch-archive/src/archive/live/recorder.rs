@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: MPL-2.0
 //! The `twitch_live_record` job.
 
+use std::collections::HashSet;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use pa_jobs::{JobContext, JobHandler, JobQueue, NetworkPolicy, NewJob, RunOutcome, priority};
+use pa_jobs::{
+    JobContext, JobHandler, JobId, JobQueue, NetworkPolicy, NewJob, RunOutcome, priority,
+};
 use pa_probe::RemuxAttachment;
 use pa_storage::{NewItem, StorageManager};
 use pa_twitch::chapters::LiveTimeline;
@@ -20,7 +23,7 @@ use serde_json::{Value, json};
 use super::journal::{AdEntry, CatEntry, GapEntry, Journal};
 use super::source::{LiveChat, LiveClock, LiveSource, LiveStream, SystemClock};
 use super::timeline::RecTimeline;
-use crate::archive::job::{DURATION_TOLERANCE, Quality};
+use crate::archive::job::{DURATION_TOLERANCE, Quality, image_mime};
 use crate::archive::meta::{date_of, escape};
 use crate::archive::mux::{Container, MuxJob, Muxer};
 use crate::archive::naming::{NameVars, Naming};
@@ -178,6 +181,12 @@ enum End {
     Disallowed,
     /// usher refused the broadcast (`usher_403`) after recording began.
     Restricted,
+    /// The user stopped it ("Stop", TWI-035): what was recorded is kept.
+    Stopped,
+    /// The disk is full (a write failed with `ENOSPC`/`EDQUOT`): what was
+    /// recorded is kept as is, without a remux, which would need as much
+    /// space again (TWI-035).
+    DiskFull,
 }
 
 impl End {
@@ -189,13 +198,58 @@ impl End {
             End::Network => "network",
             End::Disallowed => "archive_disabled",
             End::Restricted => "usher_403",
+            End::Stopped => "stopped",
+            End::DiskFull => "disk_full",
         }
     }
 }
 
 enum Stop {
     Interrupted,
+    /// [`LiveStops::request`]: end the recording now and keep it.
+    Finish,
+    /// A segment could not be written: the disk is full.
+    DiskFull(String),
     Error(ArchiveError),
+}
+
+/// Whether a write failed because the disk (or the user's disk quota) is
+/// full.
+fn is_disk_full(e: &std::io::Error) -> bool {
+    // ENOSPC and EDQUOT on Linux; ErrorKind covers the other systems.
+    matches!(
+        e.kind(),
+        std::io::ErrorKind::StorageFull | std::io::ErrorKind::QuotaExceeded
+    ) || matches!(e.raw_os_error(), Some(28 | 122))
+}
+
+/// Requests to end live recordings now and keep what was recorded ("Stop"
+/// of the app, TWI-035), shared between a [`LiveRecorder`] and its callers.
+/// A cancel throws a running recording away and a pause keeps it waiting;
+/// a stop finalises it like the end of the broadcast. Requests live in
+/// memory: after a restart the recording simply continues.
+#[derive(Debug, Clone, Default)]
+pub struct LiveStops(Arc<Mutex<HashSet<JobId>>>);
+
+impl LiveStops {
+    fn set(&self) -> std::sync::MutexGuard<'_, HashSet<JobId>> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Asks the recording `job` to end and finalise. A paused recording
+    /// does so when it runs again (the caller resumes it).
+    pub fn request(&self, job: JobId) {
+        self.set().insert(job);
+    }
+
+    /// Whether `job` was asked to stop.
+    pub fn is_requested(&self, job: JobId) -> bool {
+        self.set().contains(&job)
+    }
+
+    fn clear(&self, job: JobId) {
+        self.set().remove(&job);
+    }
 }
 
 impl From<ArchiveError> for Stop {
@@ -254,6 +308,7 @@ pub struct LiveRecorder {
     muxer: Arc<dyn Muxer>,
     clock: Arc<dyn LiveClock>,
     settings: LiveSettings,
+    stops: LiveStops,
 }
 
 impl LiveRecorder {
@@ -268,7 +323,14 @@ impl LiveRecorder {
             muxer,
             clock: Arc::new(SystemClock),
             settings: LiveSettings::default(),
+            stops: LiveStops::default(),
         }
+    }
+
+    /// The handle that stops recordings of this recorder (TWI-035); take it
+    /// before [`register`](Self::register).
+    pub fn stops(&self) -> LiveStops {
+        self.stops.clone()
     }
 
     /// Time source (virtual time in tests).
@@ -342,6 +404,11 @@ impl LiveRecorder {
         }
         let end = match self.follow(&mut run) {
             Ok(end) => end,
+            Err(Stop::Finish) => End::Stopped,
+            Err(Stop::DiskFull(e)) => {
+                run.notes.push(format!("disk_full: {e}"));
+                End::DiskFull
+            }
             Err(Stop::Interrupted) => {
                 if let Some(chat) = run.chat.as_mut() {
                     chat.close();
@@ -373,17 +440,31 @@ impl LiveRecorder {
         }
         // Chat that arrived until now.
         self.drain_chat(&mut run);
-        run.journal.close_part().map_err(io)?;
+        // On a full disk syncing the part that could not be written fails
+        // too; the segments listed are on disk already.
+        if let Err(e) = run.journal.close_part()
+            && end != End::DiskFull
+        {
+            return Err(io(e).into());
+        }
         if run.journal.segs.is_empty() {
             let _ = fs::remove_dir_all(&tmp);
-            return Err(ArchiveError::fatal(
-                "offline",
-                format!(
-                    "the channel went offline before anything was recorded ({})",
-                    end.as_str()
+            let e = match end {
+                End::Stopped => {
+                    ArchiveError::fatal("stopped", "stopped before anything was recorded")
+                }
+                End::DiskFull => {
+                    ArchiveError::fatal("no_space", "the disk is full: nothing could be recorded")
+                }
+                _ => ArchiveError::fatal(
+                    "offline",
+                    format!(
+                        "the channel went offline before anything was recorded ({})",
+                        end.as_str()
+                    ),
                 ),
-            )
-            .into());
+            };
+            return Err(e.into());
         }
         self.finalize(&mut run, &target, &tmp, end)
     }
@@ -475,9 +556,7 @@ impl LiveRecorder {
     fn follow(&self, run: &mut Run<'_>) -> Result<End, Stop> {
         let mut backoff = Duration::from_secs(1);
         loop {
-            if run.ctx.stop_requested() {
-                return Err(Stop::Interrupted);
-            }
+            self.check_stop(run)?;
             if let Some(end) = self.recheck(run)? {
                 return Ok(end);
             }
@@ -580,14 +659,23 @@ impl LiveRecorder {
         }
     }
 
+    /// A stop of the app (finalise) or of the queue (pause, cancel).
+    fn check_stop(&self, run: &Run<'_>) -> Result<(), Stop> {
+        if self.stops.is_requested(run.ctx.job().id) {
+            return Err(Stop::Finish);
+        }
+        if run.ctx.stop_requested() {
+            return Err(Stop::Interrupted);
+        }
+        Ok(())
+    }
+
     /// Sleeps `d`, waking up for a stop request.
     fn wait(&self, run: &Run<'_>, d: Duration) -> Result<(), Stop> {
         let step = Duration::from_millis(500);
         let mut left = d;
         while !left.is_zero() {
-            if run.ctx.stop_requested() {
-                return Err(Stop::Interrupted);
-            }
+            self.check_stop(run)?;
             let s = left.min(step);
             self.clock.sleep(s);
             left -= s;
@@ -623,9 +711,7 @@ impl LiveRecorder {
             {
                 continue;
             }
-            if run.ctx.stop_requested() {
-                return Err(Stop::Interrupted);
-            }
+            self.check_stop(run)?;
             let now = self.now();
             // A jump in the recorded sequence is a discontinuity too.
             let mut disc = s.discontinuity
@@ -672,7 +758,13 @@ impl LiveRecorder {
                             part_ms,
                             now,
                         )
-                        .map_err(io)?;
+                        .map_err(|e| {
+                            if is_disk_full(&e) {
+                                Stop::DiskFull(e.to_string())
+                            } else {
+                                Stop::Error(io(e))
+                            }
+                        })?;
                     run.last_new_segment = self.now();
                     let done = run.journal.bytes;
                     let rate = run
@@ -808,9 +900,13 @@ impl LiveRecorder {
         }
         fs::create_dir_all(&out_dir).map_err(io)?;
 
+        // On a full disk nothing more is written than must be: no images,
+        // no remux (TWI-035).
+        let raw = end == End::DiskFull;
+
         // Cover: the stream thumbnail, best effort.
         let mut attachments = Vec::new();
-        if !stream.thumbnail_url.is_empty() {
+        if !raw && !stream.thumbnail_url.is_empty() {
             let url = fill_image_template(&stream.thumbnail_url, 1280, 720);
             match self.source.get(&url) {
                 Ok(r) if r.status == 200 && r.body.starts_with(&[0xFF, 0xD8]) => {
@@ -823,6 +919,22 @@ impl LiveRecorder {
                 }
                 Ok(r) => run.notes.push(format!("thumbnail: HTTP {}", r.status)),
                 Err(e) => run.notes.push(format!("thumbnail: {e}")),
+            }
+        }
+        // The channel's avatar, best effort (TWI-035; as VOD downloads do).
+        if !raw && let Some(url) = self.source.avatar_url(&req.user_id) {
+            match self.source.get(&url) {
+                Ok(r) if r.status == 200 => {
+                    if let Some((mime, ext)) = image_mime(&r.body) {
+                        attachments.push(RemuxAttachment {
+                            file_name: format!("avatar.{ext}"),
+                            mime_type: mime.to_owned(),
+                            data: r.body,
+                        });
+                    }
+                }
+                Ok(r) => run.notes.push(format!("avatar: HTTP {}", r.status)),
+                Err(e) => run.notes.push(format!("avatar: {e}")),
             }
         }
 
@@ -886,37 +998,55 @@ impl LiveRecorder {
                 escape(title)
             ));
         }
-        fs::write(&meta_path, text).map_err(io)?;
-
-        // Remux: one file, timestamps folded across discontinuities and
-        // gaps.
         let inputs = journal.parts();
-        let output = out_dir.join(format!("{base}.{}", req.container.extension()));
-        let bytes = journal.bytes;
-        let progress = |ms: u64| {
-            let share = bytes.saturating_mul(ms.min(expected_ms)) / expected_ms.max(1);
-            ctx.report_bytes(bytes + share, Some(bytes * 2));
+        let (output, got_ms, probed_chapters, probed_attachments) = if raw {
+            // Full disk: the MPEG-TS parts are the recording, moved (not
+            // copied) into place; they play as they are.
+            let mut first = None;
+            for (i, part) in inputs.iter().enumerate() {
+                let name = if inputs.len() == 1 {
+                    format!("{base}.ts")
+                } else {
+                    format!("{base} - part {}.ts", i + 1)
+                };
+                fs::rename(part, out_dir.join(&name)).map_err(io)?;
+                first.get_or_insert(out_dir.join(name));
+            }
+            let output = first.unwrap_or_else(|| out_dir.join(format!("{base}.ts")));
+            (output, expected_ms, 0, 0)
+        } else {
+            fs::write(&meta_path, text).map_err(io)?;
+
+            // Remux: one file, timestamps folded across discontinuities and
+            // gaps.
+            let output = out_dir.join(format!("{base}.{}", req.container.extension()));
+            let bytes = journal.bytes;
+            let progress = |ms: u64| {
+                let share = bytes.saturating_mul(ms.min(expected_ms)) / expected_ms.max(1);
+                ctx.report_bytes(bytes + share, Some(bytes * 2));
+            };
+            let cancel = || ctx.is_cancelled();
+            let written_ms = self.muxer.remux(&MuxJob {
+                inputs: &inputs,
+                output: &output,
+                container: req.container,
+                metadata: &meta_path,
+                attachments: &attachments,
+                cut_end_ms: None,
+                fold_gaps: true,
+                cancel: &cancel,
+                progress: &progress,
+            })?;
+            let probed = self.muxer.probe(&output)?;
+            let got_ms = probed.duration_ms.unwrap_or(written_ms);
+            if got_ms.abs_diff(expected_ms) as f64 > expected_ms as f64 * DURATION_TOLERANCE {
+                // Hours of a broadcast are not thrown away for this: noted.
+                run.notes.push(format!(
+                    "duration_mismatch: the file is {got_ms} ms, the segments {expected_ms} ms"
+                ));
+            }
+            (output, got_ms, probed.chapters, probed.attachments)
         };
-        let cancel = || ctx.is_cancelled();
-        let written_ms = self.muxer.remux(&MuxJob {
-            inputs: &inputs,
-            output: &output,
-            container: req.container,
-            metadata: &meta_path,
-            attachments: &attachments,
-            cut_end_ms: None,
-            fold_gaps: true,
-            cancel: &cancel,
-            progress: &progress,
-        })?;
-        let probed = self.muxer.probe(&output)?;
-        let got_ms = probed.duration_ms.unwrap_or(written_ms);
-        if got_ms.abs_diff(expected_ms) as f64 > expected_ms as f64 * DURATION_TOLERANCE {
-            // Hours of a broadcast are not thrown away for this: noted.
-            run.notes.push(format!(
-                "duration_mismatch: the file is {got_ms} ms, the segments {expected_ms} ms"
-            ));
-        }
 
         let journal = &run.journal;
         let info = json!({
@@ -953,18 +1083,22 @@ impl LiveRecorder {
             },
             "file": {
                 "name": output.file_name().and_then(|n| n.to_str()),
-                "container": req.container, "duration_ms": got_ms, "expected_ms": expected_ms,
-                "chapters": probed.chapters, "attachments": probed.attachments,
+                "container": if raw { json!("ts") } else { json!(req.container) },
+                "duration_ms": got_ms, "expected_ms": expected_ms,
+                "chapters": probed_chapters, "attachments": probed_attachments,
             },
             "chat": chat,
             "notes": run.notes,
             "recorded_at_ms": self.now(),
         });
-        fs::write(
+        let written = fs::write(
             out_dir.join(format!("{base}.info.json")),
             serde_json::to_vec_pretty(&info).map_err(io)?,
-        )
-        .map_err(io)?;
+        );
+        // On a full disk the recording is kept without its sidecar.
+        if !raw {
+            written.map_err(io)?;
+        }
         if ctx.is_cancelled() {
             return Err(Stop::Interrupted);
         }
@@ -1079,6 +1213,8 @@ impl LiveRecorder {
         match written {
             Ok(()) => json!({"file": name, "messages": lines.len(), "outside_recording": outside}),
             Err(e) => {
+                // No half-written chat beside the recording (a full disk).
+                let _ = fs::remove_file(out_dir.join(&name));
                 run.notes.push(format!("chat: {e}"));
                 Value::Null
             }
@@ -1144,11 +1280,18 @@ fn chapters(
 
 impl JobHandler for LiveRecorder {
     fn run(&self, ctx: &JobContext) -> RunOutcome {
-        match self.record(ctx) {
+        let outcome = match self.record(ctx) {
             Ok(result) => RunOutcome::Done(Some(result)),
             Err(Stop::Interrupted) => RunOutcome::Interrupted,
+            // Only from `follow`, which `record` maps to an end.
+            Err(Stop::Finish) => RunOutcome::Interrupted,
+            Err(Stop::DiskFull(e)) => RunOutcome::Fatal(format!("no_space: {e}")),
             Err(Stop::Error(e)) if e.retryable => RunOutcome::Retryable(e.to_string()),
             Err(Stop::Error(e)) => RunOutcome::Fatal(e.to_string()),
+        };
+        if !matches!(outcome, RunOutcome::Interrupted) {
+            self.stops.clear(ctx.job().id);
         }
+        outcome
     }
 }

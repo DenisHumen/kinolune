@@ -23,6 +23,7 @@ import '../twitch_screen.dart' show formatScheduleTime;
 import 'twitch_archive_screens.dart';
 import 'twitch_browse.dart';
 import 'twitch_play.dart';
+import 'twitch_record_live.dart';
 import 'twitch_widgets.dart';
 
 enum _ChannelTab { vods, highlights, clips, schedule, about }
@@ -235,6 +236,15 @@ class _TwitchChannelScreenState extends State<TwitchChannelScreen> {
                       displayName: c.displayName,
                       categories: _categories(page),
                     ),
+                  ),
+                // TWI-035: record the broadcast on air (full builds).
+                if (AppFlavor.twitchArchive &&
+                    live != null &&
+                    services.visibleArchive != null)
+                  TwitchRecordLiveButton(
+                    login: c.login,
+                    userId: c.userId,
+                    onDark: false,
                   ),
                 // TWI-012: the read-only chat works without a login.
                 KButton(
