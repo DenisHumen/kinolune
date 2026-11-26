@@ -2481,7 +2481,6 @@ class RustLibrary
     bool scanOnStart = true,
   }) async {
     if (_closed) return;
-    _airingTimer?.cancel();
     await stopWatching();
     await sources();
     if (_closed) return;
@@ -2935,6 +2934,7 @@ class RustLibrary
     await _changes.close();
     await _musicChanges.close();
     await _bookChanges.close();
+    _airingTimer?.cancel();
     await _airingChanges.close();
     _trickplay?.dispose();
     _skip?.dispose();
