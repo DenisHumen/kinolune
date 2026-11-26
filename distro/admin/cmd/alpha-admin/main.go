@@ -105,6 +105,9 @@ func run(o options, log *slog.Logger) error {
 		Power:       &system.Logind{Bus: bus},
 		Updates:     updproxy.New(o.updatedSocket),
 		Accounts:    &privhelper.Client{Socket: o.privSocket},
+		AdminNow: func(user string) bool {
+			return auth.DefaultGroupFiles.IsAdminNow(user, splitList(o.adminGroups))
+		},
 		Info: server.Info{
 			OSVersion:      server.ReadOSVersion(o.versionFile),
 			TLSFingerprint: cert.Fingerprint,

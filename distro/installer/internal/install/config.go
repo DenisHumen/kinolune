@@ -209,6 +209,13 @@ func (in *Installer) configure(ctx context.Context) (err error) {
 			return err
 		}
 	}
+	// SSH keys given here turn SSH on at the first boot (alpha-ssh-firstboot,
+	// DIST-018); an upgraded system has no such marker and keeps its state.
+	if len(a.User.SSHAuthorizedKeys) > 0 || len(a.RootSSHAuthorizedKeys) > 0 {
+		if err := os.WriteFile(filepath.Join(deploy, SSHKeysMarkerPath), []byte("keys given to the installer\n"), 0o644); err != nil {
+			return err
+		}
+	}
 	relabel = append(relabel, varDir)
 
 	return in.relabel(ctx, deploy, relabel)

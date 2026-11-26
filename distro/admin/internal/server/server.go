@@ -110,6 +110,9 @@ type Server struct {
 	Updates     *updproxy.Client
 	// Accounts: users, Samba and SSH through the root helper (DIST-018).
 	Accounts Accounts
+	// AdminNow re-checks on every request that the session's user still
+	// exists and is an administrator (nil: no check, tests).
+	AdminNow func(user string) bool
 	Info     Info
 	Log      *slog.Logger
 	// ConfirmTTL is how long a reboot/power-off confirmation is valid.
@@ -255,6 +258,14 @@ func (s *Server) check(w http.ResponseWriter, r *http.Request, needAdmin bool) (
 	}
 	if needAdmin && sess.Role != auth.RoleAdmin {
 		writeError(w, http.StatusForbidden, "forbidden", "administrators only")
+		return nil, false
+	}
+	// The role in the session is from the log-in: a user deleted or taken
+	// out of the admin groups since (in the console too) loses the session.
+	if needAdmin && s.AdminNow != nil && !s.AdminNow(sess.User) {
+		s.Sessions.Delete(c.Value)
+		s.log().Warn("session ended: no longer an administrator", "user", sess.User, "addr", peerIP(r))
+		writeError(w, http.StatusForbidden, "not_admin", NotAdminMessage)
 		return nil, false
 	}
 	return sess, true

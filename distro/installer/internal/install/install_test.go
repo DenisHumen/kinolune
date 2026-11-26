@@ -442,6 +442,10 @@ func TestRunFullInstall(t *testing.T) {
 	if st, err := os.Stat(imp); err != nil || st.Mode().Perm() != 0o600 {
 		t.Errorf("import.smbpasswd mode: %v %v", st, err)
 	}
+	// SSH keys were in the answers: the first boot may turn SSH on.
+	if _, err := os.Stat(filepath.Join(varSub, "lib/alpha/ssh-keys-at-install")); err != nil {
+		t.Errorf("no SSH keys marker: %v", err)
+	}
 
 	// SELinux relabel covers what we wrote.
 	sf := s.fake.cmds[20]
@@ -506,6 +510,9 @@ func TestRunDataPartitionHostRunnerHashedPassword(t *testing.T) {
 	// A hashed password gives no NT hash: no Samba import file.
 	if _, err := os.Stat(filepath.Join(s.in.Root, "@var/lib/alpha/samba/import.smbpasswd")); !os.IsNotExist(err) {
 		t.Errorf("import file with a hashed password: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(s.in.Root, "@var/lib/alpha/ssh-keys-at-install")); !os.IsNotExist(err) {
+		t.Errorf("SSH keys marker without keys: %v", err)
 	}
 	sfdisk := s.fake.cmds[1]
 	if !strings.Contains(sfdisk.Stdin, "/dev/sda3 : size=16384MiB") || !strings.Contains(sfdisk.Stdin, `/dev/sda4 : type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, name="kinolune-data"`) {

@@ -83,7 +83,7 @@ curl -sk -b jar -H "X-CSRF-Token: $CSRF" -X POST $H/api/v1/power/reboot        #
 | `/usr/libexec/alpha/alpha-admin-priv` | помощник пользователей, Samba и SSH (cgo, libpam, `-tags pam`); `render-samba` — рендер конфига при загрузке |
 | `/usr/lib/systemd/system/alpha-admin-priv.socket`, `alpha-admin-priv@.service` | его сокет (`Accept=yes`, 0600 `alpha-admin`) и экземпляр |
 | `/usr/lib/systemd/system/alpha-samba-config.service` | до `smb.service`: рендер `smb.conf.d/kinolune.conf`, импорт пароля Samba из установщика, папки пользователей |
-| `/usr/lib/systemd/system/alpha-ssh-firstboot.service`, `/usr/libexec/alpha/alpha-ssh-firstboot` | один раз: SSH включается, если при установке переданы ключи, иначе выключается |
+| `/usr/lib/systemd/system/alpha-ssh-firstboot.service`, `/usr/libexec/alpha/alpha-ssh-firstboot` | один раз: SSH включается только на свежей установке с ключами; на обновлённой системе состояние SSH не меняется |
 | `/var/lib/alpha/samba/settings.json` | настройки общих папок (без секретов) |
 | `/usr/lib/sysusers.d/alpha-admin.conf` | системный пользователь и группа `alpha-admin` |
 | `/usr/share/polkit-1/rules.d/50-alpha-admin.rules` | что пользователю `alpha-admin` можно делать через D-Bus |

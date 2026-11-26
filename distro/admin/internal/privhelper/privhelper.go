@@ -30,6 +30,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -151,6 +152,15 @@ type Paths struct {
 	RootKeys      string // /root/.ssh/authorized_keys
 	HomeGlobKeys  string // /var/home/*/.ssh/authorized_keys
 	SSHUnit       string
+	// Lock serialises every change to users across the helper processes
+	// (one per connection): the last-administrator check and the change
+	// happen under it.
+	Lock string
+	// UIDHigh records the highest UID ever given to a NAS user, so a new
+	// user never gets the UID (and the old files) of a deleted one.
+	UIDHigh string
+	// Proc is /proc (tests): smbd processes are recognised by their comm.
+	Proc string
 }
 
 // DefaultPaths are the paths in the image.
@@ -166,7 +176,13 @@ var DefaultPaths = Paths{
 	RootKeys:     "/root/.ssh/authorized_keys",
 	HomeGlobKeys: "/var/home/*/.ssh/authorized_keys",
 	SSHUnit:      "sshd.service",
+	Lock:         "/run/alpha-admin/users.lock",
+	UIDHigh:      "/var/lib/alpha/uid-high",
+	Proc:         "/proc",
 }
+
+// maxKeysFile caps how much of an authorized_keys file is read.
+const maxKeysFile = 1 << 20
 
 // Helper executes requests.
 type Helper struct {
@@ -175,8 +191,10 @@ type Helper struct {
 	Paths       Paths
 	AdminGroups []string
 	MinUID      int
-	Now         func() time.Time
-	Log         *slog.Logger
+	// RootUID owns /root/.ssh/authorized_keys (0; tests use their own).
+	RootUID int
+	Now     func() time.Time
+	Log     *slog.Logger
 }
 
 // New returns a helper for the real system.
@@ -250,15 +268,15 @@ func (h *Helper) Handle(ctx context.Context, req Request) (Response, error) {
 		users, err := h.users(ctx)
 		return Response{Users: users}, err
 	case OpUserCreate:
-		return Response{}, h.createUser(ctx, req)
+		return Response{}, h.locked(func() error { return h.createUser(ctx, req) })
 	case OpUserPassword:
-		return Response{}, h.setPassword(ctx, req)
+		return Response{}, h.locked(func() error { return h.setPassword(ctx, req) })
 	case OpUserAdmin:
-		return Response{}, h.setAdmin(ctx, req)
+		return Response{}, h.locked(func() error { return h.setAdmin(ctx, req) })
 	case OpUserDelete:
-		return Response{}, h.deleteUser(ctx, req)
+		return Response{}, h.locked(func() error { return h.deleteUser(ctx, req) })
 	case OpSambaSync:
-		return Response{}, h.sambaSync(ctx, req)
+		return Response{}, h.locked(func() error { return h.sambaSync(ctx, req) })
 	case OpSharingGet:
 		s, err := samba.LoadSettings(h.Paths.Settings)
 		return Response{Settings: &s}, err
@@ -282,6 +300,110 @@ func (h *Helper) Handle(ctx context.Context, req Request) (Response, error) {
 	default:
 		return Response{}, fail(CodeBadRequest, "unknown operation %q", req.Op)
 	}
+}
+
+// locked runs f holding the exclusive users lock (flock), so read, check
+// and change of users never interleave between helper processes.
+func (h *Helper) locked(f func() error) error {
+	if h.Paths.Lock == "" {
+		return f()
+	}
+	if err := os.MkdirAll(filepath.Dir(h.Paths.Lock), 0o755); err != nil {
+		return err
+	}
+	lf, err := os.OpenFile(h.Paths.Lock, os.O_RDWR|os.O_CREATE|syscall.O_NOFOLLOW, 0o600)
+	if err != nil {
+		return err
+	}
+	defer lf.Close()
+	if err := syscall.Flock(int(lf.Fd()), syscall.LOCK_EX); err != nil {
+		return err
+	}
+	defer syscall.Flock(int(lf.Fd()), syscall.LOCK_UN) //nolint:errcheck // closed right after
+	return f()
+}
+
+// nextUID is one above both the highest human UID in passwd and the highest
+// UID ever recorded in UIDHigh.
+func (h *Helper) nextUID() (int, error) {
+	high := h.MinUID - 1
+	if b, err := os.ReadFile(h.Paths.UIDHigh); err == nil {
+		if n, err := strconv.Atoi(strings.TrimSpace(string(b))); err == nil && n > high {
+			high = n
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return 0, err
+	}
+	accts, _, err := h.humans()
+	if err != nil {
+		return 0, err
+	}
+	for _, a := range accts {
+		high = max(high, a.uid)
+	}
+	if high+1 >= 60000 {
+		return 0, fail(CodeConflict, "no free user ids left")
+	}
+	return high + 1, nil
+}
+
+func (h *Helper) recordUID(uid int) error {
+	return samba.WriteAtomic(h.Paths.UIDHigh, []byte(strconv.Itoa(uid)+"\n"), 0o644)
+}
+
+// killSessions ends the user's SMB sessions: the smbd processes that serve
+// them (one per client connection), found with smbstatus and checked by
+// their comm, so an old tree connect cannot outlive a deleted account or an
+// old password.
+func (h *Helper) killSessions(ctx context.Context, user string) {
+	out, err := h.Run.Run(ctx, "", "smbstatus", "--brief", "--json")
+	if err != nil {
+		h.log().Warn("smbstatus (smbd not running?)", "err", err)
+		return
+	}
+	for _, pid := range sessionPIDs(out, user) {
+		comm, err := os.ReadFile(filepath.Join(h.Paths.Proc, strconv.Itoa(pid), "comm"))
+		if err != nil || !strings.HasPrefix(strings.TrimSpace(string(comm)), "smbd") {
+			continue
+		}
+		if _, err := h.Run.Run(ctx, "", "kill", "-s", "TERM", "--", strconv.Itoa(pid)); err != nil {
+			h.log().Warn("ending an SMB session", "user", user, "pid", pid, "err", err)
+		} else {
+			h.log().Info("SMB session ended", "user", user, "pid", pid)
+		}
+	}
+}
+
+// sessionPIDs reads `smbstatus --brief --json`: the server pids of the
+// sessions of user.
+func sessionPIDs(out, user string) []int {
+	var st struct {
+		Sessions map[string]struct {
+			Username string `json:"username"`
+			ServerID struct {
+				PID json.RawMessage `json:"pid"`
+			} `json:"server_id"`
+		} `json:"sessions"`
+	}
+	if err := json.Unmarshal([]byte(out), &st); err != nil {
+		return nil
+	}
+	var pids []int
+	for _, s := range st.Sessions {
+		name := s.Username
+		if _, after, ok := strings.Cut(name, "\\"); ok {
+			name = after
+		}
+		if !strings.EqualFold(name, user) {
+			continue
+		}
+		raw := strings.Trim(string(s.ServerID.PID), `"`)
+		if pid, err := strconv.Atoi(raw); err == nil && pid > 1 && !slices.Contains(pids, pid) {
+			pids = append(pids, pid)
+		}
+	}
+	slices.Sort(pids)
+	return pids
 }
 
 // --- accounts database -----------------------------------------------------------------
@@ -487,7 +609,14 @@ func (h *Helper) createUser(ctx context.Context, req Request) error {
 	if req.Admin != nil && *req.Admin {
 		groups += ",wheel"
 	}
-	if _, err := h.Run.Run(ctx, "", "useradd", "-m", "-U", "-s", "/bin/bash", "-G", groups, "-c", req.FullName, "--", req.User); err != nil {
+	uid, err := h.nextUID()
+	if err != nil {
+		return err
+	}
+	if _, err := h.Run.Run(ctx, "", "useradd", "-m", "-U", "-u", strconv.Itoa(uid), "-s", "/bin/bash", "-G", groups, "-c", req.FullName, "--", req.User); err != nil {
+		return err
+	}
+	if err := h.recordUID(uid); err != nil {
 		return err
 	}
 	if err := h.setPasswords(ctx, req.User, req.Password); err != nil {
@@ -523,6 +652,8 @@ func (h *Helper) setPassword(ctx context.Context, req Request) error {
 	if err := h.setPasswords(ctx, req.User, req.Password); err != nil {
 		return err
 	}
+	// Connections opened with the old password end.
+	h.killSessions(ctx, req.User)
 	h.log().Info("password changed", "user", req.User, "by", req.Actor)
 	return h.ensureDirs(ctx, req.User)
 }
@@ -596,6 +727,15 @@ func (h *Helper) deleteUser(ctx context.Context, req Request) error {
 	}
 	if _, err := h.Run.Run(ctx, "", "pdbedit", "-x", "-u", req.User); err != nil {
 		h.log().Info("no Samba account to delete", "user", req.User)
+	}
+	h.killSessions(ctx, req.User)
+	// Keep the UID used, even if passwd held the highest one only.
+	if a, _, _, err := h.human(req.User); err == nil {
+		if high, err := h.nextUID(); err == nil && a.uid >= high-1 {
+			if err := h.recordUID(a.uid); err != nil {
+				return err
+			}
+		}
 	}
 	// Files in the shares are kept, out of reach of a future user with the
 	// same UID: renamed and handed to root:wheel for the administrators.
@@ -725,20 +865,46 @@ func (h *Helper) RenderBoot(ctx context.Context) error {
 }
 
 func (h *Helper) countKeys() int {
-	files := []string{h.Paths.RootKeys}
-	if m, err := filepath.Glob(h.Paths.HomeGlobKeys); err == nil {
-		files = append(files, m...)
-	}
-	n := 0
-	for _, f := range files {
-		b, err := os.ReadFile(f)
-		if err != nil {
+	n := h.keysIn(h.Paths.RootKeys, h.RootUID)
+	homes, _ := filepath.Glob(h.Paths.HomeGlobKeys)
+	for _, f := range homes {
+		// <home>/.ssh/authorized_keys must belong to the owner of <home>.
+		home := filepath.Dir(filepath.Dir(f))
+		st, err := os.Lstat(home)
+		if err != nil || !st.IsDir() {
 			continue
 		}
-		for _, l := range strings.Split(string(b), "\n") {
-			if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "#") {
-				n++
-			}
+		if sys, ok := st.Sys().(*syscall.Stat_t); ok {
+			n += h.keysIn(f, int(sys.Uid))
+		}
+	}
+	return n
+}
+
+// keysIn counts the keys in one authorized_keys file, as root, safely: no
+// symlinks (O_NOFOLLOW), no FIFOs or devices (O_NONBLOCK, regular files
+// only), owned by owner, at most maxKeysFile bytes read.
+func (h *Helper) keysIn(path string, owner int) int {
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return 0
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil || !st.Mode().IsRegular() {
+		return 0
+	}
+	if sys, ok := st.Sys().(*syscall.Stat_t); !ok || int(sys.Uid) != owner {
+		return 0
+	}
+	b, err := io.ReadAll(io.LimitReader(f, maxKeysFile))
+	if err != nil {
+		return 0
+	}
+	n := 0
+	for _, l := range strings.Split(string(b), "\n") {
+		if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "#") {
+			n++
 		}
 	}
 	return n

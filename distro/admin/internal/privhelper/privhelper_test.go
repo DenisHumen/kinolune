@@ -127,9 +127,12 @@ func newHelper(t *testing.T) (*Helper, *fakeRunner, string) {
 			Import: filepath.Join(dir, "samba", "import.smbpasswd"),
 			Media:  filepath.Join(dir, "srv", "media"), Users: filepath.Join(dir, "srv", "users"),
 			TimeMachine: filepath.Join(dir, "srv", "timemachine"),
-			RootKeys:    filepath.Join(dir, "root_keys"), HomeGlobKeys: filepath.Join(dir, "home", "*", "keys"),
+			RootKeys:    filepath.Join(dir, "root_keys"), HomeGlobKeys: filepath.Join(dir, "home", "*", ".ssh", "keys"),
 			SSHUnit: "sshd.service",
+			Lock:    filepath.Join(dir, "run", "users.lock"), UIDHigh: filepath.Join(dir, "lib", "uid-high"),
+			Proc: filepath.Join(dir, "proc"),
 		},
+		RootUID:     os.Getuid(),
 		AdminGroups: []string{"wheel", "alpha-admin"},
 		MinUID:      1000,
 		Now:         func() time.Time { return time.Date(2026, 11, 26, 12, 0, 0, 0, time.UTC) },
@@ -173,7 +176,7 @@ func TestCreateUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{
-		"useradd -m -U -s /bin/bash -G alpha-users -c Dina -- dina",
+		"useradd -m -U -u 1003 -s /bin/bash -G alpha-users -c Dina -- dina",
 		"chpasswd",
 		"smbpasswd -a -s -- dina",
 		"install -d -m 0700 -o dina -g dina -- " + filepath.Join(dir, "srv", "users", "dina"),
@@ -196,7 +199,8 @@ func TestCreateUser(t *testing.T) {
 	if _, err := h.Handle(ctx, req); err != nil {
 		t.Fatal(err)
 	}
-	if got := r.argvs()[0]; got != "useradd -m -U -s /bin/bash -G alpha-users,wheel -c Dina -- erik" {
+	// The fake runner does not write passwd: the recorded UID moves on.
+	if got := r.argvs()[0]; got != "useradd -m -U -u 1004 -s /bin/bash -G alpha-users,wheel -c Dina -- erik" {
 		t.Fatal(got)
 	}
 }
@@ -293,6 +297,7 @@ func TestSetAdminAndDelete(t *testing.T) {
 	kept := filepath.Join(users, "deleted-boris-20261126-120000")
 	want := []string{
 		"pdbedit -x -u boris",
+		"smbstatus --brief --json",
 		"mv -T -- " + filepath.Join(users, "boris") + " " + kept,
 		"chown -R --no-dereference root:wheel -- " + kept,
 		"chmod -R u+rwX,g+rwX,o-rwx -- " + kept,
@@ -394,10 +399,10 @@ func TestSSH(t *testing.T) {
 	if err := os.WriteFile(h.Paths.RootKeys, []byte("ssh-ed25519 AAAA a\n\n# c\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(dir, "home", "anna"), 0o700); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, "home", "anna", ".ssh"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "home", "anna", "keys"), []byte("ssh-ed25519 BBBB b\nssh-rsa CCCC c\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "home", "anna", ".ssh", "keys"), []byte("ssh-ed25519 BBBB b\nssh-rsa CCCC c\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	resp, err := h.Handle(ctx, Request{Op: OpSSHGet})

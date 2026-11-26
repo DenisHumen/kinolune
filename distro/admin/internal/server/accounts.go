@@ -184,6 +184,15 @@ func (s *Server) setUserPassword(w http.ResponseWriter, r *http.Request, sess *a
 		User: name, Password: req.Password}); !ok {
 		return
 	}
+	// A new password ends the user's other sessions; changing your own
+	// password keeps the session you did it from.
+	keep := ""
+	if name == sess.User {
+		if c, err := r.Cookie(CookieName); err == nil {
+			keep = c.Value
+		}
+	}
+	s.Sessions.RevokeUser(name, keep)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -204,6 +213,9 @@ func (s *Server) setUserAdmin(w http.ResponseWriter, r *http.Request, sess *auth
 		User: name, Admin: req.Admin}); !ok {
 		return
 	}
+	if !*req.Admin {
+		s.Sessions.RevokeUser(name, "")
+	}
 	u, ok := s.findUser(w, r, sess, name)
 	if !ok {
 		return
@@ -222,6 +234,7 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request, sess *auth.S
 	if _, ok := s.doAsAdmin(w, r, sess, privhelper.Request{Op: privhelper.OpUserDelete, ActorPassword: req.AdminPassword, User: name}); !ok {
 		return
 	}
+	s.Sessions.RevokeUser(name, "")
 	w.WriteHeader(http.StatusNoContent)
 }
 

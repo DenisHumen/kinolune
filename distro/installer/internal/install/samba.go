@@ -17,6 +17,10 @@ import (
 // line that `pdbedit -i` imports at the first boot, then deletes. Root only.
 const SambaImportPath = "/var/lib/alpha/samba/import.smbpasswd"
 
+// SSHKeysMarkerPath tells alpha-ssh-firstboot that SSH keys were given at
+// installation (DIST-018): only then does the first boot turn SSH on.
+const SSHKeysMarkerPath = "/var/lib/alpha/ssh-keys-at-install"
+
 // SambaImportLine is the smbpasswd line of user with password: no LM hash,
 // the NT hash (MD4 of the UTF-16LE password), a normal account.
 func SambaImportLine(user string, uid int, password string, now int64) string {

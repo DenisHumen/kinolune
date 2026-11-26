@@ -236,7 +236,29 @@ def main():
     r = helper({"op": "user_delete", "actor": "boris", "actor_password": BORIS[1], "user": "anna"})
     if r.get("error") != "denied":
         fail(f"non-admin deleted: {r}")
+    # An open SMB session of boris (an interactive smbclient on Users/boris).
+    boris_uid = int(sh("id -u boris")[1])
+    live = subprocess.Popen(["smbclient", f"{HOST}/Users", "-U", f"boris%{BORIS[1]}", "-m", "SMB3"],
+                            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
+    live.stdin.write("cd boris\nls\n")
+    live.stdin.flush()
+    pids = []
+    for _ in range(40):
+        st = json.loads(sh("smbstatus --brief --json")[1] or "{}")
+        pids = [int(x["server_id"]["pid"]) for x in st.get("sessions", {}).values() if x.get("username", "").endswith("boris")]
+        if pids:
+            break
+        time.sleep(0.25)
+    if not pids:
+        fail("boris's live session not seen in smbstatus")
     expect_ok(helper({"op": "user_delete", "actor": "anna", "actor_password": ANNA[1], "user": "boris"}), "delete boris")
+    time.sleep(1)
+    st = json.loads(sh("smbstatus --brief --json")[1] or "{}")
+    if any(x.get("username", "").endswith("boris") for x in st.get("sessions", {}).values()) or \
+            any(os.path.exists(f"/proc/{pid}") for pid in pids):
+        fail(f"boris's SMB session survived the deletion: {pids}")
+    live.kill()
+    ok(f"boris's open SMB session (smbd {pids}) ended on deletion")
     if "boris" in sh("pdbedit -L")[1] or sh("id boris")[0] == 0:
         fail("boris still exists")
     kept = glob.glob("/var/srv/users/deleted-boris-*")
@@ -245,6 +267,15 @@ def main():
     if smb("Media", BORIS)[0] == 0:
         fail("deleted boris still logs in")
     ok("last admin protected, non-admin refused; boris deleted: no account, files kept as root:wheel " + os.path.basename(kept[0]))
+
+    # A new user never gets boris's UID (and so never his old files).
+    expect_ok(helper({"op": "user_create", "actor": "anna", "actor_password": ANNA[1], "user": "erik", "password": "Erik-pass-1"}), "create erik")
+    erik_uid = int(sh("id -u erik")[1])
+    if erik_uid <= boris_uid:
+        fail(f"erik got UID {erik_uid}, boris had {boris_uid}")
+    if sh("cat /var/lib/alpha/uid-high")[1] != str(erik_uid):
+        fail("uid-high not recorded")
+    ok(f"new user erik gets UID {erik_uid} > deleted boris's {boris_uid}")
 
 
 main()
