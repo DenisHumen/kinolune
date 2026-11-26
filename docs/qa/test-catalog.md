@@ -2200,7 +2200,7 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 
 ## 24. Kinolune OS: установщик (DIST-006)
 
-Полноэкранный установщик на ISO Kinolune OS (`alpha-installer tui`, ADR-NNNN); только клавиатура, консоль Linux и последовательная консоль 80×24. К приложению Kinolune не относится: отметки — в колонке Linux, остальные платформы «—».
+Полноэкранный установщик на ISO Kinolune OS (`alpha-installer tui`, ADR-0174); только клавиатура, консоль Linux и последовательная консоль 80×24. К приложению Kinolune не относится: отметки — в колонке Linux, остальные платформы «—».
 
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
 |---|---|---|---|---|---|---|---|---|---|
@@ -2222,7 +2222,7 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 
 ## 25. Kinolune OS: общие папки, пользователи, firewall (DIST-018)
 
-Samba на NAS с Kinolune OS (ADR-NNNN). Проверки делаются с компьютера в той же сети: колонки macOS, Windows и Linux — откуда подключаются к шаре (Finder, Проводник, файловый менеджер или `smbclient`). К приложению Kinolune не относится: остальные платформы «—».
+Samba на NAS с Kinolune OS (ADR-0174). Проверки делаются с компьютера в той же сети: колонки macOS, Windows и Linux — откуда подключаются к шаре (Finder, Проводник, файловый менеджер или `smbclient`). К приложению Kinolune не относится: остальные платформы «—».
 
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
 |---|---|---|---|---|---|---|---|---|---|
@@ -2236,3 +2236,17 @@ Samba на NAS с Kinolune OS (ADR-NNNN). Проверки делаются с �
 
 Автотесты: NAS-01…NAS-04, NAS-06, NAS-07 — `distro/admin/tests/vm-admin-e2e.sh` (QEMU, `smbclient` снаружи VM через проброс порта и firewall VM, `tests/vm_samba_check.py`), NAS-02…NAS-04 также `distro/admin/tests/samba-container.sh`; API — `distro/admin/internal/server/accounts_test.go`, помощник — `distro/admin/internal/privhelper/privhelper_test.go`.
 Автотесты: INST-02…INST-10 — `distro/installer/internal/tui/tui_test.go` (вызовы Update() на снимках дисков, эталонные экраны 80×24 на uk/en/ru в `testdata/golden/`) и `distro/installer/cmd/alpha-installer/tui_test.go`; INST-01, INST-02, INST-06, INST-10 — `distro/tests/iso-boot.sh` (ISO в QEMU/OVMF по последовательной консоли, пробная установка через все экраны). INST-07, INST-12 — `distro/installer/internal/tui/progress_test.go` (записанный поток прогресса установки из QEMU: эталонные экраны, teatest) и `distro/installer/internal/install/progress_test.go`; `INSTALL=tui distro/tests/iso-boot.sh` ждёт строку копирования со скоростью и проверяет поток командой «alpha-installer progress».
+
+## 26. Kinolune OS: снапшоты `/var` при обновлении (DIST-010)
+
+Агент обновлений `alpha-updated` перед перезагрузкой в обновление снимает `@var`, а если ОС откатилась — возвращает `/var` к снимку до монтирования (ADR-0174). К приложению Kinolune не относится: отметки — в колонке Linux.
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| VARSNAP-01 | «Обновить сейчас» (POST /v1/update/apply) → перед перезагрузкой в @var-snapshots/ появляется read-only снапшот и pending.json; в /v1/status — last_apply.var_snapshot; хранятся 3 последних | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-02 | Новая версия загрузилась и прошла проверки (boot-complete.target) → маркер снят; ручной откат ОС после этого /var не трогает | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-03 | Новая версия загрузилась, изменила базу медиасервера, ОС откатилась → после загрузки старой версии база как до обновления, медиасервер старой версии отвечает; /var неудачного обновления лежит в @var-snapshots/<время>-replaced; в /v1/status — var_snapshots.last_restore | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-04 | Снапшот не удался (нет места на корне) → перезагрузки нет, обновление остаётся staged, ошибка в update.last_error | — | — | — | — | — | — | — | 🤖 |
+| VARSNAP-05 | Настоящий откат greenboot (обновление с проваленной проверкой required.d) на реальном NAS → ОС и база вернулись, данные пула не тронуты | — | — | — | — | — | — | — | ⬜ |
+
+Автотесты: VARSNAP-01…04 — `distro/updated/internal/varsnap/varsnap_test.go`, `distro/updated/internal/agent/agent_test.go` (`TestApplySnapshotsVarThenConfirms`, `TestSnapshotFailureBlocksReboot` и др.); VARSNAP-01, VARSNAP-03 — QEMU, шаг 7 `distro/tests/vm-install.sh` (установка с `@var`, применение через агент, откат `bootc rollback` вместо greenboot).

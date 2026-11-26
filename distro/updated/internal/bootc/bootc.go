@@ -102,6 +102,23 @@ type BootEntry struct {
 	// `bootc upgrade --download-only`: it is not applied on reboot until
 	// `bootc upgrade --from-downloaded` unlocks it. Older bootc omits it.
 	DownloadOnly bool `json:"downloadOnly,omitempty"`
+	// Ostree identifies the deployment on disk (/ostree/deploy/<stateroot>/deploy/<checksum>.<serial>).
+	Ostree *OstreeDeployment `json:"ostree,omitempty"`
+}
+
+// OstreeDeployment is the ostree part of a boot entry.
+type OstreeDeployment struct {
+	Checksum     string `json:"checksum"`
+	DeploySerial int    `json:"deploySerial"`
+	Stateroot    string `json:"stateroot"`
+}
+
+// Checksum returns the ostree deployment checksum of the entry or "".
+func (e *BootEntry) Checksum() string {
+	if e == nil || e.Ostree == nil {
+		return ""
+	}
+	return e.Ostree.Checksum
 }
 
 // Digest returns the image digest of the entry or "".
