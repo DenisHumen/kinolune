@@ -3,7 +3,7 @@
 //   1. DTCG structure, $type and literal values of every *.tokens.json;
 //   2. every reference resolves, is type-compatible and acyclic — for each theme × density;
 //   3. themes/* override only existing semantic tokens; density/* define identical token sets;
-//   4. WCAG contrast of the pairs in tokens/contrast.pairs.json for every theme.
+//   4. WCAG contrast of the pairs in tokens/contrast.pairs.json for every theme and palette.
 // Usage: node scripts/validate-tokens.mjs [--report]   (no dependencies)
 
 import { readFile, readdir } from 'node:fs/promises';
@@ -28,6 +28,8 @@ async function loadFile(dir, rel, errors) {
 const listFiles = async (dir, sub) =>
   (await readdir(path.join(dir, sub))).filter((f) => f.endsWith('.tokens.json')).sort();
 
+const listOptional = async (dir, sub) => listFiles(dir, sub).catch((e) => (e.code === 'ENOENT' ? [] : Promise.reject(e)));
+
 /** Composites a stack of colour tokens (top first) over an opaque backdrop. */
 function flattenStack(tokens, stack, backdrop) {
   let base = backdrop;
@@ -46,6 +48,13 @@ export async function validate({ report = false, dir = TOKENS_DIR } = {}) {
   for (const f of await tokenFiles('themes')) themes[f.replace('.tokens.json', '')] = await load(`themes/${f}`, errors);
   const densities = {};
   for (const f of await tokenFiles('density')) densities[f.replace('.tokens.json', '')] = await load(`density/${f}`, errors);
+  // Palettes (palettes/*, DSN-017) override colour roles on top of the dark theme; they are
+  // checked like themes: layer rules, resolution and contrast.
+  for (const f of await listOptional(dir, 'palettes')) {
+    const pal = await load(`palettes/${f}`, errors);
+    for (const [p, tok] of pal) if (tok.type !== 'color') errors.push(`palettes/${f}: ${p}: palettes may only override colours`);
+    themes[`palette:${f.replace('.tokens.json', '')}`] = new Map([...themes.dark, ...pal]);
+  }
 
   // Layer rules.
   for (const [name, t] of Object.entries(themes)) {

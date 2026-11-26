@@ -381,6 +381,9 @@ class _HomeRows extends StatelessWidget {
                   width: d.landscapeWidth,
                   onTap: () =>
                       playTwitch(context, TwitchPlayTarget.live(s.login)),
+                  // TWI-033: watch, channel, favourite, follow.
+                  onContextMenu: (at) =>
+                      showTwitchStreamMenu(context, s, position: at),
                 );
               },
             ),
