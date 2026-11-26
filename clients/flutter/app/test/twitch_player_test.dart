@@ -8,7 +8,9 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_device_sync.dart';
+import 'package:kinolune/fakes/fake_twitch_archive.dart';
 import 'package:kinolune/features/twitch/chat/chat_model.dart';
+import 'package:kinolune/flavor.dart';
 import 'package:kinolune/integration/library.dart' show Progress;
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
@@ -17,6 +19,7 @@ import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/sync/device_sync.dart';
+import 'package:kinolune/twitch/twitch_archive.dart' show TwitchArchive;
 import 'package:kinolune/twitch/twitch_models.dart';
 import 'package:kinolune/twitch/twitch_native.dart';
 import 'package:kinolune/twitch/twitch_service.dart';
@@ -214,8 +217,16 @@ class _Harness {
   }
 }
 
-Future<_Harness> _harness({bool native = true, DeviceSync? sync}) async {
-  final services = await twitchServices(twitchNative: native, sync: sync);
+Future<_Harness> _harness({
+  bool native = true,
+  DeviceSync? sync,
+  TwitchArchive? archive,
+}) async {
+  final services = await twitchServices(
+    twitchNative: native,
+    sync: sync,
+    twitchArchive: archive,
+  );
   return _Harness(services)..register();
 }
 
@@ -858,6 +869,37 @@ void main() {
     expect(l.twitchPlayerLowLatency, 'Низкая задержка');
     expect(l.twitchPlayerStable, 'Стабильно');
     expect(l.twitchPlayerAudioOnly, 'Только звук');
+    await _close(t);
+  });
+
+  // TWI-035: «● Записать» in the live player of full builds; the REC badge
+  // stays on the video. Store builds have neither.
+  testWidgets('live: Record in full builds only, REC badge while recording', (
+    t,
+  ) async {
+    setSurface(t, _desktop);
+    final archive = FakeTwitchArchive();
+    final h = await _harness(archive: archive);
+    await _play(t, h, const TwitchPlayTarget.live('pixelheron'));
+    final record = find.byKey(const ValueKey('twitch-record-live'));
+    if (!AppFlavor.twitchArchive) {
+      expect(record, findsNothing);
+      expect(
+        find.byKey(const ValueKey('twitch-recording-badge')),
+        findsNothing,
+      );
+      await _close(t);
+      return;
+    }
+    await h.services.preferences.write(
+      Preferences.twitchRecordWarningAccepted,
+      'true',
+    );
+    await _tap(t, record);
+    expect(archive.recordCalls.single.$3, 'pixelheron');
+    await settle(t, 4);
+    expect(find.byKey(const ValueKey('twitch-recording-badge')), findsOne);
+    expect(find.byKey(const ValueKey('twitch-record-live-stop')), findsOne);
     await _close(t);
   });
 }

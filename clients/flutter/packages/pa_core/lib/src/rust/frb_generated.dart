@@ -27768,8 +27768,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CoreTwitchDownload dco_decode_core_twitch_download(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 19)
-      throw Exception('unexpected arr length: expect 19 but see ${arr.length}');
+    if (arr.length != 20)
+      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
     return CoreTwitchDownload(
       jobId: dco_decode_i_64(arr[0]),
       kind: dco_decode_String(arr[1]),
@@ -27790,6 +27790,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       mediaMs: dco_decode_i_64(arr[16]),
       profileId: dco_decode_opt_box_autoadd_i_64(arr[17]),
       createdAtMs: dco_decode_i_64(arr[18]),
+      end: dco_decode_opt_String(arr[19]),
     );
   }
 
@@ -35183,6 +35184,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_mediaMs = sse_decode_i_64(deserializer);
     var var_profileId = sse_decode_opt_box_autoadd_i_64(deserializer);
     var var_createdAtMs = sse_decode_i_64(deserializer);
+    var var_end = sse_decode_opt_String(deserializer);
     return CoreTwitchDownload(
       jobId: var_jobId,
       kind: var_kind,
@@ -35203,6 +35205,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       mediaMs: var_mediaMs,
       profileId: var_profileId,
       createdAtMs: var_createdAtMs,
+      end: var_end,
     );
   }
 
@@ -43206,6 +43209,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_64(self.mediaMs, serializer);
     sse_encode_opt_box_autoadd_i_64(self.profileId, serializer);
     sse_encode_i_64(self.createdAtMs, serializer);
+    sse_encode_opt_String(self.end, serializer);
   }
 
   @protected
@@ -49629,8 +49633,8 @@ class CoreTwitchDownloadsImpl extends RustOpaque
 
   /// `pause`, `resume`, `cancel`, `retry` or `remove` (finished only) of
   /// a download or a recording. A recording that is cancelled while it
-  /// runs is not finalised: `stop` instead ends it and keeps what was
-  /// recorded.
+  /// runs is not finalised: `stop` (recordings only, TWI-035) instead ends
+  /// it and keeps what was recorded; a paused one is resumed to finalise.
   Future<void> control({
     required PlatformInt64 jobId,
     required String action,
@@ -49695,7 +49699,8 @@ class CoreTwitchDownloadsImpl extends RustOpaque
 
   /// Starts recording a channel now (the profile's rule settings, if
   /// any). Returns the job id; an active recording of the channel is
-  /// returned as is.
+  /// returned as is. An empty `user_id` is looked up by `login` in Helix
+  /// (TWI-035: the live player may know the login only).
   Future<PlatformInt64> recordNow({
     required PlatformInt64 profileId,
     required String userId,

@@ -37,8 +37,8 @@ abstract class CoreTwitchDownloads implements RustOpaqueInterface {
 
   /// `pause`, `resume`, `cancel`, `retry` or `remove` (finished only) of
   /// a download or a recording. A recording that is cancelled while it
-  /// runs is not finalised: `stop` instead ends it and keeps what was
-  /// recorded.
+  /// runs is not finalised: `stop` (recordings only, TWI-035) instead ends
+  /// it and keeps what was recorded; a paused one is resumed to finalise.
   Future<void> control({required PlatformInt64 jobId, required String action});
 
   /// Deletes a rule; the parent token as for
@@ -94,7 +94,8 @@ abstract class CoreTwitchDownloads implements RustOpaqueInterface {
 
   /// Starts recording a channel now (the profile's rule settings, if
   /// any). Returns the job id; an active recording of the channel is
-  /// returned as is.
+  /// returned as is. An empty `user_id` is looked up by `login` in Helix
+  /// (TWI-035: the live player may know the login only).
   Future<PlatformInt64> recordNow({
     required PlatformInt64 profileId,
     required String userId,
@@ -502,6 +503,12 @@ class CoreTwitchDownload {
   final PlatformInt64? profileId;
   final PlatformInt64 createdAtMs;
 
+  /// Finished recordings: why they ended — `offline`, `endlist`,
+  /// `new_broadcast`, `network`, `archive_disabled`, `usher_403`,
+  /// `stopped` (the user's "Stop", TWI-035) or `disk_full` (kept as
+  /// MPEG-TS without a remux).
+  final String? end;
+
   const CoreTwitchDownload({
     required this.jobId,
     required this.kind,
@@ -522,6 +529,7 @@ class CoreTwitchDownload {
     required this.mediaMs,
     this.profileId,
     required this.createdAtMs,
+    this.end,
   });
 
   @override
@@ -544,7 +552,8 @@ class CoreTwitchDownload {
       gaps.hashCode ^
       mediaMs.hashCode ^
       profileId.hashCode ^
-      createdAtMs.hashCode;
+      createdAtMs.hashCode ^
+      end.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -569,7 +578,8 @@ class CoreTwitchDownload {
           gaps == other.gaps &&
           mediaMs == other.mediaMs &&
           profileId == other.profileId &&
-          createdAtMs == other.createdAtMs;
+          createdAtMs == other.createdAtMs &&
+          end == other.end;
 }
 
 /// Result of an import.

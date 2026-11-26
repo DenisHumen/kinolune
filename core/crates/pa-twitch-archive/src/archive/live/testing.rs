@@ -16,6 +16,7 @@
 //!   `#EXT-X-DISCONTINUITY`; `404` once the broadcast is over;
 //! - `GET /live/<login>/seg/<sequence>.ts`: the segment;
 //! - `GET /helix/streams?user_id=`: the broadcast while it is live;
+//! - `GET /helix/users?id=`: the channel, with its avatar;
 //! - during a network blip every request is dropped without an answer.
 //!
 //! [`FakeLiveChat`] is a chat on the same clock: one message every few
@@ -394,6 +395,21 @@ fn answer(s: &mut State, method: &str, target: &str, body: &[u8]) -> (u16, &'sta
             .into_iter()
             .collect();
         return json_ok(json!({"data": data, "pagination": {}}));
+    }
+    if path == "/helix/users" {
+        let user = query(target, "id").unwrap_or_default();
+        let data: Vec<Value> = (user == st.user_id)
+            .then(|| {
+                json!({
+                    "id": st.user_id, "login": st.login, "display_name": st.display_name,
+                    "type": "", "broadcaster_type": "", "description": "",
+                    "profile_image_url": format!("{}/img/avatar.jpg", s.base),
+                    "offline_image_url": "", "created_at": "2020-01-01T00:00:00Z",
+                })
+            })
+            .into_iter()
+            .collect();
+        return json_ok(json!({"data": data}));
     }
     if path.starts_with("/img/") {
         return (200, "image/jpeg", tiny_jpeg());
