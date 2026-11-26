@@ -2,7 +2,7 @@
 
 > **Статус (2026-11-15):** ключ конфига создан, его публичная часть — `PRODUCTION_PUBLIC_KEY` в `pa-remote-config`, секретная (с паролем) хранится у владельца офлайн. `config/remote-config.json` (serial 2) подписан. Ключ релизов (без пароля) лежит в секрете GitHub `MINISIGN_RELEASE_KEY`: CI подписывает `SHA256SUMS` каждого релиза (`SHA256SUMS.minisig`), публичная часть — `updates.release_public_key` в конфиге.
 >
-> **Ждёт подписи (TWI-030, 2026-11-24):** следующая версия `serial` 3 — нативный плеер Twitch в full-сборке — лежит неподписанной в [`tools/remote-config/remote-config.next.json`](../../tools/remote-config/remote-config.next.json). Шаги владельца — в разделе [«TWI-030: включить нативный плеер Twitch»](#twi-030-включить-нативный-плеер-twitch).
+> **Опубликовано (TWI-030, 2026-11-26):** `config/remote-config.json` `serial` 3 — нативный плеер Twitch в full-сборке — подписан владельцем. Открытый ключ конфига — [`config/minisign.pub`](../../config/minisign.pub) (id `5F3D74272765CF77`, он же `PRODUCTION_PUBLIC_KEY`); ключ релизов — другой (`updates.release_public_key`).
 
 > Задача CORE-014. Связано: [ADR-0004](../adr/0004-no-project-servers-local-sync.md) (своих серверов нет), [ADR-0039](../adr/0039-remote-config-minisign.md) (формат и правила доверия), [secrets.md](secrets.md), исследование 06 §2.6–2.7, крейт [`pa-remote-config`](../../core/crates/pa-remote-config).
 
@@ -110,6 +110,8 @@ minisign -Vm config/remote-config.json -p config/minisign.pub
 KINOLUNE_DEBUG_REMOTE_CONFIG="$(git rev-parse --show-toplevel)/tools/remote-config/remote-config.next.json" \
 CARGO_KINOLUNE_FLAVOR=full flutter run -d linux --dart-define=KINOLUNE_FLAVOR=full
 ```
+
+Две оговорки (живая проверка 2026-11-26): `flutter build/run --debug` собирает Rust-ядро в release-профиле, где кода `KINOLUNE_DEBUG_REMOTE_CONFIG` нет — пересоберите `pa-frb` с `CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS=true`; без `--dart-define=KINOLUNE_VERSION=<версия>` локальная сборка сообщает `0.1.0` и попадает под kill-switch для старых сборок (0.1.0–0.1.0), то есть уходит на embed.
 
 В логе: `remote config: DEBUG unsigned copy … (serial 3)`. Live и VOD должны играть в нативном плеере, у VOD должны быть главы.
 
