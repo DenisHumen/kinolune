@@ -21,4 +21,4 @@
 
  Log: /run/alpha-installer/install.log
 
- Please wait, do not power off the computer
+ L: installation steps  Please wait, do not power off the computer

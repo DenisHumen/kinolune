@@ -1401,8 +1401,13 @@ impl CoreLibrary {
     /// The files that play the file `rel_path` of source `source_id` (as
     /// in `CoreItem` and `CoreVersion`) as one movie (LIB-020): every part
     /// of a split file (`cd1`, `cd2`) or of a DVD title set (VOBs) in
-    /// order, else the file alone. Empty for an unknown file.
+    /// order, else the file alone. Empty for an unknown file. A Blu-ray
+    /// or DVD folder or image plays the first angle of its main title
+    /// (PLAY-017); files inside an image go through the stream proxy.
     pub fn play_parts(&self, source_id: i64, rel_path: String) -> Result<Vec<CorePlayPart>> {
+        if let Some(parts) = crate::api::disc::main_parts(self, source_id, &rel_path) {
+            return Ok(parts);
+        }
         Ok(self
             .catalog
             .play_parts(source_id, &rel_path)?

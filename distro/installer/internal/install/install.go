@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/DenisHumen/kinolune/distro/installer/internal/answers"
@@ -52,11 +53,28 @@ type Installer struct {
 	// file instead of the clear-text password.
 	PasswordHash string
 
+	// Progress receives the progress of every task (DIST-034); nil: none.
+	Progress func(Event)
+	// PayloadSize is the unpacked size of the image to install (bytes, 0:
+	// unknown); it sizes the copy bar.
+	PayloadSize func() int64
+	// DiskWritten is the number of bytes written to the target disk so far;
+	// nil: /sys/block/<disk>/stat.
+	DiskWritten func() (int64, error)
+
 	// Hooks for tests.
+	Ticker     func(time.Duration) Ticker
 	Chown      func(path string, uid, gid int) error
 	Now        func() time.Time
 	NewUUID    func() string
 	WaitDevice func(ctx context.Context, path string) error
+
+	progMu   sync.Mutex
+	started  time.Time
+	cur      StepID
+	curDone  int64
+	curTotal int64
+	curNotes int
 }
 
 // New prepares an installer for disk d.
@@ -93,10 +111,15 @@ func (in *Installer) defaults() {
 	if in.WaitDevice == nil {
 		in.WaitDevice = waitDevice
 	}
+	if in.Ticker == nil {
+		in.Ticker = newRealTicker
+	}
 }
 
 func (in *Installer) step(format string, args ...any) {
-	fmt.Fprintf(in.Out, "==> "+format+"\n", args...)
+	text := fmt.Sprintf(format, args...)
+	fmt.Fprintf(in.Out, "==> %s\n", text)
+	in.note(text)
 }
 
 func (in *Installer) run(ctx context.Context, name string, args ...string) ([]byte, error) {
@@ -122,6 +145,7 @@ func (in *Installer) Required() []string {
 // resolved the disk with ResolveTarget and obtained the user's confirmation.
 func (in *Installer) Run(ctx context.Context) (err error) {
 	in.defaults()
+	in.started = in.Now()
 	var missing []string
 	for _, p := range in.Required() {
 		if !in.Runner.LookPath(p) {
@@ -131,6 +155,11 @@ func (in *Installer) Run(ctx context.Context) (err error) {
 	if len(missing) > 0 {
 		return fmt.Errorf("missing programs on the installer system: %s", strings.Join(missing, ", "))
 	}
+	defer func() {
+		if err != nil {
+			in.failCurrent(err)
+		}
+	}()
 
 	if err := in.partition(ctx); err != nil {
 		return fmt.Errorf("partitioning %s: %w", in.Disk.Path, err)
@@ -142,19 +171,31 @@ func (in *Installer) Run(ctx context.Context) (err error) {
 		in.unmountAll(context.WithoutCancel(ctx))
 		return fmt.Errorf("mounting the target: %w", err)
 	}
+	in.finish(StepFormat)
+	mounted := true
 	defer func() {
-		if uerr := in.unmount(context.WithoutCancel(ctx)); uerr != nil && err == nil {
-			err = uerr
-		} else if uerr != nil {
+		if !mounted {
+			return
+		}
+		if uerr := in.unmount(context.WithoutCancel(ctx)); uerr != nil {
 			in.unmountAll(context.WithoutCancel(ctx))
 		}
 	}()
 	if err := in.bootcInstall(ctx); err != nil {
 		return fmt.Errorf("bootc install: %w", err)
 	}
+	in.begin(StepConfigure, in.configureUnits())
 	if err := in.configure(ctx); err != nil {
 		return fmt.Errorf("configuring the installed system: %w", err)
 	}
+	in.finish(StepConfigure)
+	in.begin(StepFinalize, 4)
+	mounted = false
+	if err := in.unmount(context.WithoutCancel(ctx)); err != nil {
+		in.unmountAll(context.WithoutCancel(ctx))
+		return err
+	}
+	in.finish(StepFinalize)
 	in.step("Installed Kinolune OS to %s; it tracks %s", in.Disk.Path, in.Answers.Image.Target)
 	return nil
 }
@@ -189,20 +230,26 @@ func mkfsCmd(p Part) Cmd {
 func (in *Installer) partition(ctx context.Context) error {
 	in.step("Partitioning %s (%s, %s)", in.Disk.Path, in.Disk.Model, in.Disk.SizeString())
 	cmds := in.DiskCommands()[:3]
+	in.begin(StepPartition, int64(len(cmds)+len(in.Layout.Parts)))
 	for _, c := range cmds {
 		if _, err := in.Runner.Run(ctx, c); err != nil {
 			return err
 		}
+		in.unitDone(StepPartition, c.Name)
 	}
 	for _, p := range in.Layout.Parts {
 		if err := in.WaitDevice(ctx, p.Device); err != nil {
 			return err
 		}
+		in.unitDone(StepPartition, p.Device)
 	}
+	in.finish(StepPartition)
 	return nil
 }
 
 func (in *Installer) format(ctx context.Context) error {
+	// One unit per file system and one for mounting them; done in Run.
+	in.begin(StepFormat, int64(len(in.Layout.Parts)+1))
 	for _, p := range in.Layout.Parts {
 		in.step("Creating %s on %s (%s)", p.FS, p.Device, p.Label)
 		// Old signatures inside the new partition (a previous install with the
@@ -213,6 +260,7 @@ func (in *Installer) format(ctx context.Context) error {
 		if _, err := in.Runner.Run(ctx, mkfsCmd(p)); err != nil {
 			return err
 		}
+		in.unitDone(StepFormat, p.FS+" "+p.Label)
 	}
 	return nil
 }
@@ -248,10 +296,12 @@ func (in *Installer) unmount(ctx context.Context) error {
 		if _, err := in.run(ctx, "umount", m); err != nil {
 			errs = append(errs, err)
 		}
+		in.unitDone(StepFinalize, m)
 	}
 	if _, err := in.run(ctx, "sync"); err != nil {
 		errs = append(errs, err)
 	}
+	in.unitDone(StepFinalize, "sync")
 	return errors.Join(errs...)
 }
 
@@ -313,7 +363,11 @@ func (in *Installer) bootcInstall(ctx context.Context) error {
 		defer os.Remove(f)
 	}
 	in.step("Installing %s (tracks %s)", in.Answers.Image.Source, in.Answers.Image.Target)
-	_, err := in.Runner.Run(ctx, in.BootcCommand())
+	m := in.startCopy()
+	c := in.BootcCommand()
+	c.Output = m
+	_, err := in.Runner.Run(ctx, c)
+	m.close(err == nil)
 	return err
 }
 
