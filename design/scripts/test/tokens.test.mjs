@@ -97,6 +97,26 @@ test('CSS: defaults on :root, overrides by data attributes, composite values', a
   assert.match(css, /--pa-scrim-bottom: linear-gradient\(to top, #000000d9 0%, #00000000 100%\);/);
 });
 
+test('palettes override colour roles in CSS only and are contrast-checked', async () => {
+  const m = await buildModel();
+  const pal = m.palettes.find((x) => x.name === 'bordeaux-graphite');
+  assert.ok(pal, 'palettes/bordeaux-graphite.tokens.json is loaded');
+  assert.deepEqual(m.themes, ['dark', 'light'], 'palettes are not themes');
+  const css = emitCss(m);
+  assert.match(css, /\[data-palette="bordeaux-graphite"\] \{[^}]*--pa-bg-base: #161214;/);
+  assert.match(css, /\[data-palette="bordeaux-graphite"\] \{[^}]*--pa-accent-default: #c27580;/);
+  // Component tokens that point at a role follow the palette.
+  assert.match(css, /\[data-palette="bordeaux-graphite"\] \{[^}]*--pa-dialog-bg: /);
+  await withTokens('palettes/bordeaux-graphite.tokens.json', (j) => { j.text.secondary.$value = srgb('#3a3236'); }, async (dir) => {
+    const { errors } = await validate({ dir });
+    assert.ok(errors.some((e) => /^contrast palette:bordeaux-graphite: text\.secondary on bg\.base/.test(e)), errors.join('\n'));
+  });
+  await withTokens('palettes/bordeaux-graphite.tokens.json', (j) => { j.motion = { $type: 'duration', x: { $value: { value: 1, unit: 'ms' } } }; }, async (dir) => {
+    const { errors } = await validate({ dir });
+    assert.ok(errors.some((e) => /palettes may only override colours/.test(e)), errors.join('\n'));
+  });
+});
+
 test('names that are keywords on a platform are rejected', () => {
   const model = { themes: ['dark'], densities: ['tv'], byTheme: [], byDensity: [], constant: [{ p: 'default', type: 'number', value: 1 }] };
   assert.throws(() => emitSwift(model), /reserved word/);
