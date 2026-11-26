@@ -7,8 +7,8 @@
 // WebView2 on Windows, WebKitGTK on Linux, "Open on Twitch" without a
 // runtime; native first when the config allows it), the desktop keys and
 // fullscreen, the Linux runner channel, and "Open" in the Open on Twitch
-// dialog (url_launcher on phones and desktops, QR code only on TVs). No
-// network.
+// dialog (url_launcher on phones and desktops, QR code only on TVs), and
+// the app's chat beside a live embed (TWI-041). No network.
 
 import 'dart:async';
 import 'dart:io';
@@ -16,13 +16,17 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kinolune/fakes/fake_device_sync.dart';
+import 'package:kinolune/features/twitch/chat/chat_model.dart';
 import 'package:kinolune/integration/library.dart' show Progress;
+import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/twitch/twitch_embed_desktop.dart';
 import 'package:kinolune/screens/twitch/twitch_embed_screen.dart';
 import 'package:kinolune/screens/twitch/twitch_play.dart';
 import 'package:kinolune/screens/twitch/twitch_widgets.dart';
+import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/services/external_links.dart';
+import 'package:kinolune/services/preferences.dart';
 import 'package:kinolune/shell/app_shell.dart';
 import 'package:kinolune/twitch/twitch_embed.dart';
 import 'package:kinolune/twitch/twitch_service.dart';
@@ -664,6 +668,258 @@ void main() {
       expect(src, contains('twitch_webview_use_subsurface('));
       // X11 keeps the overlay.
       expect(src, contains('gtk_overlay_add_overlay'));
+    });
+  });
+
+  // TWI-041: the app's chat beside the embed on desktops (owner report
+  // 2026-11-26: "no way to turn the chat on beside the stream").
+  group('chat beside the embed (TWI-041)', () {
+    setUp(FakeEmbedSurface.created.clear);
+
+    Future<(AppServices, List<ManualChatFeed>)> open(
+      WidgetTester t, {
+      TwitchEmbedEngine engine = TwitchEmbedEngine.webKitGtk,
+      TwitchEmbedSurfaceFactory? surface = FakeEmbedSurface.factory,
+      bool signedIn = false,
+      bool vod = false,
+      AppServices? reuse,
+    }) async {
+      final services = reuse ?? await twitchServices();
+      final feeds = <ManualChatFeed>[];
+      services.twitch.embedPlayer = (context, target) => openTwitchEmbed(
+        context,
+        target,
+        surface: surface,
+        engine: engine,
+        chat: (context, login) async {
+          final f = ManualChatFeed(
+            channel: login,
+            canSend: signedIn,
+            ownLogin: signedIn ? 'viewer' : null,
+          );
+          feeds.add(f);
+          return f;
+        },
+      );
+      await t.pumpWidget(testApp(services, section: Section.twitch));
+      await settle(t);
+      await _tap(t, find.byKey(const ValueKey('twitch-favorite-pixelheron')));
+      await _tap(
+        t,
+        find.byKey(ValueKey(vod ? 'twitch-vod-9101' : 'twitch-watch-live')),
+      );
+      await t.pump(const Duration(seconds: 1));
+      await settle(t, 4);
+      return (services, feeds);
+    }
+
+    final chat = find.byKey(const ValueKey('twitch-embed-chat'));
+    final toggle = find.byKey(const ValueKey('twitch-embed-chat-toggle'));
+    final webView = find.byKey(const ValueKey('fake-embed-webview'));
+
+    Future<void> close(WidgetTester t) async {
+      await t.pumpWidget(const SizedBox());
+      await settle(t, 2);
+    }
+
+    testWidgets('a live stream shows the chat beside the embed; the bar\'s '
+        'button and C hide and show it', (t) async {
+      setSurface(t, _desktop);
+      final (_, feeds) = await open(t);
+      expect(feeds.single.channel, 'pixelheron');
+      expect(chat, findsOneWidget);
+      // Beside, not over: the embed ends where the chat begins.
+      final embed = t.getRect(webView);
+      final panel = t.getRect(chat);
+      expect(embed.right, lessThanOrEqualTo(panel.left));
+      expect(panel.right, _desktop.width);
+      expect(embed.width, greaterThanOrEqualTo(kTwitchEmbedMinWidth));
+      // Twitch's own chat is not in the page: only the player.
+      final page = FakeEmbedSurface.created.single;
+      expect(page.html, contains('new Twitch.Player('));
+      expect(page.html, isNot(contains('Twitch.Embed')));
+
+      final l = t.element(chat).l10n;
+      expect(t.widget<IconButton>(toggle).tooltip, l.twitchPlayerHideChat);
+      await _tap(t, toggle);
+      expect(chat, findsNothing);
+      expect(t.getRect(webView).width, _desktop.width);
+      expect(t.widget<IconButton>(toggle).tooltip, l.twitchPlayerShowChat);
+      await _tap(t, toggle);
+      expect(chat, findsOneWidget);
+
+      await t.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await settle(t, 2);
+      expect(chat, findsNothing);
+      await t.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await settle(t, 2);
+      expect(chat, findsOneWidget);
+      // Hidden and shown again: the same feed, not a second one.
+      expect(feeds, hasLength(1));
+      await close(t);
+    });
+
+    testWidgets('the width is dragged and remembered for both players', (
+      t,
+    ) async {
+      setSurface(t, _desktop);
+      final (services, _) = await open(t);
+      final before = t.getRect(chat).width;
+      await t.drag(
+        find.byKey(const ValueKey('twitch-chat-resize')),
+        const Offset(-120, 0),
+      );
+      await settle(t, 3);
+      final after = t.getRect(chat).width;
+      // 120 px less the touch slop the drag needs to start.
+      expect(after, greaterThan(before + 80));
+      expect(after, lessThanOrEqualTo(before + 120));
+      expect(t.getRect(webView).right, lessThanOrEqualTo(t.getRect(chat).left));
+      final saved = await services.preferences.read(
+        Preferences.twitchChatWidth,
+      );
+      expect(double.parse(saved!), closeTo(after, 1));
+      await close(t);
+
+      // The next stream opens at that width.
+      FakeEmbedSurface.created.clear();
+      await open(t, reuse: services);
+      expect(t.getRect(chat).width, closeTo(after, 1));
+      await close(t);
+    });
+
+    testWidgets('fullscreen leaves the embed alone; leaving it brings the '
+        'chat back', (t) async {
+      setSurface(t, _desktop);
+      await open(t);
+      await t.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await settle(t, 2);
+      expect(chat, findsNothing);
+      expect(t.getRect(webView), Offset.zero & _desktop);
+      await t.sendKeyEvent(LogicalKeyboardKey.escape);
+      await settle(t, 2);
+      expect(chat, findsOneWidget);
+      // The player's own fullscreen button too.
+      FakeEmbedSurface.created.single.onFullscreen!(true);
+      await settle(t, 2);
+      expect(chat, findsNothing);
+      await close(t);
+    });
+
+    testWidgets('signed out: read-only with "sign in to chat"', (t) async {
+      setSurface(t, _desktop);
+      await open(t);
+      final l = t.element(chat).l10n;
+      expect(
+        find.descendant(of: chat, matching: find.byType(TextField)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: chat,
+          matching: find.text(l.twitchChatSignInToChat),
+        ),
+        findsOneWidget,
+      );
+      await close(t);
+    });
+
+    testWidgets('typing in the chat does not drive the player', (t) async {
+      setSurface(t, _desktop);
+      await open(t, signedIn: true);
+      final page = FakeEmbedSurface.created.single;
+      page.post('play');
+      await settle(t, 2);
+      final input = find.descendant(of: chat, matching: find.byType(TextField));
+      expect(input, findsOneWidget);
+      await t.tap(input);
+      await settle(t, 2);
+      for (final key in [
+        LogicalKeyboardKey.keyC,
+        LogicalKeyboardKey.space,
+        LogicalKeyboardKey.keyK,
+        LogicalKeyboardKey.keyF,
+      ]) {
+        await t.sendKeyEvent(key);
+      }
+      await settle(t, 2);
+      expect(page.scripts, isEmpty);
+      expect(chat, findsOneWidget);
+      expect(find.byKey(const ValueKey('twitch-embed-open')), findsOneWidget);
+      // Escape leaves the input, not the screen; then the keys work.
+      await t.sendKeyEvent(LogicalKeyboardKey.escape);
+      await settle(t, 2);
+      expect(find.byKey(const ValueKey('twitch-embed')), findsOneWidget);
+      await t.sendKeyEvent(LogicalKeyboardKey.space);
+      expect(page.scripts.last, 'window.kinolune.pause();');
+      await close(t);
+    });
+
+    testWidgets('no chat for a VOD or in a narrow window', (t) async {
+      setSurface(t, _desktop);
+      final (_, vodFeeds) = await open(t, vod: true);
+      expect(vodFeeds, isEmpty);
+      expect(chat, findsNothing);
+      expect(toggle, findsNothing);
+      await close(t);
+
+      // A window too narrow for the embed's 400 and the chat: no panel,
+      // no button.
+      setSurface(t, const Size(820, 700));
+      final (_, feeds) = await open(t);
+      expect(feeds, hasLength(1));
+      expect(chat, findsNothing);
+      expect(toggle, findsNothing);
+      await close(t);
+    });
+
+    testWidgets('Linux: the native view\'s rectangle leaves the chat out and '
+        'shrinks when the chat widens (BUG-028)', (t) async {
+      setSurface(t, _desktop);
+      final messenger = t.binding.defaultBinaryMessenger;
+      final calls = <MethodCall>[];
+      messenger.setMockMethodCallHandler(linuxTwitchWebViewChannel, (
+        call,
+      ) async {
+        calls.add(call);
+        return call.method == 'available' || call.method == 'create'
+            ? true
+            : null;
+      });
+      addTearDown(
+        () =>
+            messenger.setMockMethodCallHandler(linuxTwitchWebViewChannel, null),
+      );
+      Map<Object?, Object?> lastRect() =>
+          calls.lastWhere((c) => c.method == 'rect').arguments
+              as Map<Object?, Object?>;
+      double right() =>
+          (lastRect()['x'] as double) + (lastRect()['width'] as double);
+
+      await open(t, surface: null);
+      await t.pump(const Duration(seconds: 1));
+      await t.pump();
+      expect(lastRect()['visible'], isTrue);
+      final panel = t.getRect(chat);
+      expect(right(), lessThanOrEqualTo(panel.left));
+      expect(lastRect()['width'], greaterThanOrEqualTo(kTwitchEmbedMinWidth));
+      final before = lastRect()['width'] as double;
+
+      await t.drag(
+        find.byKey(const ValueKey('twitch-chat-resize')),
+        const Offset(-120, 0),
+      );
+      await settle(t, 3);
+      await t.pump();
+      expect(lastRect()['width'] as double, lessThan(before - 80));
+      expect(right(), lessThanOrEqualTo(t.getRect(chat).left));
+
+      // Hidden chat: the view takes the whole width again.
+      await t.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await settle(t, 3);
+      await t.pump();
+      expect(lastRect()['width'], _desktop.width);
+      await close(t);
     });
   });
 
