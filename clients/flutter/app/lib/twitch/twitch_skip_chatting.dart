@@ -37,9 +37,12 @@ const kNonGameCategoryNames = {
 };
 
 /// The chapter is talk, not a game.
-bool isNonGameChapter(TwitchChapter c) =>
-    kNonGameCategoryIds.contains(c.gameId) ||
-    kNonGameCategoryNames.contains(c.gameName?.trim().toLowerCase());
+bool isNonGameChapter(TwitchChapter c) => isNonGameCategory(c.gameId, c.gameName);
+
+/// The category ([id], English [name]) is talk, not a game.
+bool isNonGameCategory(String? id, String? name) =>
+    kNonGameCategoryIds.contains(id) ||
+    kNonGameCategoryNames.contains(name?.trim().toLowerCase());
 
 /// Where «К игре» seeks: the start of the first game chapter after a talk
 /// opening. Null when the VOD does not open with talk, has no game after
