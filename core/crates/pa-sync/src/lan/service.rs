@@ -41,6 +41,7 @@ use crate::music::{self, MusicAction, MusicFrame};
 use crate::proto::{PlayState, PlaybackUpdate, Takeover};
 use crate::seal::SealKey;
 use crate::setup::{self as setup_proto, SetupRequest, TXT_SETUP};
+use crate::upload::{self, Board, Pace, Pacer, RemoteUpload, UploadFrame, UploadState, UploadTick};
 use crate::{Op, OpId};
 use zeroize::Zeroizing;
 
@@ -247,6 +248,12 @@ pub enum ServiceEvent {
     /// New devices asking to join the family came or went (SYNC-015):
     /// read [`SyncService::join_requests`].
     JoinRequestsChanged,
+    /// Live progress of other devices' library uploads changed (LIB-028):
+    /// read [`SyncService::uploads`].
+    Uploads,
+    /// Another device of the family asks this one to cancel its uploads
+    /// (LIB-028): `ids` are upload ids, `device_id` the asker.
+    UploadCancel { ids: Vec<String>, device_id: String },
 }
 
 /// A music handoff frame (MUS-015) for this device, its queue opened.
@@ -469,6 +476,43 @@ struct Inner {
     pulled_notify: Notify,
     /// The watcher of join requests (SYNC-015) runs.
     join_watch: std::sync::atomic::AtomicBool,
+    /// Live upload progress (LIB-028): this device's pacer and the board
+    /// of the others' uploads.
+    uploads: Mutex<Uploads>,
+    /// Wakes the upload loop: a report, a subscription, a new watcher.
+    upload_notify: Notify,
+}
+
+/// Live upload progress of one service (LIB-028).
+struct Uploads {
+    pacer: Pacer,
+    board: Board,
+    /// This app shows upload cards: it subscribes every
+    /// [`upload::WATCH_RENEW_MS`].
+    watching: bool,
+    /// When this device last sent its subscription.
+    watch_sent_ms: Option<u64>,
+    /// When the board was last checked for quiet devices.
+    expired_ms: u64,
+}
+
+impl Default for Uploads {
+    fn default() -> Self {
+        Self {
+            pacer: Pacer::new(Pace::LAN),
+            board: Board::default(),
+            watching: false,
+            watch_sent_ms: None,
+            expired_ms: 0,
+        }
+    }
+}
+
+/// What the upload loop does next.
+struct UploadStep {
+    frames: Vec<UploadFrame>,
+    events: Vec<ServiceEvent>,
+    wake_ms: Option<u64>,
 }
 
 /// The sync service of one app. Dropping it stops everything.
@@ -535,6 +579,8 @@ impl SyncService {
                 pulled: AtomicU64::new(0),
                 pulled_notify: Notify::new(),
                 join_watch: std::sync::atomic::AtomicBool::new(false),
+                uploads: Mutex::new(Uploads::default()),
+                upload_notify: Notify::new(),
             }),
             runtime: Some(runtime),
         })
@@ -1077,6 +1123,57 @@ impl SyncService {
         Ok(Some(session))
     }
 
+    /// Reports a library upload of this device (LIB-028), as often as the
+    /// app likes: the pacer sends it to the family at 10 Hz while another
+    /// device shows its card, else once a second, a new state at once.
+    /// Kept while sync is off; sent when it runs.
+    pub fn upload_report(&self, id: &str, state: UploadState, done: u64, size: u64) {
+        lock(&self.inner.uploads)
+            .pacer
+            .report(id, state, done, size, now_ms());
+        self.inner.upload_notify.notify_one();
+    }
+
+    /// This app shows upload cards (`true`) or no longer does: while on,
+    /// it subscribes to the family's progress every
+    /// [`upload::WATCH_RENEW_MS`] for [`upload::WATCH_TTL_MS`].
+    pub fn upload_watch(&self, on: bool) {
+        let mut u = lock(&self.inner.uploads);
+        if u.watching != on {
+            u.watching = on;
+            u.watch_sent_ms = None;
+        }
+        drop(u);
+        self.inner.upload_notify.notify_one();
+    }
+
+    /// Asks device `to` to cancel its uploads `ids` (LIB-028). A no-op
+    /// while sync does not run.
+    pub fn upload_cancel(&self, to: &str, ids: Vec<String>) -> Result<()> {
+        let hlc = lock(&self.inner.clock).now();
+        let frame = UploadFrame::cancelling(hlc, to, ids);
+        frame
+            .validate()
+            .map_err(|e| ServiceError::new("invalid", e.to_string()))?;
+        if let Some(r) = &lock(&self.inner.state).running {
+            r.node
+                .upload(frame)
+                .map_err(|e| ServiceError::new("io", e.to_string()))?;
+        }
+        Ok(())
+    }
+
+    /// The other devices' library uploads now (LIB-028), quiet ones as
+    /// [`UploadState::Offline`].
+    pub fn uploads(&self) -> Vec<RemoteUpload> {
+        lock(&self.inner.uploads).board.uploads(now_ms())
+    }
+
+    /// This device's uploads as last reported (LIB-028).
+    pub fn local_uploads(&self) -> Vec<UploadTick> {
+        lock(&self.inner.uploads).pacer.local()
+    }
+
     fn input_frame(&self, session: &str, action: InputAction) -> InputFrame {
         let hlc = lock(&self.inner.clock).now();
         InputFrame::new(session, action, hlc)
@@ -1263,6 +1360,74 @@ impl Inner {
         })
     }
 
+    /// An `up` frame of another device (LIB-028).
+    fn on_upload_frame(&self, frame: &UploadFrame) {
+        self.observe(&frame.hlc);
+        let now = now_ms();
+        let me = self.identity.device_id();
+        let mut events = Vec::new();
+        {
+            let mut u = lock(&self.uploads);
+            if let Some(ttl) = frame.watch {
+                u.pacer.watch(&frame.hlc.device, u64::from(ttl), now);
+                self.upload_notify.notify_one();
+            }
+            if !frame.ticks.is_empty() && u.board.apply(frame, now) {
+                events.push(ServiceEvent::Uploads);
+            }
+        }
+        if frame.to.as_deref() == Some(me) && !frame.cancel.is_empty() {
+            events.push(ServiceEvent::UploadCancel {
+                ids: frame.cancel.clone(),
+                device_id: frame.hlc.device.clone(),
+            });
+        }
+        for e in &events {
+            self.emit(e);
+        }
+    }
+
+    /// One round of the upload loop at `now`: frames to send, events to
+    /// emit and when to wake up next.
+    fn upload_step(&self, now: u64) -> UploadStep {
+        let mut u = lock(&self.uploads);
+        let mut frames = Vec::new();
+        let mut events = Vec::new();
+        let stamp = || lock(&self.clock).now();
+        if let Some(ticks) = u.pacer.poll(now) {
+            frames.push(UploadFrame::ticks(stamp(), ticks));
+        }
+        if u.watching
+            && u.watch_sent_ms
+                .is_none_or(|t| now.saturating_sub(t) >= upload::WATCH_RENEW_MS)
+        {
+            u.watch_sent_ms = Some(now);
+            let ttl = u32::try_from(upload::WATCH_TTL_MS).unwrap_or(u32::MAX);
+            frames.push(UploadFrame::watching(stamp(), ttl));
+        }
+        let since = u.expired_ms;
+        if u.board.expire(since, now) {
+            events.push(ServiceEvent::Uploads);
+        }
+        u.expired_ms = now;
+        let mut wake = u.pacer.next_poll_ms(now);
+        if u.watching {
+            let at = u
+                .watch_sent_ms
+                .map_or(now, |t| t + upload::WATCH_RENEW_MS);
+            wake = Some(wake.map_or(at, |w| w.min(at)));
+        }
+        if !u.board.is_empty() {
+            let at = now + 500;
+            wake = Some(wake.map_or(at, |w| w.min(at)));
+        }
+        UploadStep {
+            frames,
+            events,
+            wake_ms: wake,
+        }
+    }
+
     fn emit(&self, event: &ServiceEvent) {
         lock(&self.subscribers).retain(|tx| tx.send(event.clone()).is_ok());
     }
@@ -1391,6 +1556,10 @@ impl Inner {
         let tasks = vec![
             AbortOnDrop(tokio::spawn(event_loop(weak.clone(), events))),
             AbortOnDrop(tokio::spawn(flush_loop(
+                weak.clone(),
+                Arc::downgrade(&node),
+            ))),
+            AbortOnDrop(tokio::spawn(upload_loop(
                 weak.clone(),
                 Arc::downgrade(&node),
             ))),
@@ -2201,6 +2370,7 @@ async fn event_loop(weak: Weak<Inner>, mut events: tokio::sync::mpsc::UnboundedR
                     inner.emit(&ServiceEvent::Music(event));
                 }
             }
+            LanEvent::Upload(frame) => inner.on_upload_frame(&frame),
             LanEvent::Pulled => {
                 inner.pulled.fetch_add(1, Ordering::AcqRel);
                 inner.pulled_notify.notify_waiters();
@@ -2243,6 +2413,34 @@ async fn event_loop(weak: Weak<Inner>, mut events: tokio::sync::mpsc::UnboundedR
                 return;
             }
         }
+    }
+}
+
+/// Sends this device's upload progress and subscription at their pace and
+/// notices quiet devices on the board (LIB-028).
+async fn upload_loop(weak: Weak<Inner>, node: Weak<LanNode>) {
+    loop {
+        let (Some(inner), Some(node)) = (weak.upgrade(), node.upgrade()) else {
+            return;
+        };
+        let now = now_ms();
+        let step = inner.upload_step(now);
+        for frame in step.frames {
+            if let Err(e) = node.upload(frame) {
+                tracing::debug!(error = %e, "sync: upload frame not sent");
+            }
+        }
+        for e in &step.events {
+            inner.emit(e);
+        }
+        drop(node);
+        // Nothing to do: sleep until a report or a subscription comes.
+        let wait = step
+            .wake_ms
+            .map_or(Duration::from_secs(3600), |at| {
+                Duration::from_millis(at.saturating_sub(now).max(5))
+            });
+        let _ = tokio::time::timeout(wait, inner.upload_notify.notified()).await;
     }
 }
 

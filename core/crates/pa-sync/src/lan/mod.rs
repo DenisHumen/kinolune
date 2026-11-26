@@ -50,6 +50,7 @@ use tokio::task::{JoinHandle, JoinSet};
 
 use crate::input::InputFrame;
 use crate::music::MusicFrame;
+use crate::upload::UploadFrame;
 use crate::proto::{Message, PROTOCOL_VERSION, PlaybackUpdate, Takeover};
 use crate::{Error, Op, OpId};
 use election::Hub;
@@ -129,6 +130,9 @@ pub enum LanEvent {
     Input(InputFrame),
     /// A music handoff frame of another device (MUS-015).
     Music(MusicFrame),
+    /// Live upload progress, a subscription or a cancel request of
+    /// another device (LIB-028).
+    Upload(UploadFrame),
     /// The hub answered a `pull` in full: every op of the answer was
     /// reported before this.
     Pulled,
@@ -262,6 +266,14 @@ impl LanNode {
     pub fn music(&self, frame: MusicFrame) -> Result<(), Error> {
         let raw = crate::proto::encode(&Message::Music(frame.clone()))?;
         self.shared.lock().on_music(&raw, frame, Source::App);
+        Ok(())
+    }
+
+    /// Sends an upload frame (LIB-028): progress, a subscription or a
+    /// cancel request. Ephemeral: relayed once, never stored.
+    pub fn upload(&self, frame: UploadFrame) -> Result<(), Error> {
+        let raw = crate::proto::encode(&Message::Upload(frame.clone()))?;
+        self.shared.lock().on_upload(&raw, frame, Source::App);
         Ok(())
     }
 

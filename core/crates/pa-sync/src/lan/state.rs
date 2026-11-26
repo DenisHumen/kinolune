@@ -18,6 +18,7 @@ use crate::OpId;
 use crate::hlc::Hlc;
 use crate::input::{InputAction, InputFrame};
 use crate::music::MusicFrame;
+use crate::upload::UploadFrame;
 use crate::nodelog::{Inserted, NodeLog, Range};
 use crate::proto::{
     Ack, Change, Cursor, DigestFrame, ErrorFrame, Hello, MAX_PULL_LIMIT, Message, OpFrame,
@@ -104,6 +105,8 @@ pub(crate) struct State {
     seen_inputs: HashSet<(String, Hlc)>,
     /// `music` frames already routed (MUS-015): drops repeats and loops.
     seen_music: HashSet<(String, Hlc)>,
+    /// `up` frames already routed (LIB-028), by sender stamp.
+    seen_uploads: HashSet<Hlc>,
 }
 
 /// An open `input` request as received.
@@ -156,6 +159,7 @@ impl Shared {
             inputs: HashMap::new(),
             seen_inputs: HashSet::new(),
             seen_music: HashSet::new(),
+            seen_uploads: HashSet::new(),
         };
         Ok(Self {
             tls_server: Arc::new(super::tls::server_config()?),
@@ -616,6 +620,26 @@ impl State {
         }
     }
 
+    /// Routes an `up` frame (LIB-028) to every other link, once per sender
+    /// stamp. Never stored and never replayed: progress is only for who is
+    /// online now; the durable steps are `upload.event` ops.
+    pub(crate) fn on_upload(&mut self, raw: &str, frame: UploadFrame, source: Source) {
+        if self.seen_uploads.len() >= MAX_SEEN_INPUTS {
+            self.seen_uploads.clear();
+        }
+        if !self.seen_uploads.insert(frame.hlc.clone()) {
+            return;
+        }
+        for (id, link) in &self.links {
+            if Source::Link(*id) != source {
+                let _ = link.tx.send(Some(raw.to_owned()));
+            }
+        }
+        if source != Source::App && frame.hlc.device != self.family.identity().device_id() {
+            self.emit(LanEvent::Upload(frame));
+        }
+    }
+
     /// Handles one message of link `id`.
     pub(crate) fn on_message(&mut self, id: u64, raw: &str, msg: Message) {
         let Some(link) = self.links.get_mut(&id) else {
@@ -728,6 +752,7 @@ impl State {
             Message::Digest(d) => self.on_digest(&tx, &d),
             Message::Input(f) => self.on_input(raw, f, Source::Link(id)),
             Message::Music(f) => self.on_music(raw, f, Source::Link(id)),
+            Message::Upload(f) => self.on_upload(raw, f, Source::Link(id)),
             Message::Error(e) if e.code == code::UNAUTHORIZED => {
                 let _ = tx.send(None);
             }

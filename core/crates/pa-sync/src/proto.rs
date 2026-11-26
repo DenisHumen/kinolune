@@ -18,6 +18,9 @@
 //!   asks for text, a phone types it, sealed; fanned out like `pb.*`.
 //! - `music` hands the music queue to another device (MUS-015,
 //!   [`crate::music`]), sealed; fanned out like `input`, never replayed.
+//! - `up` carries live progress of library uploads, subscriptions and
+//!   cancel requests (LIB-028, [`crate::upload`]); fanned out like `music`,
+//!   never stored or replayed.
 //! - `hello.nonce` and [`Message::Auth`] authenticate paired devices
 //!   (SYNC-005, `pa-pairing`); [`Message::Family`] carries roster updates
 //!   and the rotated family key between members.
@@ -36,6 +39,7 @@ use crate::Error;
 use crate::hlc::{Hlc, is_valid_device_id};
 use crate::input::InputFrame;
 use crate::music::MusicFrame;
+use crate::upload::UploadFrame;
 use crate::nodelog::{Digest, LogMeta, Range, VersionVector};
 use crate::op::{Op, OpId, check_ref};
 use crate::outbox;
@@ -391,6 +395,9 @@ pub enum Message {
     /// Music continues on another device (MUS-015). Ephemeral, like `pb.*`.
     #[serde(rename = "music")]
     Music(MusicFrame),
+    /// Live progress of library uploads (LIB-028). Ephemeral, like `music`.
+    #[serde(rename = "up")]
+    Upload(UploadFrame),
     /// The sender's version vector (protocol 2, SYNC-017).
     #[serde(rename = "vv")]
     Vv(VvFrame),
@@ -483,6 +490,7 @@ impl Message {
             Self::Auth(a) => check_auth_text(&a.sig, "auth signature"),
             Self::Input(f) => f.validate(),
             Self::Music(f) => f.validate(),
+            Self::Upload(f) => f.validate(),
             Self::Family(f) => {
                 if f.body.is_empty() || f.body.len() > MAX_FAMILY_LEN {
                     return Err(Error::Invalid("family update"));
