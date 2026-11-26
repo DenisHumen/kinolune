@@ -31,3 +31,6 @@ d7d43d2c5c907881dc21e580a6c4de27629644ed:tools/remote-config/remote-config.next.
 778c76fd5e098d4a63f1edd31439ae1955f82b79:core/crates/pa-scrobble/tests/recorded.rs:generic-api-key:103
 778c76fd5e098d4a63f1edd31439ae1955f82b79:core/crates/pa-scrobble/tests/recorded.rs:generic-api-key:106
 ac159c94a0dbcf8c52ba1be9fd8e1f9c8e89ab25:tools/remote-config/remote-config.next.json:generic-api-key:19
+# DIST-018 installer test (reviewed 2026-11-26): the public NT-hash test vector of the word
+# "password" (MD4 of UTF-16LE "password"), not a secret; the table was removed in a later commit.
+f482bb531359eb20968d093f8e6906a217ed47b7:distro/installer/internal/install/samba_test.go:generic-api-key:27

@@ -358,6 +358,15 @@ abstract interface class VideoTrackEngine {
   Future<void> setVideoTrack(MediaTrack track);
 }
 
+/// An engine that names tracks without a language from what the app knows
+/// about the file (PLAY-017: the languages of a disc's streams are in its
+/// playlist, not in its `.m2ts` clips). Optional like [StatsEngine].
+abstract interface class StreamLanguageEngine {
+  /// Languages by the container's stream id (`src-id` in libmpv: the PID
+  /// of an MPEG-TS stream) for the files opened next; empty clears them.
+  void setStreamLanguages(Map<int, String> bySourceId);
+}
+
 /// An engine whose playlist can be edited while it plays (MUS-003): the
 /// music queue inserts, removes and reorders tracks without reopening the
 /// playing one (no gap, no restart). Optional like [StatsEngine]: for

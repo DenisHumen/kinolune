@@ -108,8 +108,13 @@ type Server struct {
 	Disks       Disks
 	Power       Power
 	Updates     *updproxy.Client
-	Info        Info
-	Log         *slog.Logger
+	// Accounts: users, Samba and SSH through the root helper (DIST-018).
+	Accounts Accounts
+	// AdminNow re-checks on every request that the session's user still
+	// exists and is an administrator (nil: no check, tests).
+	AdminNow func(user string) bool
+	Info     Info
+	Log      *slog.Logger
 	// ConfirmTTL is how long a reboot/power-off confirmation is valid.
 	ConfirmTTL time.Duration
 	Now        func() time.Time
@@ -186,6 +191,18 @@ func (s *Server) routes() {
 	m.HandleFunc("GET /api/v1/firewall", s.admin(s.firewallStatus))
 	m.HandleFunc("PUT /api/v1/firewall/openings/{name}", s.admin(s.setOpening))
 
+	m.HandleFunc("GET /api/v1/users", s.admin(s.listUsers))
+	m.HandleFunc("POST /api/v1/users", s.admin(s.createUser))
+	m.HandleFunc("PUT /api/v1/users/{name}/password", s.admin(s.setUserPassword))
+	m.HandleFunc("PUT /api/v1/users/{name}/admin", s.admin(s.setUserAdmin))
+	m.HandleFunc("DELETE /api/v1/users/{name}", s.admin(s.deleteUser))
+
+	m.HandleFunc("GET /api/v1/sharing", s.admin(s.sharing))
+	m.HandleFunc("PUT /api/v1/sharing", s.admin(s.setSharing))
+
+	m.HandleFunc("GET /api/v1/ssh", s.admin(s.sshStatus))
+	m.HandleFunc("PUT /api/v1/ssh", s.admin(s.setSSH))
+
 	m.HandleFunc("GET /api/v1/disks", s.admin(s.disks))
 	m.HandleFunc("POST /api/v1/disks/{device}/mount", s.admin(s.mount))
 	m.HandleFunc("POST /api/v1/disks/{device}/unmount", s.admin(s.unmount))
@@ -241,6 +258,14 @@ func (s *Server) check(w http.ResponseWriter, r *http.Request, needAdmin bool) (
 	}
 	if needAdmin && sess.Role != auth.RoleAdmin {
 		writeError(w, http.StatusForbidden, "forbidden", "administrators only")
+		return nil, false
+	}
+	// The role in the session is from the log-in: a user deleted or taken
+	// out of the admin groups since (in the console too) loses the session.
+	if needAdmin && s.AdminNow != nil && !s.AdminNow(sess.User) {
+		s.Sessions.Delete(c.Value)
+		s.log().Warn("session ended: no longer an administrator", "user", sess.User, "addr", peerIP(r))
+		writeError(w, http.StatusForbidden, "not_admin", NotAdminMessage)
 		return nil, false
 	}
 	return sess, true

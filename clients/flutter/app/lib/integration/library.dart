@@ -156,6 +156,12 @@ export 'package:pa_library/pa_library.dart'
         // LIB-020 discs and split movies
         LibraryParts,
         Unplayable,
+        // PLAY-017 Blu-ray and DVD folders and images
+        DiscPlayback,
+        DiscStream,
+        DiscTitle,
+        LibraryDisc,
+        discUri,
         // UI-006 file browser
         FolderEntry,
         MediaType,

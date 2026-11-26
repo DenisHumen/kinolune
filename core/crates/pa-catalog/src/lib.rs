@@ -84,9 +84,10 @@
 //! main title (the clips of the longest Blu-ray playlist, else the largest
 //! `.m2ts`; the largest DVD title set) and the item plays it like any
 //! other file, directly or through the proxy; when the main title moves to
-//! other files, the disc keeps its match and progress (LIB-021). A
-//! disc image is listed but marked [`Unplayable::DiscImage`]: the LGPL
-//! player build has no disc navigation. A DVD title set of several VOBs
+//! other files, the disc keeps its match and progress (LIB-021). A disc
+//! folder or image plays its main title with all streams, chapters,
+//! angles and extras through [`disc`] (PLAY-017): images are read in
+//! place by `pa_vfs::iso`, a protected disc is reported, not played. A DVD title set of several VOBs
 //! and a movie split into `cd1`/`cd2` files play all their parts in order
 //! ([`Catalog::play_parts`], LIB-020).
 //!
@@ -111,6 +112,7 @@ mod book_names;
 mod connect;
 mod content_kind;
 mod details;
+pub mod disc;
 pub mod ed2k;
 mod episode_order;
 mod error;
@@ -130,6 +132,7 @@ pub mod knowledge;
 mod label_sync;
 mod labels;
 mod lists;
+pub mod live_uploads;
 mod main_title;
 mod matching;
 pub mod metadata;
@@ -191,6 +194,7 @@ pub use items::{Item, ItemKind, ItemRef, SearchGroup, Unplayable};
 pub use knowledge::{KnowledgePlan, NfoReport, NfoTarget, RenameTarget};
 pub use labels::{CategoryInfo, LabelSpace, LabelTarget, LabeledFile, Labels, RatedItem, TagInfo};
 pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
+pub use live_uploads::{LiveUpload, UploadGuess, guess_upload};
 pub use metadata::{
     ExtraProviders, MetadataOptions, MetadataProgress, MetadataProviders, MetadataReport,
     MetadataStage, ProviderWait,

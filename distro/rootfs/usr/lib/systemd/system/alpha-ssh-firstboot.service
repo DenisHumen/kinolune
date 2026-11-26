@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MPL-2.0
+# Kinolune OS (DIST-018): SSH on at the first boot only if keys were given at
+# installation; see /usr/libexec/alpha/alpha-ssh-firstboot.
+[Unit]
+Description=Kinolune OS: SSH on first boot if keys were installed
+Documentation=https://github.com/DenisHumen/kinolune/tree/main/distro/admin
+ConditionPathExists=!/var/lib/alpha/ssh-firstboot.done
+DefaultDependencies=no
+After=local-fs.target systemd-tmpfiles-setup.service
+Before=firewalld.service sshd.service multi-user.target shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/alpha/alpha-ssh-firstboot
+
+[Install]
+WantedBy=multi-user.target

@@ -15,6 +15,7 @@ import 'anime_db.dart';
 import 'audiobooks.dart';
 import 'auto_recognition.dart';
 import 'content_kinds.dart';
+import 'disc.dart';
 import 'episode_order.dart';
 import 'item_details.dart';
 import 'library.dart';
@@ -70,6 +71,7 @@ class RustLibrary
         LibraryOriginalLanguage,
         LibraryMusic,
         LibraryParts,
+        LibraryDisc,
         LibraryEpisodes,
         LibraryTrickplay,
         LibraryAnimeDb,
@@ -2345,6 +2347,47 @@ class RustLibrary
       for (final part in await _playableParts(sourceId, relPath))
         part.localPath ?? streamUrl(base!, sourceId, part.relPath),
     ];
+  }
+
+  @override
+  Future<DiscPlayback?> discPlayback(LibraryItem item) async {
+    final file = fileOf(item.playbackUri);
+    if (file == null) return null;
+    final (sourceId, relPath) = file;
+    final p = await _core.discPlayback(sourceId: sourceId, relPath: relPath);
+    if (p == null) return null;
+    final base = _streamBase;
+    DiscTitle title(CoreDiscTitle t) => DiscTitle(
+      id: t.id,
+      durationMs: t.durationMs,
+      angles: [
+        for (final a in t.angles)
+          [
+            for (final f in a)
+              if (f.localPath != null || base != null)
+                f.localPath ?? streamUrl(base!, sourceId, f.relPath),
+          ],
+      ],
+      chaptersMs: [for (final c in t.chaptersMs) c.toInt()],
+      streams: [
+        for (final s in t.streams)
+          DiscStream(
+            subtitle: s.kind == 'subtitle',
+            id: s.id,
+            codec: s.codec,
+            language: s.language,
+          ),
+      ],
+      uhd: t.uhd,
+      is3d: t.is3D,
+    );
+    return DiscPlayback(
+      bluRay: p.kind == 'bluray',
+      protection: p.protection,
+      volumeId: p.volumeId,
+      main: p.main == null ? null : title(p.main!),
+      extras: [for (final e in p.extras) title(e)],
+    );
   }
 
   /// The parts of a file the player can open: local ones, and network ones

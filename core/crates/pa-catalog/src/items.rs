@@ -126,26 +126,21 @@ pub struct Item {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum Unplayable {
-    /// A disc image (`.iso`). The project's LGPL libmpv and FFmpeg have no
-    /// disc navigation: mpv plays Blu-ray and DVD structures through
-    /// libbluray and the GPL libdvdnav, and neither is in the build
-    /// (`tools/mpv/lib/mpv.sh`: `auto_features=disabled`, `dvdnav`
-    /// forbidden; FFmpeg is built without `libbluray`). FFmpeg alone reads
-    /// the image as raw bytes: at best a DVD image plays as one MPEG-PS
-    /// stream with menus and without titles or reliable seeking.
+    /// A disc image (`.iso`) the player could not open (LIB-017). No
+    /// longer reported since PLAY-017: images open through
+    /// [`pa_vfs::iso`] and play like disc folders; kept so stored codes
+    /// stay readable.
     DiscImage,
 }
 
 impl Unplayable {
-    /// What blocks playback of the file at `path` (relative or absolute).
+    /// What blocks playback of the file at `path` (relative or absolute),
+    /// as far as the path tells. Nothing since PLAY-017: disc images play
+    /// ([`crate::disc`]); a protected disc is found when it is opened
+    /// ([`DiscPlayback::protection`](crate::disc::DiscPlayback::protection)).
     #[must_use]
-    pub fn of_path(path: &str) -> Option<Self> {
-        let name = path.rsplit('/').next().unwrap_or(path);
-        let ext = name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase());
-        match ext.as_deref() {
-            Some(e) if pa_scanner::DISC_IMAGE_EXTENSIONS.contains(&e) => Some(Self::DiscImage),
-            _ => None,
-        }
+    pub fn of_path(_path: &str) -> Option<Self> {
+        None
     }
 
     /// Stable code for clients (`disc_image`), to pick a translated text.

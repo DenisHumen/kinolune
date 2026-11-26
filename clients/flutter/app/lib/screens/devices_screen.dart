@@ -75,7 +75,9 @@ class _DevicesScreenState extends State<DevicesScreen> {
           SyncEventKind.takeover ||
           SyncEventKind.input ||
           SyncEventKind.music ||
-          SyncEventKind.joinRequests:
+          SyncEventKind.joinRequests ||
+          SyncEventKind.uploads ||
+          SyncEventKind.uploadCancel:
         break;
     }
   }
