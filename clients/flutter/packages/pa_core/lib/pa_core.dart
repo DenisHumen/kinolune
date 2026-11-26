@@ -7,6 +7,7 @@
 /// the app automatically.
 library;
 
+export 'src/rust/api/airing.dart';
 export 'src/rust/api/anime_db.dart';
 export 'src/rust/api/app_update.dart';
 export 'src/rust/api/audiobooks.dart';
