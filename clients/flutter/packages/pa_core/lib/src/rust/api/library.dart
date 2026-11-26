@@ -15,6 +15,7 @@ import 'knowledge.dart';
 import 'library_labels.dart';
 import 'library_lists.dart';
 import 'library_query.dart';
+import 'live_uploads.dart';
 import 'lyrics.dart';
 import 'music.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -420,6 +421,10 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// item's work (an episode: its show). Probes the sources for writes.
   Future<CoreKnowledgePlan> knowledgePlan({required String itemId});
 
+  /// The uploads to show cards for: those on their way and those that
+  /// ended in the last day.
+  Future<List<CoreLiveUpload>> liveUploads();
+
   /// Locks every personal library (the app went to the background).
   Future<void> lockPersonalLibraries();
 
@@ -642,6 +647,14 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// Counts a play of a track (it started in the player); returns the new
   /// count, 0 if the track is not hashed yet.
   Future<PlatformInt64> recordTrackPlay({required String itemId});
+
+  /// Records a step of an upload of this device and sends it to the
+  /// family at once while sync is on.
+  Future<void> recordUploadEvent({
+    required String uploadId,
+    required CoreUploadPhase phase,
+    required String info,
+  });
 
   Future<bool> removeFromCollection({
     required PlatformInt64 id,
@@ -1078,6 +1091,16 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required String name,
     required CoreLibraryQuery query,
     required bool pinnedHome,
+  });
+
+  /// Provider results for a file not in the library yet (the poster of
+  /// the guess, «Не то»): `kind` is `movie`, `show` or `anime`. Writes
+  /// nothing.
+  Future<List<CoreMatchCandidate>> uploadSearch({
+    required CoreMetadataSettings settings,
+    required String kind,
+    required String title,
+    int? year,
   });
 
   /// Checks a parent PIN (of any profile without restrictions); a right

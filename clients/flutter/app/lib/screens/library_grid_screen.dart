@@ -14,6 +14,7 @@ import 'package:material_ui/material_ui.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../library/live_upload_card.dart';
 import '../library/paged_items.dart';
 import '../library/show_unwatched.dart';
 import '../review/review_marks.dart';
@@ -111,6 +112,8 @@ class _LibraryGridScreenState extends State<LibraryGridScreen> {
     _badgeSub = _queries
         .badges(widget.kind)
         .listen((b) => setState(() => _badges = b));
+    // LIB-028: the empty state gives way to the first card on its way.
+    _services.liveUploads.addListener(_onLive);
     unawaited(_loadPrefs());
   }
 
@@ -208,8 +211,13 @@ class _LibraryGridScreenState extends State<LibraryGridScreen> {
     );
   }
 
+  void _onLive() {
+    if (mounted && _paged?.total == 0) setState(() {});
+  }
+
   @override
   void dispose() {
+    _services.liveUploads.removeListener(_onLive);
     _badgeSub?.cancel();
     _paged?.removeListener(_onPaged);
     _paged?.dispose();
@@ -325,7 +333,24 @@ class _LibraryGridScreenState extends State<LibraryGridScreen> {
             ),
           ),
         ),
+        // LIB-028: files on their way into the library, on every device.
+        LiveUploadsSliver(
+          shows: widget.kind == ItemKind.show,
+          gridDelegate: _gridDelegate(d),
+          padding: EdgeInsets.fromLTRB(
+            d.pageInsets.left,
+            d.isTv ? 6 : 0,
+            right,
+            d.isTv ? 22 : 18,
+          ),
+        ),
         if (paged == null || total == null)
+          const SliverToBoxAdapter(child: SizedBox.shrink())
+        // LIB-028: a first file on its way is not an empty library.
+        else if (total == 0 &&
+            _services.liveUploads
+                .forPage(shows: widget.kind == ItemKind.show)
+                .isNotEmpty)
           const SliverToBoxAdapter(child: SizedBox.shrink())
         else if (total == 0)
           SliverFillRemaining(

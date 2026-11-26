@@ -809,6 +809,36 @@ impl Catalog {
         Ok(out)
     }
 
+    /// Search by title and year for a file that is not in the library
+    /// yet (LIB-028: the guess before copying, «Не то»): TMDB, ranked like
+    /// [`review_search`](Self::review_search) with what the name says.
+    /// `kind` is `movie`, `show` or `anime`. Writes nothing.
+    pub fn guess_search(
+        &self,
+        providers: &MetadataProviders,
+        kind: &str,
+        title: &str,
+        year: Option<i64>,
+    ) -> Result<Vec<ReviewCandidate>, Error> {
+        let title = title.trim();
+        if title.is_empty() {
+            return Err(Error::Invalid("empty title".into()));
+        }
+        let query = crate::metadata::WorkQuery {
+            kind: match kind {
+                "show" | "anime" => kind.to_owned(),
+                _ => "movie".to_owned(),
+            },
+            year: year.filter(|y| (1800..=3000).contains(y)),
+            titles: vec![title.to_owned()],
+            evidence: crate::metadata::WorkEvidence::default(),
+        };
+        let Some(client) = providers.tmdb() else {
+            return Err(Error::Provider("TMDB has no key".into()));
+        };
+        Self::tmdb_search(client, &query, title)
+    }
+
     /// TMDB results of [`review_search`](Self::review_search).
     fn tmdb_search(
         client: &tmdb::TmdbClient,

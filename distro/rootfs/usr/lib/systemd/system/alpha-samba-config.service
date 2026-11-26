@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MPL-2.0
+# Kinolune OS (DIST-018): render /etc/samba/smb.conf.d/kinolune.conf from the
+# sharing settings of the admin UI before Samba starts, at every boot, so a
+# new template arrives with an OS update; import the installer's Samba
+# password once; create the folders of every NAS user.
+[Unit]
+Description=Kinolune OS Samba configuration
+Documentation=https://github.com/DenisHumen/kinolune/tree/main/distro/admin
+After=systemd-tmpfiles-setup.service systemd-sysusers.service
+Before=smb.service
+Wants=systemd-tmpfiles-setup.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/alpha/alpha-admin-priv render-samba
+
+[Install]
+WantedBy=smb.service

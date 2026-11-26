@@ -14,6 +14,7 @@ import 'package:kinolune/fakes/fake_twitch.dart';
 import 'package:kinolune/features/updates/update_controller.dart';
 import 'package:kinolune/integration/library.dart'
     show Library, LibraryProfiles, PersonalMedia, ReviewInbox, SourceFiles;
+import 'package:kinolune/library/live_uploads.dart' show LiveUploadLink;
 import 'package:kinolune/network/network_controller.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/home_screen.dart';
@@ -136,6 +137,8 @@ Future<AppServices> demoServices({
   NetworkController? network,
   // TWI-035: system notifications, when a test records them.
   LiveNotifier? liveNotifier,
+  // LIB-028: live cards of uploads, when a test plays the other devices.
+  LiveUploadLink? liveUploadLink,
 }) async {
   library ??= empty
       ? FakeLibrary(scanStepDelay: Duration.zero)
@@ -187,6 +190,7 @@ Future<AppServices> demoServices({
     files: files,
     network: network,
     liveNotifier: liveNotifier ?? const NoLiveNotifier(),
+    liveUploadLink: liveUploadLink,
   );
   await s.init();
   if (advancedSettings) await s.setShowAdvancedSettings(true);

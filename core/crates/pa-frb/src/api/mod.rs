@@ -24,6 +24,7 @@ pub mod library;
 pub mod library_labels;
 pub mod library_lists;
 pub mod library_query;
+pub mod live_uploads;
 pub mod lyrics;
 pub mod music;
 pub mod offline;

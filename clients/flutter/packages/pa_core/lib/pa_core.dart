@@ -34,6 +34,7 @@ export 'src/rust/api/library.dart';
 export 'src/rust/api/library_labels.dart';
 export 'src/rust/api/library_lists.dart';
 export 'src/rust/api/library_query.dart';
+export 'src/rust/api/live_uploads.dart';
 export 'src/rust/api/lyrics.dart';
 export 'src/rust/api/music.dart';
 export 'src/rust/api/offline.dart';

@@ -351,6 +351,49 @@ async fn playback_is_forwarded_and_replayed_to_new_devices() {
     hub.stop().await;
 }
 
+/// LIB-028: live upload progress is fanned out at once and never stored
+/// or replayed (a device that connects later gets the durable
+/// `upload.event` ops, not old ticks).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn upload_progress_is_relayed_but_not_replayed() {
+    use pa_sync::upload::{UploadFrame, UploadState, UploadTick};
+    let tmp = tempfile::tempdir().unwrap();
+    let hub = Running::start(tmp.path()).await;
+    let (mut pc, _) = connect(hub.addr, "pc", None).await;
+    let (mut tv, _) = connect(hub.addr, "tv", None).await;
+
+    let watch = Message::Upload(UploadFrame::watching(hlc("tv", 1_763_000_000_000), 3_000));
+    send(&mut tv, &watch).await;
+    assert_eq!(recv(&mut pc).await, Some(watch));
+    let tick = |b| UploadTick {
+        id: "u1".into(),
+        state: UploadState::Copying,
+        done: b,
+        size: 3_000_000_000,
+        rate: 85_000_000,
+    };
+    let frame = Message::Upload(UploadFrame::ticks(
+        hlc("pc", 1_763_000_000_100),
+        vec![tick(85_000_000)],
+    ));
+    let sent = Instant::now();
+    send(&mut pc, &frame).await;
+    assert_eq!(recv(&mut tv).await, Some(frame));
+    assert!(sent.elapsed() < Duration::from_millis(200));
+    silent(&mut pc).await;
+
+    let (mut phone, _) = connect(hub.addr, "phone", None).await;
+    silent(&mut phone).await;
+    let cancel = Message::Upload(UploadFrame::cancelling(
+        hlc("phone", 1_763_000_000_200),
+        "pc",
+        vec!["u1".into()],
+    ));
+    send(&mut phone, &cancel).await;
+    assert_eq!(recv(&mut pc).await, Some(cancel));
+    hub.stop().await;
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn journal_and_progress_survive_restart() {
     let tmp = tempfile::tempdir().unwrap();
