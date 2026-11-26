@@ -120,7 +120,7 @@ def setup():
     expect(code, 200, "ssh", body)
     if not (body["enabled"] and body["active"] and body["port_open"] and body["authorized_keys"] >= 1):
         fail(f"ssh after first boot with keys: {body}")
-    if "passwordauthentication no" not in sh("sshd -T 2>/dev/null"):
+    if "passwordauthentication no" not in sh("sshd -T 2>/dev/null").lower():
         fail("sshd accepts passwords")
     ok(f"SSH on after the first boot because keys were installed ({body['authorized_keys']} key), keys only")
 

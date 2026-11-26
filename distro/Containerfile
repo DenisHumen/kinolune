@@ -74,6 +74,9 @@ ARG ALPHA_SIGNATURE_POLICY=auto
 
 RUN set -eux; \
     chmod 0755 /usr/libexec/alpha/*; \
+    # Our configuration files must not be group-writable whatever the umask
+    # of the checkout was (sshd and Samba read them as root).
+    chmod -R go-w /etc/samba /etc/ssh/sshd_config.d /etc/selinux/targeted/contexts/files/file_contexts.local; \
     rm -f /usr/share/alpha/keys/.gitkeep; \
     policy="${ALPHA_SIGNATURE_POLICY}"; \
     if [ "${policy}" = auto ]; then \

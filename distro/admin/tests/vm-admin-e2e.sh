@@ -187,7 +187,7 @@ smb -U "dina%Dina-pass-1" "${S}/Media" -c 'get film.txt /dev/null' >/dev/null ||
 if smb -U "dina%Dina-pass-1" "${S}/Users" -c 'get anna/private.txt /dev/null' >/dev/null 2>&1; then
     die "dina reads anna's folder"
 fi
-[[ "$(vm stat -c '%U %a' /var/srv/users/dina/notes.txt)" == "dina 600" ]] || die "dina's file owner/mode"
+[[ "$(vm "stat -c '%U %a' /var/srv/users/dina/notes.txt")" == "dina 600" ]] || die "dina's file owner/mode"
 log "OK from outside the VM: anonymous refused; anna and dina (created via the API) read/write their folders and Media; dina cannot read anna's"
 
 vm python3 - guest on < "${ADMIN_TESTS}/vm_samba_check.py"
