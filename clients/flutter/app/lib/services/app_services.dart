@@ -26,6 +26,7 @@ import '../integration/library.dart';
 import '../integration/player.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../library/live_uploads.dart';
 import '../network/network_controller.dart';
 import '../notices/in_app_notices.dart';
 import '../offline/offline_downloads.dart';
@@ -97,6 +98,7 @@ class AppServices extends ChangeNotifier {
     this.deviceFolder,
     this.scrobbleBackend,
     this.network,
+    this.liveUploadLink,
   }) : personal =
            personal ??
            (library is RustLibrary ? RustPersonalMedia(library) : null),
@@ -219,6 +221,40 @@ class AppServices extends ChangeNotifier {
     ),
     null => null,
   };
+
+  /// Where live cards come from (tests and the demo pass one; the Rust
+  /// core otherwise).
+  final LiveUploadLink? liveUploadLink;
+
+  /// LIB-028: the grey cards of files on their way into the library, on
+  /// every device of the family.
+  late final LiveUploads liveUploads = LiveUploads(
+    link:
+        liveUploadLink ??
+        switch (library) {
+          final RustLibrary lib => CoreLiveUploadLink(
+            lib,
+            sync is CoreDeviceSync ? sync as CoreDeviceSync : null,
+          ),
+          _ => MemoryLiveUploadLink(),
+        },
+    files: filesControl,
+    library: library,
+    deviceName: _thisDeviceName,
+    clock: clock,
+  );
+
+  String _thisDeviceName() {
+    try {
+      final me = sync.devices().firstOrNull?.name;
+      if (me != null && me.isNotEmpty) return me;
+    } catch (_) {}
+    try {
+      return Platform.localHostname;
+    } catch (_) {
+      return '';
+    }
+  }
 
   Future<int> _createDeviceSource() async {
     final dir =
@@ -982,6 +1018,8 @@ class AppServices extends ChangeNotifier {
     unawaited(startSync());
     // UI-035: unfinished uploads go on; old trash is purged.
     unawaited(filesControl?.start());
+    // LIB-028: cards of uploads of this and the other devices.
+    unawaited(liveUploads.start());
   }
 
   /// Listens to the sync service and starts it if devices are paired.
@@ -1023,7 +1061,9 @@ class AppServices extends ChangeNotifier {
           SyncEventKind.takeover ||
           SyncEventKind.input ||
           SyncEventKind.music ||
-          SyncEventKind.joinRequests:
+          SyncEventKind.joinRequests ||
+          SyncEventKind.uploads ||
+          SyncEventKind.uploadCancel:
         break;
     }
   }

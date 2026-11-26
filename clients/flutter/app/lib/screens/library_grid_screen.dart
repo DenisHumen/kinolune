@@ -14,6 +14,7 @@ import 'package:material_ui/material_ui.dart';
 import '../integration/library.dart';
 import '../l10n/l10n.dart';
 import '../library/library_queries.dart';
+import '../library/live_upload_card.dart';
 import '../library/paged_items.dart';
 import '../library/show_unwatched.dart';
 import '../review/review_marks.dart';
@@ -323,6 +324,17 @@ class _LibraryGridScreenState extends State<LibraryGridScreen> {
               facets: _facets,
               onFilter: _setFilter,
             ),
+          ),
+        ),
+        // LIB-028: files on their way into the library, on every device.
+        LiveUploadsSliver(
+          shows: widget.kind == ItemKind.show,
+          gridDelegate: _gridDelegate(d),
+          padding: EdgeInsets.fromLTRB(
+            d.pageInsets.left,
+            d.isTv ? 6 : 0,
+            right,
+            d.isTv ? 22 : 18,
           ),
         ),
         if (paged == null || total == null)
