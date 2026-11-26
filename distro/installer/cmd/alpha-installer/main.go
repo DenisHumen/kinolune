@@ -36,7 +36,8 @@ var version = "dev"
 const usage = `usage:
   alpha-installer disks [--json] [--all] [--smart] [--from DIR] [--record DIR]
   alpha-installer install --answers FILE [--dry-run] [--yes] [--from DIR]
-  alpha-installer tui [--dry-run] [--from DIR] [--answers FILE] [--lang uk|en|ru] [--action-file FILE]`
+  alpha-installer tui [--dry-run] [--from DIR] [--answers FILE] [--lang uk|en|ru] [--action-file FILE]
+  alpha-installer progress [FILE]   (check a recorded progress stream, default ` + install.ProgressLogPath + `)`
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -58,11 +59,31 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return runInstall(ctx, args[1:], stdin, stdout, stderr, liveEnv())
 	case "tui":
 		return runTUI(args[1:], stdin, stdout, stderr, liveEnv())
+	case "progress":
+		return runProgress(args[1:], stdout)
 	case "version", "--version":
 		fmt.Fprintln(stdout, version)
 		return nil
 	}
 	return errors.New(usage)
+}
+
+// runProgress checks a recorded progress stream of the TUI (DIST-034).
+func runProgress(args []string, stdout io.Writer) error {
+	path := install.ProgressLogPath
+	if len(args) > 0 {
+		path = args[0]
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	evs, err := install.ReadEvents(f)
+	if err != nil {
+		return err
+	}
+	return install.CheckRecording(evs, stdout)
 }
 
 func runDisks(args []string, stdout io.Writer) error {

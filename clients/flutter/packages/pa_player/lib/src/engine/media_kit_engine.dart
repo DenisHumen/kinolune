@@ -62,6 +62,7 @@ class MediaKitEngine
     implements
         PlayerEngine,
         StatsEngine,
+        StreamLanguageEngine,
         SubtitleRenderingEngine,
         PlaylistEditingEngine,
         AudioProcessingEngine,
@@ -193,6 +194,20 @@ class MediaKitEngine
   /// `hearing-impaired` and `visual-impaired`.
   Map<String, _TrackFlags> _flags = const {};
   int _flagsGeneration = 0;
+
+  /// Languages of a disc's streams by `src-id` (PLAY-017).
+  Map<int, String> _streamLanguages = const {};
+
+  @override
+  void setStreamLanguages(Map<int, String> bySourceId) =>
+      _streamLanguages = bySourceId;
+
+  /// [language] of a track, else the disc's language of its stream.
+  String? _languageOf(String? language, _TrackFlags? f) {
+    if (language != null && language.isNotEmpty) return language;
+    final known = f?.sourceId == null ? null : _streamLanguages[f!.sourceId];
+    return known == null || known.isEmpty ? language : known;
+  }
 
   /// Tells fatal mpv errors from harmless ones (BUG-003).
   final PlaybackErrorTracker _errors = PlaybackErrorTracker();
@@ -449,7 +464,7 @@ class MediaKitEngine
     return MediaTrack(
       id: t.id,
       title: t.title,
-      language: t.language,
+      language: _languageOf(t.language, f),
       codec: t.codec,
       external: t.uri,
       isDefault: f?.isDefault ?? t.isDefault ?? false,
@@ -479,7 +494,7 @@ class MediaKitEngine
     return MediaTrack(
       id: t.id,
       title: t.title,
-      language: t.language,
+      language: _languageOf(t.language, f),
       codec: t.codec,
       external: t.uri || t.data,
       forced: (f?.forced ?? false) || flags.forced,
@@ -1161,6 +1176,7 @@ class _TrackFlags {
     this.visualImpaired = false,
     this.commentary = false,
     this.channels,
+    this.sourceId,
   });
 
   final bool isDefault;
@@ -1171,6 +1187,9 @@ class _TrackFlags {
   /// mpv 0.38+: the container's commentary flag.
   final bool commentary;
   final int? channels;
+
+  /// The container's id of the stream (`src-id`: the PID in MPEG-TS).
+  final int? sourceId;
 
   /// `track-list` as mpv prints it (a JSON array), by `<type>:<id>`.
   static Map<String, _TrackFlags> parse(String json) {
@@ -1189,6 +1208,10 @@ class _TrackFlags {
               final int n when n > 0 => n,
               _ => null,
             },
+            sourceId: switch (t['src-id']) {
+              final int n => n,
+              _ => null,
+            },
           ),
     };
   }
@@ -1201,7 +1224,8 @@ class _TrackFlags {
       other.hearingImpaired == hearingImpaired &&
       other.visualImpaired == visualImpaired &&
       other.commentary == commentary &&
-      other.channels == channels;
+      other.channels == channels &&
+      other.sourceId == sourceId;
 
   @override
   int get hashCode => Object.hash(
@@ -1211,5 +1235,6 @@ class _TrackFlags {
     visualImpaired,
     commentary,
     channels,
+    sourceId,
   );
 }

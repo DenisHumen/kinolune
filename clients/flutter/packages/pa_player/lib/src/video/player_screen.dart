@@ -598,6 +598,11 @@ class PlayerScreenState extends State<PlayerScreen>
     // The first duration the engine reports after this loads the file's
     // subtitles (engines reset the duration when a file is opened).
     _subtitlesLoaded = false;
+    // PLAY-017: a disc's languages for its unlabelled streams.
+    final e0 = engine;
+    if (e0 is StreamLanguageEngine) {
+      (e0 as StreamLanguageEngine).setStreamLanguages(request.streamLanguages);
+    }
     final opened = engine.open(
       [request.uri],
       start: Duration(milliseconds: request.startPositionMs),
@@ -721,6 +726,18 @@ class PlayerScreenState extends State<PlayerScreen>
     final e = engine;
     if (e is! VideoTrackEngine) return;
     await (e as VideoTrackEngine).setVideoTrack(track);
+  }
+
+  /// The user picked another angle of a disc title in the video tab
+  /// (PLAY-017): the title reopens at the same position with that
+  /// angle's files.
+  Future<void> selectAngle(String uri) async {
+    if (uri == request.uri || !request.angles.contains(uri)) return;
+    final at = engine.state.value.position;
+    setState(() {
+      request = request.withUri(uri, startPositionMs: at.inMilliseconds);
+    });
+    await _openCurrent();
   }
 
   /// Where panels open on this screen (UI-014).
@@ -2460,6 +2477,7 @@ class _Osd extends StatelessWidget {
                   onSelectVideo: engine is VideoTrackEngine
                       ? state.selectVideo
                       : null,
+                  onSelectAngle: state.selectAngle,
                   subtitleSettings: state.widget.subtitleSettings,
                   onSubtitleSettings: state.widget.subtitleSettings == null
                       ? null

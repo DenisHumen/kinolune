@@ -13,6 +13,8 @@
 //!   that cannot escape it.
 //! - [`LocalFs`] is the local backend; [`host`] turns stored local paths
 //!   (a `file://` root, a `VfsPath` under it) into native host paths.
+//! - [`iso`] reads disc images (`.iso`: UDF, ISO 9660) as a read-only
+//!   [`Vfs`] (PLAY-017).
 //! - [`contract`] is the test suite every backend must pass.
 //! - [`VfsWrite`] is the write side of a backend ([`Vfs::as_write`]), and
 //!   [`files`] the file management built on it (NET-023): folders,
@@ -44,6 +46,7 @@ pub mod contract;
 mod error;
 pub mod files;
 pub mod host;
+pub mod iso;
 mod local;
 mod path;
 mod source;

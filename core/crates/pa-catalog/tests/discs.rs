@@ -220,13 +220,13 @@ fn disc_folders_and_images_are_one_movie_each_with_metadata() {
     assert_eq!(versions.len(), 1, "{versions:?}");
     assert_eq!(versions[0].rel_path, dvd.rel_path);
 
-    // Disc image: one movie, marked unplayable for the LGPL player build.
+    // Disc image: one movie; it plays since PLAY-017 (tests/disc_playback.rs).
     let iso = movie("Spirited Away");
     assert_eq!(iso.rel_path, ISO);
-    assert_eq!(iso.unplayable, Some(Unplayable::DiscImage));
-    assert_eq!(iso.unplayable.unwrap().code(), "disc_image");
+    assert_eq!(iso.unplayable, None);
+    assert_eq!(Unplayable::DiscImage.code(), "disc_image");
     let versions = cat.versions(iso.id).unwrap();
-    assert_eq!(versions[0].unplayable(), Some(Unplayable::DiscImage));
+    assert_eq!(versions[0].unplayable(), None);
     assert_eq!(movie("Heat").unplayable, None);
 
     // The other streams of the discs are no items and no search hits.

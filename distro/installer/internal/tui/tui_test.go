@@ -25,7 +25,12 @@ import (
 	"github.com/DenisHumen/kinolune/distro/installer/internal/install"
 )
 
-var update = flag.Bool("update", false, "rewrite the golden screens in testdata/golden")
+// updating tells whether -update asks to rewrite the golden screens in
+// testdata/golden. The flag itself is defined by teatest's golden package.
+func updating() bool {
+	f := flag.Lookup("update")
+	return f != nil && f.Value.String() == "true"
+}
 
 const fixtures = "../disks/testdata/"
 
@@ -194,7 +199,7 @@ func (h *harness) golden(name string) {
 	}
 	got := strings.Join(lines, "\n") + "\n"
 	path := filepath.Join("testdata", "golden", name+".txt")
-	if *update {
+	if updating() {
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			h.t.Fatal(err)
 		}
@@ -597,6 +602,7 @@ func TestProgressScreen(t *testing.T) {
 	for range 3 {
 		_, wait = h.m.Update(wait())
 	}
+	h.keys("=l") // the command log (DIST-034: the task list is the default)
 	h.golden("en-08-progress")
 	_, c := h.m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
 	if c != nil || h.m.quitOpen || !strings.Contains(h.m.msg, "running") {
