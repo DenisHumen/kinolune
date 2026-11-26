@@ -2250,3 +2250,18 @@ Samba на NAS с Kinolune OS (ADR-0174). Проверки делаются с �
 | VARSNAP-05 | Настоящий откат greenboot (обновление с проваленной проверкой required.d) на реальном NAS → ОС и база вернулись, данные пула не тронуты | — | — | — | — | — | — | — | ⬜ |
 
 Автотесты: VARSNAP-01…04 — `distro/updated/internal/varsnap/varsnap_test.go`, `distro/updated/internal/agent/agent_test.go` (`TestApplySnapshotsVarThenConfirms`, `TestSnapshotFailureBlocksReboot` и др.); VARSNAP-01, VARSNAP-03 — QEMU, шаг 7 `distro/tests/vm-install.sh` (установка с `@var`, применение через агент, откат `bootc rollback` вместо greenboot).
+## 26. Сайт (SITE-001)
+
+Сайт проекта на GitHub Pages (denishumen.github.io/kinolune/, ADR-NNNN). Колонки — браузер на этой платформе (на ТВ-платформах сайта нет: «—»).
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| SITE-01 | Открыть корень сайта → переход на язык: запомненный выбор, иначе язык браузера (uk, en, ru), иначе English; без JavaScript видны три ссылки на языки | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-02 | Переключатель «UK / EN / RU» в шапке → та же страница на другом языке, выбор запоминается для корня сайта | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-03 | «Завантажити / Download / Скачать» → страница GitHub Releases; «Код на GitHub» → репозиторий | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-04 | Раздел «Встановити»: команды APT и DNF из README, после их выполнения kinolune ставится из /apt и /rpm того же сайта | — | — | — | — | — | — | — | ⬜ |
+| SITE-05 | После деплоя сайта /apt/dists/stable/InRelease, /rpm/kinolune.repo и /kinolune.asc по-прежнему открываются | — | — | — | — | — | — | — | ⬜ |
+| SITE-06 | Несуществующий адрес → страница 404 на трёх языках со ссылками на главную | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+| SITE-07 | Узкий экран (телефон): нет горизонтальной прокрутки, меню и кнопки помещаются; «Уменьшить движение» и «Уменьшить прозрачность» убирают анимацию и стекло | ⬜ | — | ⬜ | ⬜ | — | ⬜ | ⬜ | ⬜ |
+
+Автотесты: SITE-01…SITE-06 частично — `docs/site/scripts/check.mjs` в CI (`site.yml`, `linux-repo.yml`): одинаковые ключи во всех языках, нет литералов цвета, все внутренние ссылки и якоря живые, нет сторонних скриптов и шрифтов, сайт не пишет в `/apt`, `/rpm`, `/kinolune.asc`.

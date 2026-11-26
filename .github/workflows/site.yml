@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# Website (SITE-001, ADR-NNNN): build the Astro site in docs/site and check it
+# (locales, colour tokens only, links, no paths of the Linux repositories, no
+# third-party resources). Publishing is in linux-repo.yml, which puts the
+# site and the APT/DNF repositories into the one GitHub Pages artifact.
+# Check locally: cd docs/site && npm ci && npm run build && npm run check.
+
+name: Site
+
+on:
+  pull_request:
+    # CI on PRs runs once when the PR is opened or marked ready (not on every
+    # push to a draft). Re-run manually: gh workflow run <file> --ref <branch>.
+    types: [opened, reopened, ready_for_review]
+    paths:
+      - "docs/site/**"
+      - "design/tokens/generated/web/**"
+      - "design/brand/export/**"
+      - "docs/screenshots/0.1/**"
+      - ".github/workflows/site.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    name: Build and check the website
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: docs/site
+    env:
+      ASTRO_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: docs/site/package-lock.json
+      - run: npm ci --ignore-scripts --no-fund --no-audit
+      - run: npm run build
+      - run: npm run check
