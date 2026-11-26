@@ -46,6 +46,12 @@ func (m *Model) View() string {
 		body, keys = m.viewSummary(cw), tr(m.lang, "keys.confirm")
 	case m.scr == scrProgress:
 		body, keys = m.viewProgress(cw), tr(m.lang, "keys.wait")
+		if m.tasks != nil && !m.opt.DryRun {
+			keys = tr(m.lang, "keys.tasks")
+			if m.showLog {
+				keys = tr(m.lang, "keys.log")
+			}
+		}
 	case m.scr == scrDone:
 		body, keys = m.viewDone(cw), tr(m.lang, "keys.menu")
 	case m.scr == scrSave:
@@ -389,6 +395,9 @@ func (m *Model) viewProgress(cw int) []string {
 		title = tr(m.lang, "prog.dry")
 	}
 	out := []string{stTitle.Render(title), ""}
+	if m.tasks != nil && !m.opt.DryRun && !m.showLog {
+		return append(out, m.viewTasks(cw)...)
+	}
 	step := m.stepLine
 	if step == "" {
 		step = "..."
@@ -403,6 +412,115 @@ func (m *Model) viewProgress(cw int) []string {
 		out = append(out, stMuted.Render(tr(m.lang, "prog.log", m.opt.LogPath)))
 	}
 	return out
+}
+
+// Column widths of the task list (DIST-034): it fits the 80x24 console.
+const (
+	taskName = 26
+	taskBar  = 22
+)
+
+// nowMs is the screen time in milliseconds since the installation started.
+func (m *Model) nowMs() int64 { return m.now.Sub(m.started).Milliseconds() }
+
+// viewTasks draws one line per task with its bar, like pacman, and the
+// total bar with the time left on top.
+func (m *Model) viewTasks(cw int) []string {
+	now := max(m.nowMs(), m.tasks.Last)
+	name := min(taskName, max(cw-taskBar-14, 10))
+	total := m.tasks.Overall(now)
+	line := "     " + pad(tr(m.lang, "prog.total"), name) + " " + bar(total, taskBar, now) + " " + percent(total)
+	if m.tasks.Failed() == nil {
+		line += "  " + tr(m.lang, "prog.left", dur(m.tasks.Remaining(now)))
+	}
+	out := []string{stTitle.Render(truncate(line, cw)), "     " + tr(m.lang, "prog.elapsed", m.elapsed()), ""}
+	for _, k := range m.tasks.Tasks {
+		mark, st := "[  ]", stMuted
+		switch k.State {
+		case install.Running:
+			mark, st = "[>>]", stSel
+		case install.Finished:
+			mark, st = "[ok]", stOK
+		case install.Failed:
+			mark, st = "[!!]", stWarn
+		}
+		row := pad(tr(m.lang, "task."+string(k.ID)), name)
+		if k.State != install.Pending {
+			f := k.Fraction()
+			row += " " + bar(f, taskBar, now) + " " + percent(f) + " " + fmt.Sprintf("%6s", dur(k.Elapsed(now)))
+		}
+		out = append(out, truncate(st.Render(mark)+" "+row, cw))
+		if detail := m.taskDetail(k); detail != "" {
+			out = append(out, stMuted.Render(truncate("     "+detail, cw)))
+		}
+	}
+	if m.opt.LogPath != "" {
+		// Below the title and its blank line (viewProgress).
+		for len(out) < m.h-4-1-2 {
+			out = append(out, "")
+		}
+		out = append(out, stMuted.Render(truncate(tr(m.lang, "prog.log", m.opt.LogPath), cw)))
+	}
+	return out
+}
+
+// taskDetail is the second line of the running or failed task: amounts,
+// speed and time left of the copy, the error of a failed task.
+func (m *Model) taskDetail(k *install.Task) string {
+	switch {
+	case k.State == install.Failed:
+		return k.Error
+	case k.State != install.Running || !k.Bytes:
+		return ""
+	case k.Total > 0 && k.Speed > 0:
+		eta, _ := k.ETA()
+		return tr(m.lang, "prog.copy", size(k.Done), size(k.Total), size(int64(k.Speed)), dur(eta))
+	case k.Done > 0:
+		return tr(m.lang, "prog.written", size(k.Done), size(int64(k.Speed)))
+	}
+	return ""
+}
+
+// bar draws [#####-----]; an unknown amount (f < 0) is a block that runs
+// back and forth.
+func bar(f float64, w int, now int64) string {
+	in := w - 2
+	if f < 0 {
+		const blk = 4
+		span := in - blk
+		pos := int(now/250) % (2 * span)
+		if pos > span {
+			pos = 2*span - pos
+		}
+		return "[" + strings.Repeat("-", pos) + strings.Repeat("#", blk) + strings.Repeat("-", span-pos) + "]"
+	}
+	n := int(f*float64(in) + 0.5)
+	return "[" + strings.Repeat("#", n) + strings.Repeat("-", in-n) + "]"
+}
+
+func percent(f float64) string {
+	if f < 0 {
+		return "    "
+	}
+	return fmt.Sprintf("%3d%%", int(f*100))
+}
+
+// dur rounds to seconds: 3m05s.
+func dur(d time.Duration) string {
+	return d.Round(time.Second).String()
+}
+
+// size is a decimal size for amounts and speeds: 612 MB, 1.4 GB.
+func size(n int64) string {
+	switch {
+	case n >= 1e9:
+		return fmt.Sprintf("%.1f GB", float64(n)/1e9)
+	case n >= 1e6:
+		return fmt.Sprintf("%d MB", n/1e6)
+	case n >= 1e3:
+		return fmt.Sprintf("%d kB", n/1e3)
+	}
+	return fmt.Sprintf("%d B", n)
 }
 
 func (m *Model) tail(n, cw int) []string {
@@ -442,6 +560,11 @@ func (m *Model) viewDone(cw int) []string {
 	switch {
 	case m.err != nil:
 		out = append(out, stWarn.Render(tr(m.lang, "fail.title")), "")
+		if m.tasks != nil {
+			if k := m.tasks.Failed(); k != nil {
+				out = append(out, tr(m.lang, "fail.task", tr(m.lang, "task."+string(k.ID))), "")
+			}
+		}
 		for _, l := range wrap(m.err.Error(), cw) {
 			out = append(out, l)
 			if len(out) > 5 {
