@@ -190,10 +190,7 @@ void main() {
     });
 
     test('Reduce Motion: only opacity, 150 ms in, 2.5 s, 300 ms out', () {
-      final r = SentBubbleTimeline.of(
-        SentBubbleKind.sent,
-        reduceMotion: true,
-      );
+      final r = SentBubbleTimeline.of(SentBubbleKind.sent, reduceMotion: true);
       expect(r.particles, isFalse);
       expect(r.totalMs, 2950);
       for (var ms = 0; ms <= 2950; ms += 50) {
@@ -304,9 +301,10 @@ void main() {
           ],
         ),
       );
+      await _start(t);
       await t.pump(const Duration(milliseconds: 700));
-      final text = t.widget<RichText>(
-        find.descendant(of: _bubbleCards, matching: find.byType(RichText)),
+      final text = t.widget<Text>(
+        find.descendant(of: _bubbleCards, matching: find.byType(Text)),
       );
       expect(text.maxLines, 2);
       expect(text.overflow, TextOverflow.ellipsis);
@@ -324,6 +322,7 @@ void main() {
       const size = Size(760, 380);
       final b = await _pumpStage(t, ff: FormFactor.tv, size: size);
       b.add(_sent('a very long message ' * 10));
+      await _start(t);
       await t.pump(const Duration(milliseconds: 700));
       final rect = t.getRect(_bubbleCards);
       expect(rect.width, lessThanOrEqualTo(420));
@@ -427,9 +426,7 @@ void main() {
       expect(_bubbleCards, findsNothing);
     });
 
-    testWidgets('a tap hides it at once; elsewhere taps go through', (
-      t,
-    ) async {
+    testWidgets('a tap hides it at once; elsewhere taps go through', (t) async {
       setSurface(t, const Size(800, 600));
       final b = SentBubbles();
       addTearDown(b.dispose);
@@ -483,10 +480,7 @@ void main() {
       expect(find.text('next'), findsOneWidget);
       // Nothing in the bubble's subtree can be focused.
       expect(
-        find.ancestor(
-          of: _bubbleCards,
-          matching: find.byType(ExcludeFocus),
-        ),
+        find.ancestor(of: _bubbleCards, matching: find.byType(ExcludeFocus)),
         findsWidgets,
       );
       await t.tap(find.byKey(const ValueKey('below')));

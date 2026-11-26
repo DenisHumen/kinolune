@@ -25,7 +25,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
@@ -159,8 +158,7 @@ class SentBubbleTimeline {
   }
 
   Offset driftAt(double ms) =>
-      drift *
-      Curves.easeInOutSine.transform(_u(ms, settleEndMs, _driftEndMs));
+      drift * Curves.easeInOutSine.transform(_u(ms, settleEndMs, _driftEndMs));
 
   /// Share of its height the bubble takes in the stack (older ones slide
   /// down as it grows); at once under Reduce Motion.
@@ -252,8 +250,7 @@ List<SentParticle> sentParticles(math.Random random, {Color? accent}) {
         size: 2,
         lifeMs: between(450, 650),
         color: confetti[i % confetti.length],
-        spin:
-            between(2 * math.pi, 4 * math.pi) * (random.nextBool() ? 1 : -1),
+        spin: between(2 * math.pi, 4 * math.pi) * (random.nextBool() ? 1 : -1),
         turn: random.nextDouble() * math.pi,
       ),
   ];
@@ -408,7 +405,9 @@ class SentBubbles extends ChangeNotifier {
 
   void add(SentBubbleData b) {
     _items.insert(0, b);
-    if (_items.length > kSentBubbleMax) _items.removeRange(kSentBubbleMax, _items.length);
+    if (_items.length > kSentBubbleMax) {
+      _items.removeRange(kSentBubbleMax, _items.length);
+    }
     notifyListeners();
   }
 
@@ -514,11 +513,18 @@ class _SentBubbleState extends State<SentBubble>
       ? sentParticles(math.Random(widget.data.seed))
       : const [];
 
+  var _done = false;
+
   @override
   void initState() {
     super.initState();
-    _c.addStatusListener((s) {
-      if (s == AnimationStatus.completed) widget.onDone();
+    // Gone at the last moment of the timeline (the controller itself
+    // reports "completed" one frame later).
+    _c.addListener(() {
+      if (!_done && _c.value >= 1) {
+        _done = true;
+        widget.onDone();
+      }
     });
     _c.forward();
   }
@@ -541,10 +547,12 @@ class _SentBubbleState extends State<SentBubble>
       container: true,
       label: label,
       onTapHint: l.twitchChatBubbleHide,
+      onTap: widget.onDone,
       excludeSemantics: true,
       child: GestureDetector(
         key: const ValueKey('twitch-sent-bubble'),
         behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
         onTap: widget.onDone,
         child: RepaintBoundary(
           child: _SentCard(data: d, tv: widget.formFactor == FormFactor.tv),
@@ -658,7 +666,11 @@ class _SentCard extends StatelessWidget {
               : KColors.accent.withValues(alpha: .55),
         ),
         boxShadow: const [
-          BoxShadow(color: Color(0x66000000), blurRadius: 12, offset: Offset(0, 4)),
+          BoxShadow(
+            color: Color(0x66000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
         ],
       ),
       child: Padding(
@@ -678,7 +690,9 @@ class _SentCard extends StatelessWidget {
               ),
               child: Icon(
                 dropped ? Icons.priority_high_rounded : Icons.check_rounded,
-                key: ValueKey(dropped ? 'twitch-sent-bang' : 'twitch-sent-check'),
+                key: ValueKey(
+                  dropped ? 'twitch-sent-bang' : 'twitch-sent-check',
+                ),
                 size: mark * .7,
                 color: const Color(0xFFFFFFFF),
               ),
