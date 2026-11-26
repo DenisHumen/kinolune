@@ -73,7 +73,7 @@ Future<void> _pump(WidgetTester t, Duration d) async {
 
 Future<AppServices> _start(WidgetTester t) async {
   _dir.createSync(recursive: true);
-  unawaited(app.main());
+  unawaited(app.main(const []));
   AppServices? s;
   for (var i = 0; i < 600 && s == null; i++) {
     await _pump(t, const Duration(milliseconds: 100));

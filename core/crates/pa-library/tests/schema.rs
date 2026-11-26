@@ -36,6 +36,7 @@ const TABLES: &[&str] = &[
     "import_v0_progress",
     "jobs",
     "label_sync",
+    "live_uploads",
     "match_candidates",
     "match_episodes",
     "matches",
@@ -634,6 +635,13 @@ fn build_graph(conn: &Connection) -> Graph {
               '{"schema_version":1,"data":{}}', 'parked', NULL),
              ('category'||char(31)||'default'||char(31)||'ffff', 'default', NULL, 'merged',
               '0123456789abcdef0123456789abcdef');"#,
+    )
+    .unwrap();
+    // A file another device is copying into the library (LIB-028).
+    conn.execute_batch(
+        r#"INSERT INTO live_uploads (upload_id, phase, info, device_id, stamp, updated_ms)
+           VALUES ('up-m3k9x2-0-5d21aa07', 'started', '{"v":1,"name":"Dune.mkv"}',
+                   'kpc', NULL, 1763000000000);"#,
     )
     .unwrap();
     // Another device said its TMDB key and this `file:` key are one film
