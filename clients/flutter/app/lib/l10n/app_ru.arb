@@ -2380,5 +2380,8 @@
   "twitchLanguageOther": "Другой язык",
   "twitchCategoryVodsTitle": "Записи избранного с этой игрой",
   "twitchStreamOpenChannel": "Открыть канал",
-  "twitchSearchRecent": "Недавние запросы"
+  "twitchSearchRecent": "Недавние запросы",
+  "twitchChatSentBubble": "Сообщение отправлено",
+  "twitchChatNotSentBubble": "Сообщение не отправлено: {reason}",
+  "twitchChatBubbleHide": "Скрыть"
 }
