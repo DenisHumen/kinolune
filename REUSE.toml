@@ -136,6 +136,15 @@ precedence = "override"
 SPDX-FileCopyrightText = "third-party screenshot, rights belong to their owners"
 SPDX-License-Identifier = "LicenseRef-Reference-Only"
 
+# Owner's redesign mood references (2026-11-26): home cinema rooms with the
+# poster wall on a big screen. Third-party photos, no licence granted, rights
+# belong to their owners; remove when DSN-017 (design v2) is done.
+[[annotations]]
+path = "docs/design/references/redesign-room-*.jpg"
+precedence = "override"
+SPDX-FileCopyrightText = "third-party photos, rights belong to their owners"
+SPDX-License-Identifier = "LicenseRef-Reference-Only"
+
 # UI icons based on Lucide (ISC; icons derived from Feather are also MIT) —
 # the licence is in each SVG header, the copyright is added here (DSN-004).
 [[annotations]]
