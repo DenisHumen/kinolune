@@ -57,6 +57,13 @@ STAGES=(general native assets linux android assemble)
 # Kept in sync with release-app.yml (the Android job builds these two for
 # people; x86_64 and universal are test builds there).
 ABIS=(arm64-v8a armeabi-v7a)
+# Linux is built for the machine it runs on (no emulation): x86_64 or, on an
+# arm64 machine, aarch64 (PKG-026). Names follow release-app.yml.
+case "$(uname -m)" in
+    x86_64) LINUX_T=linux-x86_64 LINUX_ARCH=x86_64 FLUTTER_ARCH=x64 DEB_ARCH=amd64 OTHER_RE='(aarch64|arm64)\.(AppImage|deb|rpm)$' ;;
+    aarch64 | arm64) LINUX_T=linux-arm64 LINUX_ARCH=aarch64 FLUTTER_ARCH=arm64 DEB_ARCH=arm64 OTHER_RE='(x86_64|amd64)\.(AppImage|deb|rpm)$' ;;
+    *) printf 'precheck: no Linux build for %s\n' "$(uname -m)" >&2; exit 2 ;;
+esac
 
 say() { printf '%s\n' "$*" >&2; }
 die() { say "precheck: $*"; exit 2; }
@@ -136,7 +143,7 @@ stage_native() {
     export GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-$GH_REPO}"
     mkdir -p "$CACHE/native"
     : > "$RUN/native.env"
-    for t in linux-x86_64 "${ABIS[@]/#/android-}"; do
+    for t in "$LINUX_T" "${ABIS[@]/#/android-}"; do
         key="$(tools/ci/prebuilt.sh key libmpv "$t")"
         dir="$CACHE/native/$key"
         if [ -d "$dir/lib" ]; then
@@ -176,7 +183,7 @@ stage_native() {
     export PA_SMB2_CACHE="$CACHE/native/libsmb2-src" PA_SMB2_WORK="$CACHE/native/libsmb2-work" PA_SMB2_OUT="$out"
     export PA_SMB2_JOBS="$JOBS"
     export ANDROID_NDK_HOME="$ANDROID_HOME/${ANDROID_NDK_PACKAGE/;//}"
-    for t in linux-x86_64 "${ABIS[@]/#/android-}"; do
+    for t in "$LINUX_T" "${ABIS[@]/#/android-}"; do
         if [ -d "$out/$t/lib" ]; then
             echo "libsmb2 $t: из кэша ($smb)"
         else
@@ -220,31 +227,31 @@ flutter_common() {
 
 stage_linux() {
     load_native || return 1
-    local dist="$RUN/dist" common=()
+    local dist="$RUN/dist" common=() lm="LIBMPV_${LINUX_T//-/_}" ls="LIBSMB2_${LINUX_T//-/_}"
     mkdir -p "$dist"
     mapfile -t common < <(flutter_common)
     (cd core/crates/pa-frb && rustup toolchain install >/dev/null)
     echo "== flutter build linux ($KINOLUNE_FLAVOR)"
     (
         cd "$APP_DIR"
-        export PKG_CONFIG_PATH="$LIBMPV_linux_x86_64/lib/pkgconfig"
+        export PKG_CONFIG_PATH="${!lm}/lib/pkgconfig"
         pkg-config --modversion mpv
         flutter pub get --enforce-lockfile --suppress-analytics
-        rm -rf build/linux/x64/release/bundle
+        rm -rf "build/linux/$FLUTTER_ARCH/release/bundle"
         flutter build linux --suppress-analytics "${common[@]}"
     )
     echo "== tar.gz и AppImage (packaging/app/linux/package.sh)"
-    PA_LIBMPV_DIR="$LIBMPV_linux_x86_64" PA_LIBSMB2_DIR="$LIBSMB2_linux_x86_64" \
+    PA_LIBMPV_DIR="${!lm}" PA_LIBSMB2_DIR="${!ls}" \
         PA_APPIMAGE_TOOLS="$CACHE/appimage-tools" \
-        packaging/app/linux/package.sh "$APP_DIR/build/linux/x64/release/bundle" "$VERSION" "$dist"
+        packaging/app/linux/package.sh "$APP_DIR/build/linux/$FLUTTER_ARCH/release/bundle" "$VERSION" "$dist"
     echo "== .deb и .rpm (packaging/linux/build-packages.sh)"
-    packaging/linux/build-packages.sh "$dist/kinolune-$VERSION-linux-x86_64.tar.gz" "$VERSION" "$dist"
+    packaging/linux/build-packages.sh "$dist/kinolune-$VERSION-linux-$LINUX_ARCH.tar.gz" "$VERSION" "$dist"
 
     echo "== Проверка бандла (как «Smoke-test the bundle links» в release-app.yml)"
     local tmp dir exe
     tmp="$(mktemp -d)"
-    tar -xzf "$dist/kinolune-$VERSION-linux-x86_64.tar.gz" -C "$tmp"
-    dir="$tmp/kinolune-$VERSION-linux-x86_64"
+    tar -xzf "$dist/kinolune-$VERSION-linux-$LINUX_ARCH.tar.gz" -C "$tmp"
+    dir="$tmp/kinolune-$VERSION-linux-$LINUX_ARCH"
     exe=$(find "$dir" -maxdepth 1 -type f -perm -u+x | head -n1)
     if ldd "$exe" "$dir"/lib/*.so* | grep 'not found'; then echo "ОШИБКА: неразрешённые библиотеки"; return 1; fi
     ldd "$dir/lib/libmedia_kit_video_plugin.so" | grep -F "libmpv.so.2 => $dir/lib/libmpv.so.2" \
@@ -335,7 +342,7 @@ stage_assemble() {
 
     echo "== Подпись .rpm одноразовым ключом GPG через packaging/linux/import-key.sh"
     local rpm fpr
-    rpm="$(ls "$dist"/kinolune-*-linux-x86_64.rpm)"
+    rpm="$(ls "$dist"/kinolune-*-linux-"$LINUX_ARCH".rpm)"
     export GNUPGHOME="$tmp/gnupg-gen"
     mkdir -m 700 "$GNUPGHOME"
     gpg --batch --quiet --passphrase '' --quick-gen-key "Kinolune precheck (throwaway) <precheck@invalid>" rsa3072 sign 1d
@@ -353,12 +360,13 @@ stage_assemble() {
 
     echo "== Файлы, лицензии, LGPL-исходники, SHA256SUMS"
     cp "$dist"/* "$rel/assets/"
-    rm -f "$rel/assets/kinolune-$VERSION-linux-x86_64.tar.gz"
+    rm -f "$rel/assets/kinolune-$VERSION-linux-$LINUX_ARCH.tar.gz"
     local lic="kinolune-$VERSION-licenses" tp="kinolune-$VERSION-third-party"
     mkdir -p "$tmp/$tp" "$tmp/$lic/licenses/libmpv" "$tmp/$lic/licenses/libsmb2"
     cp LICENSE packaging/app/THIRD-PARTY-NOTICES.md "$tmp/$lic/"
     packaging/app/fetch-licences.sh "$tmp/$lic/licenses"
-    local libmpv=("$LIBMPV_linux_x86_64") libsmb2=("$LIBSMB2_linux_x86_64") abi v d
+    local lm="LIBMPV_${LINUX_T//-/_}" ls="LIBSMB2_${LINUX_T//-/_}"
+    local libmpv=("${!lm}") libsmb2=("${!ls}") abi v d
     for abi in "${ABIS[@]}"; do
         v="LIBMPV_android_${abi//-/_}"; libmpv+=("${!v}")
         v="LIBSMB2_android_${abi//-/_}"; libsmb2+=("${!v}")
@@ -372,7 +380,7 @@ stage_assemble() {
     cp "$rel/libsmb2.md" "$tmp/$lic/LIBSMB2.md"
     cp "$RUN/notes/native-licences.md" "$tmp/$lic/ANDROID-NATIVE-LIBRARIES.md"
     for d in "${libsmb2[@]}"; do cp "$d"/share/licenses/* "$tmp/$lic/licenses/libsmb2/"; done
-    cp "$LIBSMB2_linux_x86_64/BUILDINFO.txt" "$tmp/$lic/licenses/libsmb2/BUILDINFO.txt"
+    cp "${!ls}/BUILDINFO.txt" "$tmp/$lic/licenses/libsmb2/BUILDINFO.txt"
     tar --sort=name --owner=0 --group=0 --numeric-owner -C "$tmp" -czf "$tmp/$tp/$lic.tar.gz" "$lic"
     cp packaging/app/THIRD-PARTY-README.md "$tmp/$tp/README.md"
     tar --sort=name --owner=0 --group=0 --numeric-owner -C "$tmp" -cf "$rel/assets/$tp.tar" "$tp"
@@ -413,8 +421,8 @@ PY
     head -n 3 "$notes"
 
     echo "== Ожидаемые файлы (Linux и Android; Windows и macOS — в dry_run на GitHub)"
-    local want=("kinolune-$VERSION-x86_64.AppImage" "kinolune-$VERSION-linux-amd64.deb"
-                "kinolune-$VERSION-linux-x86_64.rpm" "kinolune-$VERSION-third-party.tar" SHA256SUMS SHA256SUMS.minisig)
+    local want=("kinolune-$VERSION-$LINUX_ARCH.AppImage" "kinolune-$VERSION-linux-$DEB_ARCH.deb"
+                "kinolune-$VERSION-linux-$LINUX_ARCH.rpm" "kinolune-$VERSION-third-party.tar" SHA256SUMS SHA256SUMS.minisig)
     for abi in "${ABIS[@]}"; do want+=("kinolune-$VERSION-android-$abi.apk"); done
     local fail=0 have
     for f in "${want[@]}"; do
@@ -424,8 +432,10 @@ PY
         have="$(basename "$have")"
         case " ${want[*]} " in *" $have "*) ;; *) echo "ОШИБКА: лишний файл в выпуске: $have"; fail=1 ;; esac
     done
-    # Every Linux/Android link of the notes points at a file of the release.
-    for f in $(grep -oE "kinolune-$VERSION-(x86_64\.AppImage|linux-[a-z0-9_]+\.(deb|rpm)|android-[a-z0-9_-]+\.apk)" "$notes" | sort -u); do
+    # Every Linux/Android link of the notes points at a file of the release
+    # (Linux files of the other architecture are built on its own runner).
+    for f in $(grep -oE "kinolune-$VERSION-((x86_64|aarch64)\.AppImage|linux-[a-z0-9_]+\.(deb|rpm)|android-[a-z0-9_-]+\.apk)" "$notes" | sort -u); do
+        [[ $f =~ $OTHER_RE ]] && continue
         [ -s "$rel/assets/$f" ] || { echo "ОШИБКА: заметки ссылаются на $f, а его нет среди файлов"; fail=1; }
     done
     rm -rf "$tmp"

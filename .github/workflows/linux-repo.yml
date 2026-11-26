@@ -97,12 +97,17 @@ jobs:
             pre=false; [[ "$v" == *-* ]] && pre=true
             if [ "$beta" -ge 3 ] && { [ "$pre" = true ] || [ "$stable" -ge 3 ]; }; then continue; fi
             deb="kinolune-$v-linux-amd64.deb"; rpm="kinolune-$v-linux-x86_64.rpm"
+            # arm64 packages since PKG-026; older releases have none.
+            deb_arm="kinolune-$v-linux-arm64.deb"; rpm_arm="kinolune-$v-linux-aarch64.rpm"
             d="$RUNNER_TEMP/pkgs/$v"; mkdir -p "$d"
-            if ! gh release download "$tag" --repo "$GITHUB_REPOSITORY" -D "$d" -p "$deb" -p "$rpm" 2>/dev/null \
+            if ! gh release download "$tag" --repo "$GITHUB_REPOSITORY" -D "$d" \
+                 -p "$deb" -p "$rpm" -p "$deb_arm" -p "$rpm_arm" 2>/dev/null \
                || [ ! -f "$d/$deb" ] || [ ! -f "$d/$rpm" ]; then
               echo "$tag: no .deb/.rpm, skipped"; continue
             fi
-            echo "$v $d/$deb $d/$rpm" >> "$RUNNER_TEMP/manifest.txt"
+            line="$v $d/$deb $d/$rpm"
+            if [ -f "$d/$deb_arm" ] && [ -f "$d/$rpm_arm" ]; then line="$line $d/$deb_arm $d/$rpm_arm"; fi
+            echo "$line" >> "$RUNNER_TEMP/manifest.txt"
             beta=$((beta + 1)); [ "$pre" = false ] && stable=$((stable + 1))
             echo "$tag: added"
           done
@@ -125,8 +130,10 @@ jobs:
           gpg --batch --quiet --import packaging/linux/kinolune-repo-public.asc
           for s in stable beta; do
             gpg --batch --verify "$RUNNER_TEMP/site/apt/dists/$s/InRelease"
-            gpg --batch --verify "$RUNNER_TEMP/site/rpm/$s/x86_64/repodata/repomd.xml.asc" \
-              "$RUNNER_TEMP/site/rpm/$s/x86_64/repodata/repomd.xml"
+            for a in x86_64 aarch64; do
+              gpg --batch --verify "$RUNNER_TEMP/site/rpm/$s/$a/repodata/repomd.xml.asc" \
+                "$RUNNER_TEMP/site/rpm/$s/$a/repodata/repomd.xml"
+            done
           done
           du -sh "$RUNNER_TEMP/site"
           {

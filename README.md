@@ -49,7 +49,7 @@
 
 ## Скачать
 
-Сборки — в [GitHub Releases](https://github.com/DenisHumen/kinolune/releases): Linux (`.deb`, `.rpm`, AppImage), Windows (установщик), macOS (`.dmg`), Android (APK).
+Сборки — в [GitHub Releases](https://github.com/DenisHumen/kinolune/releases): Linux x86_64 и ARM64 (`.deb`, `.rpm`, AppImage), Windows (установщик), macOS (`.dmg`), Android (APK).
 
 ### Установка на Linux
 
@@ -67,7 +67,7 @@ curl -fsSL https://denishumen.github.io/kinolune/rpm/kinolune.repo | sudo tee /e
 sudo dnf install kinolune
 ```
 
-Дальше Kinolune обновляется вместе с системой (`sudo apt upgrade`, `sudo dnf upgrade`). Файлы `.deb` и `.rpm` из релиза при установке добавляют этот же репозиторий.
+Дальше Kinolune обновляется вместе с системой (`sudo apt upgrade`, `sudo dnf upgrade`). Файлы `.deb` и `.rpm` из релиза при установке добавляют этот же репозиторий. Команды одинаковы для x86_64 и ARM64 (aarch64: Raspberry Pi 5, ARM-ноутбуки) — пакетный менеджер сам берёт сборку своей архитектуры.
 
 ## Участвовать
 

@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: MPL-2.0
 #
 # .deb and .rpm of Kinolune (PKG-002, PKG-023). build-packages.sh fills in
-# ${PA_PKG_STAGE} (the staged tree) and ${PA_PKG_VERSION} (semver version;
+# ${PA_PKG_STAGE} (the staged tree), ${PA_PKG_ARCH} (amd64 or arm64, from the
+# bundle; nfpm writes x86_64/aarch64 into the rpm, PKG-026) and
+# ${PA_PKG_VERSION} (semver version;
 # nfpm turns a pre-release into 0.1.0~alpha.7 for both formats, so
 # alpha < beta < rc < the release in apt and dnf).
 #
@@ -11,7 +13,7 @@
 # time), PulseAudio client (works on PipeWire), ALSA, libsecret,
 # Wayland. The rpm requires sonames, so it fits Fedora and openSUSE alike.
 name: kinolune
-arch: amd64
+arch: ${PA_PKG_ARCH}
 platform: linux
 version: ${PA_PKG_VERSION}
 version_schema: semver

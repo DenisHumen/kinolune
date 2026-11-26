@@ -14,7 +14,10 @@
 #   5. the NVMe boots alone with the same OVMF NVRAM; over SSH: booted image tracks the
 #      registry (not containers-storage), layout, @var, hostname, user (yescrypt, wheel),
 #      NetworkManager, install.json, SELinux labels;
-#   6. a new image is pushed under the same tag and `bootc upgrade --check` sees it.
+#   6. a new image is pushed under the same tag and `bootc upgrade --check` sees it;
+#   7. DIST-010: alpha-updated applies it (read-only snapshot of @var first), the new
+#      version changes /var, the OS rolls back, and /var is back to the snapshot before
+#      it is mounted; the replaced /var is kept.
 #
 # Requirements: docker (or rootful podman) with --privileged, qemu-system-x86_64, OVMF,
 # /dev/kvm, ssh, python3, ~10 GB free in distro/.work. Takes ~20 minutes.
@@ -251,4 +254,79 @@ read -r booted_digest cached < <(python3 -c 'import json,sys; s=json.load(sys.st
     < "${W}/status-after-check.json")
 check "bootc upgrade --check found a new image in the registry (${cached})" test "${cached}" != - -a "${cached}" != "${booted_digest}"
 
+
+# --- 7. /var snapshot before the update and restore after an OS rollback (DIST-010) --------
+# The media server is a stub in this image, so its "database" is a file the test writes:
+# schema 1 under v1, "migrated" to schema 2 while v2 runs. The rollback is what greenboot
+# does after failed health checks (bootc rollback + reboot, before boot-complete is
+# confirmed); greenboot itself is DIST-011.
+TOP_DEV="$(vm findmnt -no SOURCE /sysroot | sed 's/\[.*//')"
+top() { vm "mkdir -p /run/t && mount -o subvolid=5 ${TOP_DEV} /run/t && { $*; }; r=\$?; umount /run/t; exit \$r"; }
+api() { vm curl -fsS --unix-socket /run/alpha-updated/api.sock "$@"; }
+boot_id() { vm cat /proc/sys/kernel/random/boot_id 2>/dev/null || true; }
+# wait_reboot OLD_BOOT_ID: the agent pulls and stages before it reboots, so wait for a new boot.
+wait_reboot() {
+    local _ id
+    for _ in $(seq 1 120); do
+        id="$(boot_id)"
+        if [[ -n "${id}" && "${id}" != "$1" ]]; then
+            vm systemctl is-system-running --wait >/dev/null || true
+            return 0
+        fi
+        sleep 5
+    done
+    api http://localhost/v1/status > "${W}/agent-status.json" 2>&1 || true
+    vm journalctl -b -u alpha-updated --no-pager -o cat > "${W}/agent-journal.txt" 2>&1 || true
+    die "no reboot within 10 minutes (see ${W}/agent-status.json, agent-journal.txt)"
+}
+version() { vm sed -n 's/^ALPHA_OS_VERSION=//p' /usr/share/alpha/version; }
+DB=/var/lib/alpha-media-test/library.db
+vm "mkdir -p ${DB%/*} && echo schema=1 > ${DB}"
+check "alpha-var-restore ran on the installed system" \
+    grep -q "action=nothing" <<< "$(vm journalctl -b -u alpha-var-restore.service --no-pager)"
+log "Step 7: apply v2 through alpha-updated (snapshot of @var, then reboot)"
+BOOT="$(boot_id)"
+# ssh joins its arguments into one remote shell line: quote the JSON body for that shell.
+applied=
+for _ in $(seq 1 30); do
+    if api -X POST -H "'Content-Type: application/json'" -d "'{\"when\":\"now\"}'" \
+        http://localhost/v1/update/apply > "${W}/apply.json" 2>&1; then applied=1; break; fi
+    sleep 10   # 409 while the scheduler's own check or download runs
+done
+[[ -n "${applied}" ]] || die "alpha-updated refused the apply: $(cat "${W}/apply.json")"
+wait_reboot "${BOOT}"
+check "v2 booted after the agent's apply" test "$(version)" = 0.0.1-install.2
+# The agent confirms a healthy update at its first scheduler step (after ~2 min):
+# stop it now, as if greenboot's required checks had not passed.
+vm systemctl stop alpha-updated.service
+top "cat /run/t/@var-snapshots/pending.json" | tee "${W}/var-pending.json"
+check "pending marker: v2 booted, snapshot recorded" python3 -c \
+    'import json,sys; p=json.load(sys.stdin); assert p["to_booted"] and p["to_version"]=="0.0.1-install.2" and p["snapshot"], p' \
+    < "${W}/var-pending.json"
+SNAP="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["snapshot"])' < "${W}/var-pending.json")"
+check "snapshot ${SNAP} is read-only" grep -q true <<< "$(top "btrfs property get -ts /run/t/@var-snapshots/${SNAP} ro")"
+check "snapshot holds schema 1" test "$(top "cat /run/t/@var-snapshots/${SNAP}${DB#/var}")" = schema=1
+vm "echo schema=2 > ${DB}"   # the new media server migrated its database
+log "Step 7: the update fails its checks, the OS goes back to v1"
+vm bootc rollback
+BOOT="$(boot_id)"
+vm systemctl reboot || true
+wait_reboot "${BOOT}"
+check "v1 booted after the rollback" test "$(version)" = 0.0.1-install.1
+vm journalctl -b -u alpha-var-restore.service --no-pager | tee "${W}/var-restore.log"
+check "alpha-var-restore restored /var" grep -q "action=restored" "${W}/var-restore.log"
+check "database is back to schema 1" test "$(vm cat "${DB}")" = schema=1
+check "/var is still the @var subvolume" grep -q "subvol=/@var" <<< "$(vm findmnt -no OPTIONS /var)"
+check "/var is writable" vm "touch /var/.rw-test && rm /var/.rw-test"
+top "cat /run/t/@var-snapshots/last-restore.json" | tee "${W}/var-last-restore.json"
+REPL="$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["snapshot"]==sys.argv[1], d; print(d["replaced"])' "${SNAP}" \
+    < "${W}/var-last-restore.json")"
+check "replaced /var kept with schema 2" test "$(top "cat /run/t/@var-snapshots/${REPL}${DB#/var}")" = schema=2
+check "no pending marker left" test -z "$(top "ls /run/t/@var-snapshots/pending.json 2>/dev/null || true")"
+check "SELinux labels survived the restore" vm "ls -Zd /var/lib | grep -q var_lib_t"
+check "media server (old version) answers" vm "curl -fsS http://127.0.0.1:8487/health"
+check "agent status shows the restore" python3 -c \
+    'import json,sys; v=json.load(sys.stdin)["var_snapshots"]; assert v["last_restore"]["version"]=="0.0.1-install.2", v' \
+    <<< "$(api http://localhost/v1/status)"
+check "no failed units after the restore" test -z "$(vm systemctl --failed --no-legend --plain | grep -v '^$' || true)"
 log "ALL CHECKS PASSED"
