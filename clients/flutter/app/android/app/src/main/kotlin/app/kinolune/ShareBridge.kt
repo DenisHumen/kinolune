@@ -22,6 +22,7 @@ import java.util.concurrent.Executors
  *
  * Channel `app.kinolune/share`:
  * * `take()` — the paths of a share that arrived before Dart was listening (a cold start), or an empty list;
+ * * `shareText(text)` — the system share menu with a link (TWI-040 «Поделиться» of a clip); `true` if shown;
  * * `shared(paths)` — Dart is told of a share that arrives while it runs. Dart answers `true` once it took them;
  *   otherwise they wait for `take`.
  *
@@ -47,8 +48,25 @@ object ShareBridge {
                     result.success(ArrayList(pending))
                     pending.clear()
                 }
+                "shareText" -> result.success(shareText(call.arguments as? String))
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    private fun shareText(text: String?): Boolean {
+        if (text.isNullOrEmpty()) return false
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        val chooser = Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return try {
+            app.startActivity(chooser)
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "No app to share with", e)
+            false
         }
     }
 

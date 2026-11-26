@@ -170,7 +170,12 @@ pub struct SourceOpener {
 struct OpenerState {
     vfs: HashMap<i64, Arc<dyn Vfs>>,
     files: VecDeque<(i64, VfsPath, Arc<dyn ByteSource>)>,
+    /// Disc images opened as file systems (PLAY-017).
+    images: VecDeque<(i64, VfsPath, Arc<pa_vfs::iso::IsoFs>)>,
 }
+
+/// Disc images kept open by [`SourceOpener`].
+const OPEN_IMAGES: usize = 2;
 
 impl fmt::Debug for SourceOpener {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -194,9 +199,33 @@ impl SourceOpener {
         format!("{source_id}{}", path.as_str())
     }
 
+    pub(crate) fn catalog(&self) -> &Catalog {
+        &self.catalog
+    }
+
+    pub(crate) fn cached_image(&self, id: i64, image: &VfsPath) -> Option<Arc<pa_vfs::iso::IsoFs>> {
+        let st = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        st.images
+            .iter()
+            .find(|(s, p, _)| *s == id && p == image)
+            .map(|(_, _, fs)| Arc::clone(fs))
+    }
+
+    pub(crate) fn keep_image(&self, id: i64, image: &VfsPath, fs: Arc<pa_vfs::iso::IsoFs>) {
+        let mut st = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        st.images.retain(|(s, p, _)| !(*s == id && p == image));
+        st.images.push_front((id, image.clone(), fs));
+        st.images.truncate(OPEN_IMAGES);
+    }
+
     /// Opens `path` of source `id`, reusing a recent open of the same file.
-    /// A file the active profile may not see (LIB-012) is not found.
+    /// A file the active profile may not see (LIB-012) is not found. A
+    /// path into a disc image (`Film.iso/BDMV/STREAM/00010.m2ts`) opens
+    /// the file inside the image (PLAY-017).
     pub fn open_file(&self, id: i64, path: &VfsPath) -> pa_vfs::Result<Arc<dyn ByteSource>> {
+        if let Some((image, inner)) = pa_vfs::iso::split_image_path(path) {
+            return Ok(Arc::from(self.image(id, &image)?.open(&inner)?));
+        }
         let allowed = self
             .catalog
             .may_open(id, path.as_str())
@@ -254,6 +283,7 @@ impl SourceOpener {
         let mut st = self.state.lock().unwrap_or_else(|e| e.into_inner());
         st.vfs.insert(id, Arc::clone(&vfs));
         st.files.retain(|(s, _, _)| *s != id);
+        st.images.retain(|(s, _, _)| *s != id);
         Ok(vfs)
     }
 
@@ -262,6 +292,7 @@ impl SourceOpener {
         let mut st = self.state.lock().unwrap_or_else(|e| e.into_inner());
         st.vfs.clear();
         st.files.clear();
+        st.images.clear();
     }
 }
 

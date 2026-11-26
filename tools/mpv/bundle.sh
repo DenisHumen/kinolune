@@ -31,10 +31,24 @@ target_of() { sed -n 's/^target: //p' "$1/BUILDINFO.txt" 2>/dev/null; }
 # Libraries an Android app may link from the platform (NDK stable APIs).
 ANDROID_SYSTEM_LIBS_RE='^lib(c|m|dl|log|android|EGL|GLESv[123]|mediandk|aaudio|OpenSLES|z|jnigraphics|vulkan|nativewindow|camera2ndk|sync)\.so$'
 
+# linux-<arch> target name of a Flutter Linux bundle, from its executable's
+# ELF header (e_machine): the artifact must match it (PKG-026).
+bundle_target() {
+    local exe
+    exe="$(find "$1" -maxdepth 1 -type f -perm -u+x | head -n1)"
+    case "$(od -An -tx1 -j18 -N2 "$exe" 2>/dev/null | tr -d ' \n')" in
+        3e00) echo linux-x86_64 ;;
+        b700) echo linux-arm64 ;;
+        *) echo "linux-unknown" ;;
+    esac
+}
+
 bundle_linux() {
     local out="$1" bundle="$2"
-    [ "$(target_of "$out")" = linux-x86_64 ] || die "$out is not a linux-x86_64 libmpv artifact"
     [ -d "$bundle/lib" ] && [ -d "$bundle/data" ] || die "$bundle is not a Flutter Linux bundle"
+    local want
+    want="$(bundle_target "$bundle")"
+    [ "$(target_of "$out")" = "$want" ] || die "$out is not a $want libmpv artifact (the bundle is $want)"
     command -v patchelf >/dev/null || die "patchelf is required (apt install patchelf)"
     local f name soname
     # Real files, installed under their SONAME (what the dynamic linker looks for).

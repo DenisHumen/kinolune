@@ -7,8 +7,8 @@
 |---|---|
 | `.github/workflows/flutter.yml` | PR в `clients/flutter/**`: `dart format`, `flutter analyze`, тесты для приложения и каждого пакета; smoke-сборки Linux (с упаковкой) и Android debug. Обязательная проверка — `flutter-green` |
 | `.github/workflows/release-app.yml` | Тег `app-v*` → сборка и GitHub Release; `workflow_dispatch` → dry run (артефакт `release-<версия>`, без публикации) |
-| `linux/package.sh` | Linux-бандл Flutter → `kinolune-<v>-linux-x86_64.tar.gz` и `kinolune-<v>-x86_64.AppImage` (appimagetool 1.9.1 и runtime закреплены по SHA-256) |
-| `../linux/build-packages.sh` | tar.gz → `kinolune-<v>-linux-amd64.deb` и `kinolune-<v>-linux-x86_64.rpm` (nfpm 2.48.0 по SHA-256); репозитории APT/DNF — `../linux/build-repo.sh`, `linux-repo.yml` (PKG-023, ADR-0109) |
+| `linux/package.sh` | Linux-бандл Flutter → `kinolune-<v>-linux-<arch>.tar.gz` и `kinolune-<v>-<arch>.AppImage`, `<arch>` = `x86_64` или `aarch64` по ELF-заголовку исполняемого файла (appimagetool 1.9.1 и runtime для обеих архитектур закреплены по SHA-256; собирать на машине той же архитектуры, PKG-026) |
+| `../linux/build-packages.sh` | tar.gz → `kinolune-<v>-linux-amd64.deb` и `kinolune-<v>-linux-x86_64.rpm` (на arm64 — `…-linux-arm64.deb` и `…-linux-aarch64.rpm`; nfpm 2.48.0 по SHA-256); репозитории APT/DNF — `../linux/build-repo.sh`, `linux-repo.yml` (PKG-023, ADR-0109) |
 | `android/sign.sh` | Переподпись APK ключом из секретов (apksigner, v1+v2+v3) или оставляет debug-подпись |
 | `android/check-native-licences.sh` | Лицензионный гейт APK: только наш набор libmpv из `tools/mpv`, FFmpeg — отдельными `libav*/libsw*` с «LGPL version 2.1 or later» без `--enable-gpl/nonfree/version3`, libmpv — `-Dgpl=false` без вшитого FFmpeg; иначе релиз падает |
 | `lgpl-sources.sh` | Исходники libmpv/FFmpeg для релиза: архив `tools/mpv/build.sh sources`, сверенный с `BUILDINFO.txt` вложенных сборок (см. ниже) |
@@ -28,7 +28,7 @@
 
 Оба платформенных артефакта несут **нашу** сборку libmpv + FFmpeg под LGPL-2.1+ из
 [`tools/mpv`](../../tools/mpv/README.md) (PLAY-002, PLAY-013). Релиз собирает её в том же запуске:
-`release-app.yml` вызывает `libmpv.yml` (`workflow_call`, `release: true` — только Linux x86_64,
+`release-app.yml` вызывает `libmpv.yml` (`workflow_call`, `release: true` — только Linux x86_64 и arm64,
 три Android-ABI и архив исходников; кэш сборок с `main` переиспользуется).
 
 - **Android.** Приложение подменяет `media_kit_libs_android_video` локальным пакетом

@@ -8,7 +8,7 @@
 
 | Путь | Что |
 |---|---|
-| `Containerfile` | образ ОС: `FROM fedora-bootc:45@sha256:…` (пин по digest), пакеты, сервисы, firewall, `bootc container lint` |
+| `Containerfile` | образ ОС: `FROM ghcr.io/denishumen/fedora-bootc:45@sha256:…` (пин по digest из нашего зеркала, см. ниже), пакеты, сервисы, firewall, `bootc container lint` |
 | `packages.txt` | пакеты поверх базы (Samba, wsdd, Avahi, firewalld, smartmontools, mdadm, btrfs-progs, greenboot, Cockpit) |
 | `rootfs/` | файлы, копируемые в образ: юниты наших сервисов, preset, `tmpfiles.d`, `smb.conf` и сгенерированный по умолчанию `smb.conf.d/kinolune.conf`, `sshd_config.d`, `file_contexts.local` |
 | `scripts/build-image.sh` | сборка образа (`podman`, если есть, иначе `docker`) |
@@ -31,6 +31,8 @@
 | `tests/vm-install.sh` | DIST-005: установка `alpha-installer` по файлу ответов на виртуальный NVMe (UEFI), загрузка установленной системы, проверки по SSH, `bootc upgrade --check` против реестра |
 | `tests/wifi-hwsim.sh`, `tests/wifi-hwsim-vm.sh` | DIST-032: Wi-Fi приложения (клиент NetworkManager, `tool/nm_probe.dart`) в VM Fedora Cloud с `mac80211_hwsim` — точки WPA2 и открытая, пользователь группы `kinolune` без root |
 | `.work/` | локальные артефакты (диски, ключи SSH, логи); в git не попадает |
+
+**Зеркало базового образа.** quay.io периодически удаляет старые digest-ы `fedora-bootc`, и сборка по закреплённому digest-у падает с «manifest unknown». Поэтому `Containerfile` и `installer/Containerfile` берут базу из зеркала `ghcr.io/denishumen/fedora-bootc` (публичный пакет). Workflow [`base-image-mirror.yml`](../.github/workflows/base-image-mirror.yml) копирует туда закреплённые digest-ы и текущий `:45` с теми же digest-ами (`skopeo copy --all --preserve-digests`) раз в неделю, при смене пина на main и вручную. Сменить базу: взять digest текущего `quay.io/fedora/fedora-bootc:45`, запустить `base-image-mirror` (или он уже скопировал его по расписанию), вписать digest в оба `Containerfile`.
 
 ## Что в образе
 
