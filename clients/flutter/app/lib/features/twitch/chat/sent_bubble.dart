@@ -442,37 +442,41 @@ class SentBubbleLayer extends StatelessWidget {
   Widget build(BuildContext context) {
     final inset = sentBubbleInset(formFactor);
     final pad = MediaQuery.maybeViewPaddingOf(context) ?? EdgeInsets.zero;
+    // The window's overlay has no Material: give the text its style.
     return ExcludeFocus(
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            top: inset + pad.top,
-            right: inset + pad.right,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: sentBubbleMaxWidth(formFactor),
-              ),
-              child: ListenableBuilder(
-                listenable: bubbles,
-                builder: (context, _) => Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    for (final b in bubbles.items)
-                      SentBubble(
-                        key: ValueKey('twitch-sent-bubble-${b.id}'),
-                        data: b,
-                        formFactor: formFactor,
-                        reduceMotion: reduceMotion,
-                        onDone: () => bubbles.remove(b.id),
-                      ),
-                  ],
+      child: Material(
+        type: MaterialType.transparency,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: inset + pad.top,
+              right: inset + pad.right,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: sentBubbleMaxWidth(formFactor),
+                ),
+                child: ListenableBuilder(
+                  listenable: bubbles,
+                  builder: (context, _) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      for (final b in bubbles.items)
+                        SentBubble(
+                          key: ValueKey('twitch-sent-bubble-${b.id}'),
+                          data: b,
+                          formFactor: formFactor,
+                          reduceMotion: reduceMotion,
+                          onDone: () => bubbles.remove(b.id),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
