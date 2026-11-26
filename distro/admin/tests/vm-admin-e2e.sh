@@ -12,6 +12,15 @@
 # restart, journal, Wi-Fi radio, firewall openings, mount/unmount of a data
 # disk, update proxy (a fake alpha-updated on its unix socket), LAN-only
 # filter, reboot with confirmation, certificate kept across the reboot.
+# DIST-018 (tests/vm_samba_check.py plus smbclient from outside the VM
+# through QEMU's port forward and the VM's firewall): SSH on at the first
+# boot because keys were installed, keys only; firewall with 445/tcp and no
+# NetBIOS; config rendered at boot, SELinux labels; a user created through
+# the API reads and writes their folder and Media; anonymous access refused,
+# then Media read-only for guests when turned on; the smb opening closes and
+# reopens SMB; SSH off/on through the API; guest setting and a closed
+# opening survive the reboot. SMB_EXEC="docker exec <c> smbclient" runs
+# smbclient elsewhere (it must reach 127.0.0.1:VM_SMB_PORT).
 #
 # Requirements as distro/tests/vm-switch-rollback.sh. QEMU_EXEC="docker exec <c>" runs
 # QEMU in a helper container (see scripts/run-vm.sh). KEEP=1 leaves the VM running.
@@ -23,6 +32,10 @@ mkdir -p "${WORK_DIR}"
 KEY="${WORK_DIR}/vm_key"
 [[ -f "${KEY}" ]] || ssh-keygen -q -t ed25519 -N '' -C alpha-os-vm-test -f "${KEY}"
 read -r -a qemu_exec <<< "${QEMU_EXEC:-}"
+
+export VM_SMB_PORT="${VM_SMB_PORT:-$((VM_SSH_PORT + 1))}"
+read -r -a smb_exec <<< "${SMB_EXEC:-smbclient}"
+smb() { "${smb_exec[@]}" -p "${VM_SMB_PORT}" -m SMB3 "$@"; }
 
 LOCAL_REPO="localhost:${REGISTRY_PORT}/alpha-os"
 VM_REPO="10.0.2.2:${REGISTRY_PORT}/alpha-os"
@@ -160,8 +173,50 @@ fi
 vm "ip addr del 192.168.77.7/32 dev lo; ip addr del 203.0.113.7/32 dev lo"
 log "OK LAN client served, public address refused"
 
+# --- Samba, users, firewall, SSH (DIST-018) ----------------------------------------------
+sleep 30   # the login rate limit (10 a minute per address) refills
+vm python3 - setup < "${ADMIN_TESTS}/vm_samba_check.py"
+S=//127.0.0.1
+if smb -N -L "${S}" >/dev/null 2>&1; then die "anonymous share list works"; fi
+if smb -N "${S}/Media" -c ls >/dev/null 2>&1; then die "anonymous Media access works"; fi
+smb -U "anna%E2e-pass-1" -L "${S}" | grep -q 'Kinolune OS' || die "anna: share list without 'Kinolune OS'"
+smb -U "anna%E2e-pass-1" "${S}/Media" -c 'put /etc/hostname film.txt' >/dev/null || die "anna cannot write Media"
+smb -U "anna%E2e-pass-1" "${S}/Users" -c 'put /etc/hostname anna/private.txt' >/dev/null || die "anna cannot write Users/anna"
+smb -U "dina%Dina-pass-1" "${S}/Users" -c 'put /etc/hostname dina/notes.txt' >/dev/null || die "dina cannot write Users/dina"
+smb -U "dina%Dina-pass-1" "${S}/Media" -c 'get film.txt /dev/null' >/dev/null || die "dina cannot read Media"
+if smb -U "dina%Dina-pass-1" "${S}/Users" -c 'get anna/private.txt /dev/null' >/dev/null 2>&1; then
+    die "dina reads anna's folder"
+fi
+[[ "$(vm "stat -c '%U %a' /var/srv/users/dina/notes.txt")" == "dina 600" ]] || die "dina's file owner/mode"
+log "OK from outside the VM: anonymous refused; anna and dina (created via the API) read/write their folders and Media; dina cannot read anna's"
+
+vm python3 - guest on < "${ADMIN_TESTS}/vm_samba_check.py"
+smb -N "${S}/Media" -c ls | grep -q film.txt || die "guest cannot read Media"
+if smb -N "${S}/Media" -c 'put /etc/hostname guest.txt' >/dev/null 2>&1 || vm test -e /var/srv/media/guest.txt; then
+    die "guest wrote to Media"
+fi
+if smb -N "${S}/Users" -c ls >/dev/null 2>&1; then die "guest reaches Users"; fi
+log "OK guest read on: anonymous reads Media, cannot write, no Users"
+
+vm python3 - opening smb close < "${ADMIN_TESTS}/vm_samba_check.py"
+if timeout 30 "${smb_exec[@]}" -p "${VM_SMB_PORT}" -m SMB3 -t 10 -U "dina%Dina-pass-1" "${S}/Media" -c ls >/dev/null 2>&1; then
+    die "SMB reachable with the smb opening closed"
+fi
+vm python3 - opening smb open < "${ADMIN_TESTS}/vm_samba_check.py"
+smb -U "dina%Dina-pass-1" "${S}/Media" -c ls >/dev/null || die "SMB not reachable after reopening"
+vm python3 - opening media close < "${ADMIN_TESTS}/vm_samba_check.py"
+log "OK firewall: closing the smb opening blocks SMB from outside, reopening restores it; media port closed for the reboot check"
+
+vm "cat > /run/vm_samba_check.py" < "${ADMIN_TESTS}/vm_samba_check.py"
+vm "systemd-run --quiet --unit=ssh-toggle-check python3 /run/vm_samba_check.py ssh-toggle"
+sleep 25
+wait_ssh
+RES="$(vm cat /run/ssh-toggle.result)"
+[[ "${RES}" == "off=True 200 on=True 200" ]] || die "SSH toggle through the API: ${RES}"
+log "OK SSH off (unit disabled, port closed, runtime+permanent) and on again through the API"
+
 log "systemd-analyze security:"
-vm "systemd-analyze security alpha-admin.service | tail -1; systemd-analyze security alpha-admin-auth@x.service 2>/dev/null | tail -1" || true
+vm "systemd-analyze security alpha-admin.service | tail -1; systemd-analyze security alpha-admin-auth@x.service 2>/dev/null | tail -1; systemd-analyze security alpha-admin-priv@x.service 2>/dev/null | tail -1" || true
 
 # --- reboot with confirmation ------------------------------------------------------------
 FP_BEFORE="$(vm python3 - fingerprint < "${ADMIN_TESTS}/vm_api_check.py")"
@@ -182,6 +237,10 @@ echo "${OUT}" | grep '^OK'
 FP_AFTER="$(echo "${OUT}" | sed -n 's/^FP //p')"
 [[ "${FP_AFTER}" == "${FP_BEFORE}" ]] || die "certificate changed across the reboot: ${FP_BEFORE} -> ${FP_AFTER}"
 log "OK rebooted through the API; same certificate after the reboot"
+
+vm python3 - after < "${ADMIN_TESTS}/vm_samba_check.py"
+smb -U "dina%Dina-pass-1" "${S}/Users" -c 'get dina/notes.txt /dev/null' >/dev/null || die "dina after the reboot"
+log "OK after the reboot: dina's SMB log-in and files kept"
 
 vm "journalctl -u alpha-admin -b -1 -o cat --no-pager | tail -n 12" > "${WORK_DIR}/admin-e2e-journal.txt" || true
 log "ALL CHECKS PASSED"

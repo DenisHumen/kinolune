@@ -313,6 +313,13 @@ class FilesController extends ChangeNotifier {
 
   final _changes = StreamController<void>.broadcast();
 
+  /// LIB-028: every progress callback and state change of an upload, not
+  /// throttled (the live card on other devices paces itself in the core).
+  void Function(UploadJob job)? onJobChanged;
+
+  /// LIB-028: an upload was cancelled and left the queue.
+  void Function(UploadJob job)? onJobCancelled;
+
   /// A write landed and the library was refreshed: lists re-read.
   Stream<void> get changes => _changes.stream;
 
@@ -421,6 +428,7 @@ class FilesController extends ChangeNotifier {
     }
     if (job.ownedCopy) await _deleteLocal(job.localPath);
     await _save();
+    onJobCancelled?.call(job);
     notifyListeners();
   }
 
@@ -432,6 +440,7 @@ class FilesController extends ChangeNotifier {
       ..state = UploadState.waiting
       ..retryAt = null
       ..error = null;
+    onJobChanged?.call(job);
     notifyListeners();
     _pump();
   }
@@ -459,6 +468,7 @@ class FilesController extends ChangeNotifier {
     job
       ..state = UploadState.running
       ..error = null;
+    onJobChanged?.call(job);
     notifyListeners();
     try {
       // A restart right after the file was finished: it is there already.
@@ -482,6 +492,7 @@ class FilesController extends ChangeNotifier {
             job
               ..done = done
               ..size = total;
+            onJobChanged?.call(job);
             final now = clock();
             if (now.difference(last).inMilliseconds >= 200 || done == total) {
               last = now;
@@ -505,6 +516,7 @@ class FilesController extends ChangeNotifier {
       _failed(job, FilesError.other);
     }
     await _save();
+    onJobChanged?.call(job);
     notifyListeners();
   }
 
@@ -550,6 +562,7 @@ class FilesController extends ChangeNotifier {
         ..state = UploadState.waiting
         ..retryAt = null
         ..error = null;
+      onJobChanged?.call(job);
       notifyListeners();
       _pump();
     });

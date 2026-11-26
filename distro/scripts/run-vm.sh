@@ -5,6 +5,7 @@
 # SSH: ssh -i distro/.work/vm_key -p $VM_SSH_PORT root@127.0.0.1
 # Set VM_UEFI=1 to boot with OVMF instead of SeaBIOS (the generic image supports both).
 # VM_EXTRA_DISKS="a.raw b.raw" attaches more virtio disks (vdb, vdc, ...).
+# VM_SMB_PORT=N also forwards 127.0.0.1:N to SMB (445) in the VM.
 # QEMU_EXEC="docker exec <container>" runs QEMU through a helper container that has
 # qemu and /dev/kvm (the paths must be the same inside it).
 set -euo pipefail
@@ -29,6 +30,11 @@ if [[ "${VM_UEFI:-0}" == 1 ]]; then
               -drive "if=pflash,format=raw,file=${WORK_DIR}/OVMF_VARS.fd")
 fi
 
+fwd="hostfwd=tcp:127.0.0.1:${VM_SSH_PORT}-:22"
+if [[ -n "${VM_SMB_PORT:-}" ]]; then
+    fwd+=",hostfwd=tcp:127.0.0.1:${VM_SMB_PORT}-:445"
+fi
+
 extra=()
 for d in ${VM_EXTRA_DISKS:-}; do
     extra+=(-drive "file=${d},format=raw,if=virtio,cache=unsafe")
@@ -41,7 +47,7 @@ log "Starting VM (${VM_CPUS} vCPU, ${VM_MEM_MB} MiB), ssh on 127.0.0.1:${VM_SSH_
     "${firmware[@]}" \
     -drive "file=${DISK},format=raw,if=virtio,cache=unsafe" \
     "${extra[@]}" \
-    -netdev "user,id=n0,hostfwd=tcp:127.0.0.1:${VM_SSH_PORT}-:22" \
+    -netdev "user,id=n0,${fwd}" \
     -device virtio-net-pci,netdev=n0 \
     -display none -serial "file:${SERIAL}" \
     -daemonize -pidfile "${PIDFILE}"
