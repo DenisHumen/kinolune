@@ -4,7 +4,7 @@
 // CSS and ES modules embedded in the binary, no build step and no CDN. The
 // pages talk only to the documented REST API (internal/server/openapi.yaml).
 // Colours come from the generated design tokens (static/tokens.css, a copy of
-// design/tokens/generated/web/tokens.css); see docs/adr/NNNN-admin-web-ui.md.
+// design/tokens/generated/web/tokens.css); see docs/adr/0176-admin-web-ui.md.
 package webui
 
 import (
