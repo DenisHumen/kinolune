@@ -134,6 +134,13 @@ pub trait LiveSource: Send + Sync {
         let _ = stream;
         None
     }
+
+    /// The channel's avatar URL from Helix, attached to the finished
+    /// recording (TWI-035); `None` without.
+    fn avatar_url(&self, user_id: &str) -> Option<String> {
+        let _ = user_id;
+        None
+    }
 }
 
 /// Timeline hook: usually `pa_twitch::chapters::store::load_live_timeline`
@@ -221,6 +228,12 @@ impl LiveSource for TwitchLiveSource {
 
     fn timeline(&self, stream_id: &str) -> Option<LiveTimeline> {
         self.timeline.as_ref().and_then(|f| f(stream_id))
+    }
+
+    fn avatar_url(&self, user_id: &str) -> Option<String> {
+        crate::archive::source::ArchiveSource::avatar_url(self.inner.as_ref(), user_id)
+            .ok()
+            .flatten()
     }
 
     fn chat(&self, stream: &LiveStream) -> Option<Box<dyn LiveChat>> {

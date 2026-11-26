@@ -30,7 +30,13 @@
 //!
 //! On low space the storage monitor (CORE-012) empties the trash and
 //! pauses other jobs first; a live recording is paused only at the hard
-//! reserve, and the segments it misses become a gap (`paused`).
+//! reserve, and the segments it misses become a gap (`paused`). When a
+//! write fails because the disk is full after all, the recording ends
+//! (`disk_full`) and keeps its MPEG-TS parts as they are, without a remux
+//! (TWI-035).
+//!
+//! [`LiveStops`] ends a recording on request ("Stop" in the app, TWI-035)
+//! and finalises it like the end of the broadcast (`stopped`).
 //!
 //! [`AutoRecord`] queues recordings from TWI-009 live events by the
 //! household's record rules.
@@ -44,7 +50,9 @@ pub mod testing;
 mod timeline;
 
 pub use journal::{AdEntry, CatEntry, ChatEntry, GapEntry, SegEntry};
-pub use recorder::{INFO_FORMAT, LiveRecorder, LiveRequest, LiveSettings, TWITCH_LIVE_RECORD};
+pub use recorder::{
+    INFO_FORMAT, LiveRecorder, LiveRequest, LiveSettings, LiveStops, TWITCH_LIVE_RECORD,
+};
 pub use rules::{AutoDecision, AutoRecord, group_of, quality_of};
 pub use source::{
     ChatFn, ChatRecord, ChatSourceFeed, LiveChat, LiveClock, LiveSource, LiveStream, SystemClock,

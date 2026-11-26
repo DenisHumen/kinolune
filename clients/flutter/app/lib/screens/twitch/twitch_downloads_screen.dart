@@ -123,7 +123,8 @@ String _stateLabel(AppLocalizations l, TwitchDownloadState s) => switch (s) {
     Icons.play_arrow_rounded,
     l.twitchDownloadResume,
   ),
-  TwitchDownloadAction.cancel => (Icons.close_rounded, l.twitchDownloadCancel),
+  TwitchDownloadAction.cancel ||
+  TwitchDownloadAction.stop => (Icons.close_rounded, l.twitchDownloadCancel),
   TwitchDownloadAction.retry => (Icons.refresh_rounded, l.twitchDownloadRetry),
   TwitchDownloadAction.remove => (
     Icons.delete_outline_rounded,
