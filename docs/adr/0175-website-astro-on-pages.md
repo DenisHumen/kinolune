@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
-# ADR-NNNN. Сайт: Astro в `docs/site`, общий артефакт GitHub Pages с репозиториями APT/DNF
+# ADR-0175. Сайт: Astro в `docs/site`, общий артефакт GitHub Pages с репозиториями APT/DNF
 
 - Статус: **принят** (SITE-001)
 - Дата: 2026-11-26
