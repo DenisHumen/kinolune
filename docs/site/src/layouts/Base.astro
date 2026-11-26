@@ -1,0 +1,78 @@
+---
+// SPDX-License-Identifier: MPL-2.0
+// Page shell: head, glass header with navigation and language switcher, footer.
+import '../generated/tokens.css';
+import '../styles/site.css';
+import { languageNames, links, locales, useStrings, href } from '../i18n/strings.mjs';
+
+const { lang, title, description, path = '' } = Astro.props;
+const t = useStrings(lang);
+const canonical = new URL(href(`${lang}/${path}`), Astro.site);
+---
+<!doctype html>
+<html lang={lang} data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="color-scheme" content="dark" />
+    <link rel="canonical" href={canonical} />
+    {locales.map((l) => (
+      <link rel="alternate" hreflang={l} href={new URL(href(`${l}/${path}`), Astro.site)} />
+    ))}
+    <link rel="alternate" hreflang="x-default" href={new URL(href(''), Astro.site)} />
+    <link rel="icon" href={href('favicon.svg')} type="image/svg+xml" />
+    <link rel="icon" href={href('favicon.ico')} sizes="32x32" />
+    <link rel="apple-touch-icon" href={href('apple-touch-icon.png')} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL(href('assets/desktop-home.png'), Astro.site)} />
+  </head>
+  <body>
+    <a class="skip" href="#main">{t('skip')}</a>
+    <div class="ambient" aria-hidden="true"></div>
+    <header class="topbar glass">
+      <a class="brand" href={href(`${lang}/`)}>
+        <img src={href('assets/lockup-dark.svg')} alt="Kinolune" width="122" height="40" />
+      </a>
+      <nav aria-label={t('nav.label')}>
+        <ul>
+          <li><a href={href(`${lang}/#features`)}>{t('nav.features')}</a></li>
+          <li><a href={href(`${lang}/#install`)}>{t('nav.install')}</a></li>
+          <li><a href={href(`${lang}/#open-source`)}>{t('nav.opensource')}</a></li>
+          <li><a href={href(`${lang}/#donate`)}>{t('nav.donate')}</a></li>
+          <li><a href={links.repo} rel="noopener">{t('nav.github')}</a></li>
+        </ul>
+      </nav>
+      <nav class="langs" aria-label={t('lang.label')}>
+        {locales.map((l) => (
+          <a
+            href={href(`${l}/${path}`)}
+            hreflang={l}
+            lang={l}
+            data-lang={l}
+            aria-current={l === lang ? 'true' : undefined}
+          >{l.toUpperCase()}<span class="sr-only"> — {languageNames[l]}</span></a>
+        ))}
+      </nav>
+    </header>
+    <main id="main">
+      <slot />
+    </main>
+    <footer class="footer">
+      <p>{t('footer.license')} <a href={links.repo} rel="noopener">GitHub</a></p>
+      <p class="muted">{t('footer.trademarks')}</p>
+    </footer>
+    <script is:inline>
+      // Remember an explicit language choice for the root page redirect.
+      document.querySelectorAll('[data-lang]').forEach((a) =>
+        a.addEventListener('click', () => {
+          try { localStorage.setItem('kinolune-lang', a.dataset.lang); } catch (_) {}
+        }),
+      );
+    </script>
+  </body>
+</html>

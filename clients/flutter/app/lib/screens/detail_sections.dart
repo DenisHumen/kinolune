@@ -673,6 +673,7 @@ String extraKindLabel(AppLocalizations l, MediaExtraKind k) => switch (k) {
   MediaExtraKind.interview => l.detailExtraInterview,
   MediaExtraKind.short => l.detailExtraShort,
   MediaExtraKind.scene => l.detailExtraScene,
+  MediaExtraKind.discTitle => l.detailExtraDiscTitle,
   MediaExtraKind.other => l.detailExtraOther,
 };
 

@@ -310,6 +310,71 @@ class TwitchClip {
   String get url => 'https://clips.twitch.tv/$slug'; // l10n-ignore
 }
 
+/// How pressing «Клип» ended (TWI-040).
+enum TwitchClipOutcome {
+  ready,
+
+  /// No sign-in or it expired: sign in, then press again.
+  signInRequired,
+
+  /// The sign-in lacks `clips:edit`: sign in again asking for it.
+  scopeRequired,
+
+  /// The channel turned clips off: the button stays off with the reason.
+  disabled,
+  offline,
+
+  /// Twitch did not finish the clip within 15 seconds.
+  notReady,
+  rateLimited,
+  network,
+  failed,
+}
+
+/// A clip made from the app (TWI-040).
+class TwitchNewClip {
+  const TwitchNewClip({
+    required this.slug,
+    required this.url,
+    required this.editUrl,
+    this.embedUrl = '',
+    this.title = '',
+    this.broadcasterName = '',
+    this.thumbnailUrl,
+    this.duration = Duration.zero,
+  });
+
+  final String slug;
+
+  /// `clips.twitch.tv` page: «Скопировать ссылку», «Поделиться».
+  final String url;
+
+  /// Twitch page to trim and title the clip: «Открыть на Twitch».
+  final String editUrl;
+  final String embedUrl;
+  final String title;
+  final String broadcasterName;
+  final String? thumbnailUrl;
+  final Duration duration;
+}
+
+/// Answer of [TwitchBackend.makeClip].
+class TwitchClipResult {
+  const TwitchClipResult(
+    this.outcome, {
+    this.clip,
+    this.message = '',
+    this.retryAfter = Duration.zero,
+  });
+
+  final TwitchClipOutcome outcome;
+  final TwitchNewClip? clip;
+
+  /// Twitch's explanation ([TwitchClipOutcome.disabled]).
+  final String message;
+  final Duration retryAfter;
+}
+
 class TwitchScheduleSegment {
   const TwitchScheduleSegment({
     required this.id,

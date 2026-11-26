@@ -1,0 +1,24 @@
+ Kinolune OS 0.1.0 - Installer
+
+ Kinolune OS is installed
+
+ Next steps:
+ 1. Remove the installer USB stick and reboot the computer.
+ 2. Admin panel: https://kinolune.local in a browser on the same network.
+    If the .local address does not open, find the server IP in the router's
+    device list.
+ 3. Sign in as admin with the password you set.
+
+ Elapsed 31s
+
+ > Reboot
+   Save an answer file for repeat installs
+   Power off
+   Text menu and command line
+
+
+
+
+
+
+ Up/Down: select  Enter: run

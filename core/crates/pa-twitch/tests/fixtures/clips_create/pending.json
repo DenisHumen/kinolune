@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "headers": {
+    "Ratelimit-Limit": "800",
+    "Ratelimit-Remaining": "797",
+    "Ratelimit-Reset": "1800000060"
+  },
+  "body": {
+    "data": [],
+    "pagination": {}
+  }
+}

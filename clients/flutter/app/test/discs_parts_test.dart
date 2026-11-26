@@ -87,7 +87,10 @@ void main() {
 
     expect(find.byKey(const ValueKey('unplayable-dialog')), findsOneWidget);
     expect(find.text("This file can't be played"), findsOneWidget);
-    expect(find.textContaining('Disc images (.iso)'), findsOneWidget);
+    expect(
+      find.textContaining('Disc images play from the library'),
+      findsOneWidget,
+    );
     expect(find.byType(PlayerScreen), findsNothing);
     expect(engine.calls, isEmpty);
     expect(library.asked, isEmpty);
@@ -162,7 +165,7 @@ void main() {
 
   test('the Russian reason', () async {
     final ru = await AppLocalizations.delegate.load(const Locale('ru'));
-    expect(ru.libraryUnplayableDiscImage, contains('.iso'));
+    expect(ru.libraryUnplayableDiscImage, contains('Образы дисков'));
     expect(ru.libraryUnplayableTitle, 'Этот файл не воспроизводится');
   });
 }

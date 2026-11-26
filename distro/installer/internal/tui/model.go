@@ -98,6 +98,8 @@ type Model struct {
 
 	logCh    chan tea.Msg
 	logLines []string
+	tasks    *install.Tracker // progress of every task (DIST-034)
+	showLog  bool             // L: the command log instead of the tasks
 	stepLine string
 	started  time.Time
 	now      time.Time
@@ -123,6 +125,7 @@ type blockedDisk struct {
 
 type (
 	logMsg  string
+	progMsg install.Event
 	doneMsg struct {
 		hash string
 		err  error
@@ -207,6 +210,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.addLog(string(msg))
 		m.now = m.opt.Now()
 		return m, m.waitLog()
+	case progMsg:
+		m.tasks.Apply(install.Event(msg))
+		m.now = m.opt.Now()
+		return m, m.waitLog()
 	case doneMsg:
 		m.finish(msg)
 		return m, nil
@@ -229,6 +236,14 @@ func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.quitOpen, m.quitIdx = true, 0
+		return m, nil
+	}
+	if m.scr == scrProgress {
+		// L (Д on a Cyrillic layout) switches between the tasks and the log.
+		switch k.String() {
+		case "l", "L", "д", "Д":
+			m.showLog, m.msg = !m.showLog, ""
+		}
 		return m, nil
 	}
 	if m.quitOpen {
@@ -682,6 +697,7 @@ func (m *Model) summaryKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m *Model) startInstall() tea.Cmd {
 	m.scr = scrProgress
 	m.logLines, m.stepLine, m.err, m.hash = nil, "", nil, ""
+	m.tasks, m.showLog = install.NewTracker(), false
 	m.started = m.opt.Now()
 	m.now = m.started
 	ch := make(chan tea.Msg, 256)
@@ -740,7 +756,9 @@ func (m *Model) finish(d doneMsg) {
 	}
 }
 
-// lineWriter turns the installer output into log lines for the UI.
+// lineWriter turns the installer output into log lines for the UI. It also
+// carries the progress events: Env.Install hands them to Progress when its
+// log writer has that method.
 type lineWriter struct {
 	ch  chan tea.Msg
 	buf []byte
@@ -757,6 +775,15 @@ func (w *lineWriter) Write(p []byte) (int, error) {
 		w.buf = w.buf[i+1:]
 	}
 	return len(p), nil
+}
+
+// Progress implements ProgressSink.
+func (w *lineWriter) Progress(e install.Event) { w.ch <- progMsg(e) }
+
+// ProgressSink is the optional side of the log writer that Env.Install
+// passes the progress of every task to (install.Installer.Progress).
+type ProgressSink interface {
+	Progress(install.Event)
 }
 
 func (w *lineWriter) flush() {

@@ -1,0 +1,14 @@
+{
+  "status": 200,
+  "body": {
+    "access_token": "fakeaccess3000000000000000000",
+    "expires_in": 14400,
+    "refresh_token": "fakerefresh3000000000000000000000000000000000000",
+    "scope": [
+      "clips:edit",
+      "user:read:chat",
+      "user:read:follows"
+    ],
+    "token_type": "bearer"
+  }
+}

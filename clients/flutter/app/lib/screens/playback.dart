@@ -79,6 +79,13 @@ Future<void> playVideo(
     return showUnplayable(context, reason);
   }
   final services = Services.read(context);
+  // PLAY-017: a Blu-ray or DVD plays its main title; a protected one says
+  // so instead.
+  final disc = await discOf(services.library, item);
+  if (!context.mounted) return;
+  if (disc?.protection != null) {
+    return showUnplayable(context, Unplayable.protectedDisc);
+  }
   final l = context.l10n;
   // MUS-003: music is global state; a video pauses it and offers it back.
   final messenger = ScaffoldMessenger.maybeOf(context);
@@ -96,6 +103,7 @@ Future<void> playVideo(
     item,
     start,
     transcode: transcode,
+    disc: disc,
   );
   if (!context.mounted) return;
   // UI-014: track panels across the top with tabs for the remote.
@@ -206,10 +214,15 @@ Future<PlayRequest> _request(
   int startMs, {
   bool eager = true,
   ServerTranscode? transcode,
+  DiscPlayback? disc,
 }) async {
   final series = item.kind == ItemKind.episode ? item.showId : null;
   final base = await playbackUriOf(services.library, item);
-  final uri = await _serverStream(services, item, startMs, transcode) ?? base;
+  final server = await _serverStream(services, item, startMs, transcode);
+  final uri = server ?? base;
+  // PLAY-017: chapters, angles and stream languages of a disc title.
+  final title = server == null ? disc?.main : null;
+  final angles = title?.angleUris ?? const <String>[];
   return PlayRequest(
     uri: uri,
     title: item.kind == ItemKind.episode
@@ -239,8 +252,36 @@ Future<PlayRequest> _request(
         base == item.playbackUri && services.skipMode.value != SkipMode.off
         ? await skipSegmentsOf(services.library, item, analyze: eager)
         : const [],
+    chapters: title == null || title.chaptersMs.length < 2
+        ? null
+        : discChapters(title),
+    angles: angles.length > 1 && angles.contains(uri) ? angles : const [],
+    streamLanguages: title == null
+        ? const {}
+        : {
+            for (final s in title.streams)
+              if (s.language.isNotEmpty) s.id: s.language,
+          },
   );
 }
+
+/// What [item] plays if it is a Blu-ray or DVD (PLAY-017); null for other
+/// files or when the library cannot tell.
+Future<DiscPlayback?> discOf(Library library, LibraryItem item) async {
+  if (library is! LibraryDisc) return null;
+  try {
+    return await (library as LibraryDisc).discPlayback(item);
+  } catch (e) {
+    debugPrint('Disc of ${item.id} not read: $e');
+    return null;
+  }
+}
+
+/// The chapters of a disc title for the player's chapter list.
+List<PlaybackChapter> discChapters(DiscTitle title) => [
+  for (final ms in title.chaptersMs)
+    PlaybackChapter(start: Duration(milliseconds: ms)),
+];
 
 /// The HLS URL of [item] when its Jellyfin server streams it for this
 /// device (DirectStream or Transcode), or its Plex server transcodes it
@@ -397,7 +438,12 @@ Future<String> playbackUriOf(Library library, LibraryItem item) async {
   if (library is! LibraryParts) return item.playbackUri;
   try {
     final parts = await (library as LibraryParts).playParts(item);
-    if (parts.length > 1) return partsUri(parts);
+    // A disc image's main title is inside the image (PLAY-017): one file
+    // that is not the item's own.
+    if (parts.length > 1 ||
+        (parts.length == 1 && parts.single != item.playbackUri)) {
+      return partsUri(parts);
+    }
   } catch (e) {
     debugPrint('Parts of ${item.id} not read: $e');
   }
@@ -415,6 +461,7 @@ Future<void> showUnplayable(BuildContext context, Unplayable reason) {
       title: Text(l.libraryUnplayableTitle),
       content: Text(switch (reason) {
         Unplayable.discImage => l.libraryUnplayableDiscImage,
+        Unplayable.protectedDisc => l.libraryUnplayableProtectedDisc,
         Unplayable.other => l.libraryUnplayableOther,
       }),
       actions: [

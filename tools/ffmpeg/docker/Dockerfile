@@ -9,11 +9,14 @@
 
 FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+# The mingw-w64 cross compilers only on amd64: the arm64 image (linux-arm64,
+# built natively on an arm64 runner, PKG-026) never builds Windows targets.
+RUN mingw=""; [ "$(dpkg --print-architecture)" = amd64 ] && mingw="gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev"; \
+    apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         bash ca-certificates curl xz-utils bzip2 unzip patch file \
         build-essential pkgconf meson ninja-build nasm python3 \
         zlib1g-dev libva-dev libdrm-dev libfontconfig-dev \
-        gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev \
+        $mingw \
     && rm -rf /var/lib/apt/lists/*
 
 # Optional Android NDK (~2 GB unpacked). Empty = not installed.

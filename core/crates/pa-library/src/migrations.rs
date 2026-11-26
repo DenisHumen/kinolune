@@ -71,6 +71,7 @@ pub const MIGRATIONS: &[MigrationFile] = &[
     migration!(202701080000, "202701080000_META-012_clearart_contract"),
     migration!(202701130000, "202701130000_SYNC-015_auto_sync_folder"),
     migration!(202701200000, "202701200000_LIB-028_live_uploads"),
+    migration!(202701210000, "202701210000_UI-057_work_airing"),
 ];
 
 impl MigrationFile {

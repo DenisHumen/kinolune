@@ -4,9 +4,11 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'airing.dart';
 import 'audiobooks.dart';
 import 'content_kind.dart';
 import 'details.dart';
+import 'disc.dart';
 import 'episodes.dart';
 import 'files.dart';
 import 'folder_rules.dart';
@@ -73,6 +75,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required PlatformInt64 id,
     required String itemId,
   });
+
+  /// The airing state of every show that has one (poster labels).
+  Future<List<CoreShowAiring>> airingAll({required PlatformInt64 nowMs});
 
   /// Alphabet index of a query in title order.
   Future<List<CoreAlphabetEntry>> alphabetIndex({
@@ -198,6 +203,15 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// logo, ratings, ids, cast and crew, extras and the probe data of the
   /// version the item plays.
   Future<CoreItemDetails> details({required String itemId});
+
+  /// What the disc of the file `rel_path` of source `source_id` plays
+  /// (as in `CoreItem` and `CoreVersion`: the first clip of a disc
+  /// folder or the image itself). `None` for a file that is not on a
+  /// disc.
+  Future<CoreDiscPlayback?> discPlayback({
+    required PlatformInt64 sourceId,
+    required String relPath,
+  });
 
   /// Ends the parent token at once (the app locked its settings again).
   Future<void> endParentSession();
@@ -589,7 +603,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// The files that play the file `rel_path` of source `source_id` (as
   /// in `CoreItem` and `CoreVersion`) as one movie (LIB-020): every part
   /// of a split file (`cd1`, `cd2`) or of a DVD title set (VOBs) in
-  /// order, else the file alone. Empty for an unknown file.
+  /// order, else the file alone. Empty for an unknown file. A Blu-ray
+  /// or DVD folder or image plays the first angle of its main title
+  /// (PLAY-017); files inside an image go through the stream proxy.
   Future<List<CorePlayPart>> playParts({
     required PlatformInt64 sourceId,
     required String relPath,
@@ -642,6 +658,21 @@ abstract class CoreLibrary implements RustOpaqueInterface {
     required String uploadId,
     required CoreUploadPhase phase,
     required String info,
+  });
+
+  /// Asks TMDB, AniList or Shikimori about a show now (its page opened).
+  /// Offline the last value comes back with `offline`.
+  Future<CoreShowAiring?> refreshAiring({
+    required String showId,
+    required CoreMetadataSettings settings,
+    required PlatformInt64 nowMs,
+  });
+
+  /// The daily background refresh of the shows that are due. Returns how
+  /// many shows a provider answered for.
+  Future<int> refreshAiringDue({
+    required CoreMetadataSettings settings,
+    required PlatformInt64 nowMs,
   });
 
   Future<bool> removeFromCollection({
@@ -950,6 +981,12 @@ abstract class CoreLibrary implements RustOpaqueInterface {
 
   /// Smart shelves by position; `pinned_only`: those on Home.
   Future<List<CoreSmartShelf>> shelves({required bool pinnedOnly});
+
+  /// The airing state of a show as last fetched; `None` without data.
+  Future<CoreShowAiring?> showAiring({
+    required String showId,
+    required PlatformInt64 nowMs,
+  });
 
   /// Episodes of a show item in `order`, or in the order stored for the
   /// show when `None`; an order without data falls back to TMDB. Each

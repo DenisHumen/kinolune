@@ -10,10 +10,12 @@ import 'package:pa_core/pa_core.dart';
 import 'package:pa_core/pa_core.dart' as bridge show subdlHasProjectKey;
 import 'package:path/path.dart' as p;
 
+import 'airing.dart';
 import 'anime_db.dart';
 import 'audiobooks.dart';
 import 'auto_recognition.dart';
 import 'content_kinds.dart';
+import 'disc.dart';
 import 'episode_order.dart';
 import 'item_details.dart';
 import 'library.dart';
@@ -69,6 +71,7 @@ class RustLibrary
         LibraryOriginalLanguage,
         LibraryMusic,
         LibraryParts,
+        LibraryDisc,
         LibraryEpisodes,
         LibraryTrickplay,
         LibraryAnimeDb,
@@ -79,7 +82,8 @@ class RustLibrary
         LibraryContentKinds,
         LibraryTrailers,
         LibraryAudiobooks,
-        LibraryLyrics {
+        LibraryLyrics,
+        LibraryAiring {
   final CoreLibrary _core;
   final String? _tempDir;
   final String _metadataCacheDir;
@@ -97,6 +101,43 @@ class RustLibrary
   /// Runs MusicBrainz after scans (META-021). Off unless the app turns it
   /// on ([openAppLibrary]): tests must not reach the network.
   bool musicMetadata = false;
+
+  /// Asks TMDB, AniList and Shikimori when the next episodes air (UI-057).
+  /// Off unless the app turns it on ([openAppLibrary]): tests must not
+  /// reach the network; off, the stored values are read. On, the shows
+  /// that are due (once a day each) are asked a minute after the start and
+  /// then every [airingRefreshEvery].
+  bool get airingRefresh => _airingRefresh;
+  set airingRefresh(bool on) {
+    _airingRefresh = on;
+    _airingTimer?.cancel();
+    _airingTimer = null;
+    if (!on || _closed) return;
+    _airingTimer = Timer(const Duration(minutes: 1), () {
+      unawaited(_refreshAiringQuietly());
+      _airingTimer = Timer.periodic(
+        airingRefreshEvery,
+        (_) => unawaited(_refreshAiringQuietly()),
+      );
+    });
+  }
+
+  bool _airingRefresh = false;
+  Timer? _airingTimer;
+
+  /// How often the background refresh looks for shows that are due.
+  static const airingRefreshEvery = Duration(hours: 6);
+
+  Future<void> _refreshAiringQuietly() async {
+    try {
+      await refreshAiringDue();
+    } catch (e) {
+      // Offline or a provider down: the next round tries again.
+    }
+  }
+
+  /// A refresh of the airing states changed something (UI-057).
+  final _airingChanges = StreamController<void>.broadcast();
 
   /// The running background music metadata run, if any.
   Future<void>? _musicRun;
@@ -2308,6 +2349,47 @@ class RustLibrary
     ];
   }
 
+  @override
+  Future<DiscPlayback?> discPlayback(LibraryItem item) async {
+    final file = fileOf(item.playbackUri);
+    if (file == null) return null;
+    final (sourceId, relPath) = file;
+    final p = await _core.discPlayback(sourceId: sourceId, relPath: relPath);
+    if (p == null) return null;
+    final base = _streamBase;
+    DiscTitle title(CoreDiscTitle t) => DiscTitle(
+      id: t.id,
+      durationMs: t.durationMs,
+      angles: [
+        for (final a in t.angles)
+          [
+            for (final f in a)
+              if (f.localPath != null || base != null)
+                f.localPath ?? streamUrl(base!, sourceId, f.relPath),
+          ],
+      ],
+      chaptersMs: [for (final c in t.chaptersMs) c.toInt()],
+      streams: [
+        for (final s in t.streams)
+          DiscStream(
+            subtitle: s.kind == 'subtitle',
+            id: s.id,
+            codec: s.codec,
+            language: s.language,
+          ),
+      ],
+      uhd: t.uhd,
+      is3d: t.is3D,
+    );
+    return DiscPlayback(
+      bluRay: p.kind == 'bluray',
+      protection: p.protection,
+      volumeId: p.volumeId,
+      main: p.main == null ? null : title(p.main!),
+      extras: [for (final e in p.extras) title(e)],
+    );
+  }
+
   /// The parts of a file the player can open: local ones, and network ones
   /// while the stream proxy runs. [playParts] and [sidecarSubtitles] use
   /// the same list, so the subtitles of part N go with video part N.
@@ -2800,6 +2882,84 @@ class RustLibrary
     _profileChanged();
   }
 
+  // -------------------------------------------------------------------
+  // UI-057: when the next episode airs
+
+  static int _nowMs() => DateTime.now().millisecondsSinceEpoch;
+
+  static ShowAiring _airing(CoreShowAiring a) {
+    final date = a.nextAirDate;
+    DateTime? day;
+    if (date != null) {
+      final parts = date.split('-').map(int.tryParse).toList();
+      if (parts.length == 3 && !parts.contains(null)) {
+        day = DateTime(parts[0]!, parts[1]!, parts[2]!);
+      }
+    }
+    final ep = a.nextEpisode;
+    final at = a.nextAirAtMs;
+    return ShowAiring(
+      showId: a.showId,
+      status: switch (a.status) {
+        CoreAiringStatus.airing => AiringStatus.airing,
+        CoreAiringStatus.hiatus => AiringStatus.hiatus,
+        CoreAiringStatus.ended => AiringStatus.ended,
+      },
+      next: ep == null
+          ? null
+          : NextAiring(
+              season: a.nextSeason,
+              episode: ep,
+              date: day,
+              at: at == null
+                  ? null
+                  : DateTime.fromMillisecondsSinceEpoch(at, isUtc: true),
+            ),
+      source: a.source,
+      checkedAt: DateTime.fromMillisecondsSinceEpoch(a.checkedAtMs),
+      offline: a.offline,
+    );
+  }
+
+  @override
+  Future<ShowAiring?> showAiring(String showId) async {
+    final a = await _core.showAiring(showId: showId, nowMs: _nowMs());
+    return a == null ? null : _airing(a);
+  }
+
+  @override
+  Future<ShowAiring?> refreshAiring(String showId) async {
+    if (!airingRefresh) return showAiring(showId);
+    final before = await showAiring(showId);
+    final a = await _core.refreshAiring(
+      showId: showId,
+      settings: metadataSettings(),
+      nowMs: _nowMs(),
+    );
+    final after = a == null ? null : _airing(a);
+    if (after != before && !_airingChanges.isClosed) _airingChanges.add(null);
+    return after;
+  }
+
+  @override
+  Future<List<ShowAiring>> airingAll() async => [
+    for (final a in await _core.airingAll(nowMs: _nowMs())) _airing(a),
+  ];
+
+  @override
+  Future<int> refreshAiringDue() async {
+    if (!airingRefresh || _closed) return 0;
+    final n = await _core.refreshAiringDue(
+      settings: metadataSettings(),
+      nowMs: _nowMs(),
+    );
+    if (n > 0 && !_airingChanges.isClosed) _airingChanges.add(null);
+    return n;
+  }
+
+  @override
+  Stream<void> get airingChanges => _airingChanges.stream;
+
   @override
   Future<void> close() async {
     if (_closed) return;
@@ -2817,6 +2977,8 @@ class RustLibrary
     await _changes.close();
     await _musicChanges.close();
     await _bookChanges.close();
+    _airingTimer?.cancel();
+    await _airingChanges.close();
     _trickplay?.dispose();
     _skip?.dispose();
     _core.dispose();

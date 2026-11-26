@@ -1,0 +1,96 @@
+# SPDX-License-Identifier: MPL-2.0
+# Mirror of the Kinolune OS base image (fedora-bootc) on GHCR.
+#
+# quay.io garbage-collects old fedora-bootc digests, and every distro build that
+# pins one of them then fails with "manifest unknown". This workflow copies the
+# digests we pin (distro/Containerfile, distro/installer/Containerfile) and the
+# current :<major> tag to ghcr.io/denishumen/fedora-bootc with all architectures
+# and the SAME digests (skopeo --preserve-digests), so a pin keeps working after
+# quay drops it. Containerfiles then pull from the mirror by digest.
+#
+# Security model: no third-party code, only skopeo from the runner image;
+# `packages: write` in the mirror job only; never runs on pull requests.
+name: base-image-mirror
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"   # weekly: keep the current :45 in the mirror
+  push:
+    branches: [main]
+    paths:
+      - "distro/Containerfile"
+      - "distro/installer/Containerfile"
+      - ".github/workflows/base-image-mirror.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: base-image-mirror
+  cancel-in-progress: false
+
+env:
+  UPSTREAM: quay.io/fedora/fedora-bootc
+  MIRROR: ghcr.io/denishumen/fedora-bootc
+
+jobs:
+  mirror:
+    name: mirror fedora-bootc to GHCR
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Log in to GHCR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: printf '%s' "$GH_TOKEN" | skopeo login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Copy pinned digests and the current tag
+        run: |
+          set -euo pipefail
+          # Pinned digests: "fedora-bootc:<major>@sha256:<hex>" from the Containerfiles.
+          mapfile -t pins < <(sed -n 's|^ARG BASE_IMAGE=.*fedora-bootc:\([0-9]*\)@\(sha256:[0-9a-f]\{64\}\).*|\1 \2|p' \
+            distro/Containerfile distro/installer/Containerfile | sort -u)
+          [ "${#pins[@]}" -gt 0 ] || { echo "::error::no pinned fedora-bootc digest found"; exit 1; }
+          major="${pins[0]%% *}"
+          copy() { # src dst
+            echo "copy $1 -> $2"
+            skopeo copy --all --preserve-digests --retry-times 3 "docker://$1" "docker://$2"
+          }
+          for p in "${pins[@]}"; do
+            m="${p%% *}"; d="${p##* }"
+            tag="${m}-${d#sha256:}"; tag="${tag:0:15}"
+            if skopeo inspect --raw "docker://${MIRROR}@${d}" >/dev/null 2>&1; then
+              echo "already mirrored: ${d}"
+            else
+              copy "${UPSTREAM}@${d}" "${MIRROR}:${tag}" || {
+                echo "::error::pinned ${d} is gone upstream and not in the mirror; re-pin to the current :${m}"; exit 1; }
+            fi
+            got="$(skopeo inspect --raw "docker://${MIRROR}@${d}" | sha256sum | cut -d' ' -f1)"
+            [ "sha256:${got}" = "${d}" ] || { echo "::error::mirror digest mismatch for ${d}"; exit 1; }
+            echo "- \`${MIRROR}@${d}\` (pinned)" >> "$GITHUB_STEP_SUMMARY"
+          done
+          # Current upstream tag, so the next re-pin is already mirrored.
+          cur="$(skopeo inspect --raw "docker://${UPSTREAM}:${major}" | sha256sum | cut -d' ' -f1)"
+          if ! skopeo inspect --raw "docker://${MIRROR}@sha256:${cur}" >/dev/null 2>&1; then
+            copy "${UPSTREAM}:${major}" "${MIRROR}:${major}-${cur:0:12}"
+          fi
+          skopeo copy --all --preserve-digests "docker://${MIRROR}@sha256:${cur}" "docker://${MIRROR}:${major}"
+          echo "- \`${MIRROR}:${major}\` = \`sha256:${cur}\` (current upstream)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Anonymous pull works (package must be public)
+        run: |
+          set -euo pipefail
+          skopeo logout ghcr.io || true
+          if skopeo inspect --raw "docker://${MIRROR}:45" >/dev/null 2>&1; then
+            echo "anonymous pull OK"
+          else
+            echo "::warning::${MIRROR} is not public yet: make the package public once in GitHub → Packages → fedora-bootc → Package settings"
+          fi

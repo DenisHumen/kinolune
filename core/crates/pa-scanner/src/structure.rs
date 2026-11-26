@@ -1578,6 +1578,7 @@ mod tests {
             clip_id: clip.into(),
             in_time: 0,
             out_time: secs * 45_000,
+            angles: Vec::new(),
         };
         let listing = vec![
             ListedFile::new(format!("{root}/BDMV/index.bdmv"), 1),
@@ -1595,7 +1596,13 @@ mod tests {
         ];
         let mut playlists = Playlists::new();
         let mut add = |n: &str, items: Vec<PlayItem>| {
-            playlists.insert(format!("{root}/BDMV/PLAYLIST/{n}.mpls"), Playlist { items });
+            playlists.insert(
+                format!("{root}/BDMV/PLAYLIST/{n}.mpls"),
+                Playlist {
+                    items,
+                    ..Playlist::default()
+                },
+            );
         };
         // Menu loop, the bonus, the film cut into three clips (in an order
         // that is not the name order), the same length with a missing clip,
@@ -1648,6 +1655,7 @@ mod tests {
             format!("{root}/BDMV/PLAYLIST/00001.mpls"),
             Playlist {
                 items: vec![item("00010", 7_000)],
+                ..Playlist::default()
             },
         );
         let g = analyze_with(&listing, &StructureOptions::default(), &one);
