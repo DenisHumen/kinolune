@@ -3,6 +3,9 @@
 enable alpha-media.service
 enable alpha-admin.service
 enable alpha-admin-auth.socket
+enable alpha-admin-priv.socket
+enable alpha-samba-config.service
+enable alpha-ssh-firstboot.service
 enable alpha-updated.service
 enable alpha-updated.socket
 enable alpha-var-restore.service
@@ -12,6 +15,7 @@ enable avahi-daemon.service
 enable firewalld.service
 enable smartd.service
 enable chronyd.service
-enable sshd.service
+# SSH is off by default (DIST-018); alpha-ssh-firstboot turns it on when keys were installed.
+disable sshd.service
 disable cockpit.socket
 disable bootc-fetch-apply-updates.timer

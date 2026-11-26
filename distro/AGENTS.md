@@ -15,7 +15,8 @@ distro/tests/branding.sh localhost/alpha-os:dev        # брендинг Kinolu
 distro/tests/vm-switch-rollback.sh                     # ~10 мин: switch → rollback → upgrade → digest-пин
 (cd distro/admin && go vet ./... && go test -race ./...) # alpha-admin: нужен dbus-daemon (иначе D-Bus-тесты пропускаются)
 distro/admin/tests/pam-container.sh                    # alpha-admin с настоящим PAM в контейнере Fedora
-distro/admin/tests/vm-admin-e2e.sh                     # ~15 мин: alpha-admin в QEMU против настоящих systemd/NM/firewalld/UDisks2/logind
+distro/admin/tests/samba-container.sh                  # DIST-018: alpha-admin-priv + smbd + smbclient в контейнере Fedora
+distro/admin/tests/vm-admin-e2e.sh                     # ~20 мин: alpha-admin в QEMU против настоящих systemd/NM/firewalld/UDisks2/logind, Samba по SMB снаружи VM (нужен smbclient)
 distro/tests/vm-install.sh                             # ~25 мин: установщик по файлу ответов (OVMF, NVMe), затем снапшот и откат /var (DIST-010)
 distro/scripts/build-iso.sh                            # ~30 мин: ISO установщика (DIST-007), размер < 1.9 GiB
 distro/tests/iso-boot.sh distro/.work/iso/kinolune-os-*.iso  # ~7 мин: ISO в QEMU/OVMF: TUI, текстовое меню, пробная установка через TUI

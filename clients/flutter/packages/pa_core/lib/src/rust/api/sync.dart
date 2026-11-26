@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `app_item_id`, `catalog_error`, `folder_loop`, `folder_round`, `io`, `key`, `ms`, `name_of`, `of`, `of`, `others`, `parts`, `quick_pull`, `remote`, `setup_sources`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `CatalogSync`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `ack`, `apply`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `disable`, `drop`, `enable`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `pending`, `set_seal_key`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `ack`, `apply`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `disable`, `drop`, `enable`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `pending`, `set_seal_key`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreSync>>
 abstract class CoreSync implements RustOpaqueInterface {
@@ -228,6 +228,29 @@ abstract class CoreSync implements RustOpaqueInterface {
   /// Removes a device from the family; this device's id leaves the
   /// family.
   Future<void> unpair({required String deviceId});
+
+  /// Asks device `to` to cancel its uploads `ids` (the source device or
+  /// an administrator cancels).
+  Future<void> uploadCancel({required String to, required List<String> ids});
+
+  /// Reports a library upload of this device (LIB-028), as often as the
+  /// upload callback runs: the core sends it to the family at 10 Hz
+  /// while another device shows its card, else once a second, a new
+  /// state at once. Cheap; works while sync is off too.
+  void uploadReport({
+    required String uploadId,
+    required CoreUploadState state,
+    required PlatformInt64 done,
+    required PlatformInt64 size,
+  });
+
+  /// This app shows upload cards now (`true`: a library or «Загрузки»
+  /// screen with a card is open) or no longer: the uploading devices go
+  /// to 10 Hz while somebody watches.
+  void uploadWatch({required bool on_});
+
+  /// Live progress of the other devices' uploads now.
+  List<CoreUploadTick> uploads();
 }
 
 /// What kind of device this app runs on (orders the hub election: desktop,
@@ -876,6 +899,14 @@ enum CoreSyncEventKind {
   /// New devices asking to join came or went (SYNC-015): read
   /// `join_requests`.
   joinRequests,
+
+  /// Live progress of another device's library uploads changed
+  /// (LIB-028): read `uploads`.
+  uploads,
+
+  /// Another device asks this one to cancel uploads (LIB-028):
+  /// `device_id` the asker, `payload` a JSON array of upload ids.
+  uploadCancel,
 }
 
 /// An open invitation.
@@ -906,4 +937,66 @@ class CoreSyncInvite {
           code == other.code &&
           qr == other.qr &&
           expiresMs == other.expiresMs;
+}
+
+/// State of a library upload on the wire (LIB-028).
+enum CoreUploadState {
+  waiting,
+  copying,
+
+  /// Copied; checked and renamed from `.part`.
+  verifying,
+
+  /// The source cannot be reached; resumes by itself.
+  paused,
+  done,
+  cancelled,
+  failed,
+
+  /// Its device went quiet: «Пауза: <устройство> не в сети».
+  offline,
+}
+
+/// Live progress of a library upload of another device (LIB-028).
+class CoreUploadTick {
+  final String uploadId;
+
+  /// The device that uploads.
+  final String deviceId;
+  final CoreUploadState state;
+  final PlatformInt64 done;
+  final PlatformInt64 size;
+
+  /// Bytes per second, averaged by the sender.
+  final PlatformInt64 rate;
+
+  const CoreUploadTick({
+    required this.uploadId,
+    required this.deviceId,
+    required this.state,
+    required this.done,
+    required this.size,
+    required this.rate,
+  });
+
+  @override
+  int get hashCode =>
+      uploadId.hashCode ^
+      deviceId.hashCode ^
+      state.hashCode ^
+      done.hashCode ^
+      size.hashCode ^
+      rate.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CoreUploadTick &&
+          runtimeType == other.runtimeType &&
+          uploadId == other.uploadId &&
+          deviceId == other.deviceId &&
+          state == other.state &&
+          done == other.done &&
+          size == other.size &&
+          rate == other.rate;
 }

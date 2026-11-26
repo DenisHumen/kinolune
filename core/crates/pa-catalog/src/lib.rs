@@ -129,6 +129,7 @@ pub mod knowledge;
 mod label_sync;
 mod labels;
 mod lists;
+pub mod live_uploads;
 mod main_title;
 mod matching;
 pub mod metadata;
@@ -189,6 +190,7 @@ pub use items::{Item, ItemKind, ItemRef, SearchGroup, Unplayable};
 pub use knowledge::{KnowledgePlan, NfoReport, NfoTarget, RenameTarget};
 pub use labels::{CategoryInfo, LabelSpace, LabelTarget, LabeledFile, Labels, RatedItem, TagInfo};
 pub use lists::{CollectionInfo, CollectionKind, PlaylistInfo, Version};
+pub use live_uploads::{LiveUpload, UploadGuess, guess_upload};
 pub use metadata::{
     ExtraProviders, MetadataOptions, MetadataProgress, MetadataProviders, MetadataReport,
     MetadataStage, ProviderWait,

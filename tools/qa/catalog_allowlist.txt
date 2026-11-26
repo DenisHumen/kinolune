@@ -124,3 +124,6 @@ network-icon-*  # the icon glyph inside the network button (HOME-15)
 twitch-sent-bubble-*  # per-bubble slot of the sent-bubble stack (TWI-039); the tappable bubble is cited as TWI-165
 twitch-record-live-busy  # spinner while a recording starts (TWI-035)
 twitch-record-live-recording  # row of the recording indicator; its parts are cited as TWI-182, TWI-183
+live-upload-status-*  # status line inside a grey card (LIB-028); the card is cited as OFF-39
+live-upload-detail-*  # bytes, speed and time left inside a grey card (LIB-028, OFF-39)
+live-upload-guess-text  # text of the guess snack bar (LIB-028); the snack bar is cited as OFF-37

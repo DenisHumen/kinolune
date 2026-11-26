@@ -103,7 +103,9 @@ class HandoffController extends ChangeNotifier {
           SyncEventKind.inviteClosed ||
           SyncEventKind.input ||
           SyncEventKind.music ||
-          SyncEventKind.joinRequests:
+          SyncEventKind.joinRequests ||
+          SyncEventKind.uploads ||
+          SyncEventKind.uploadCancel:
         break;
     }
   }

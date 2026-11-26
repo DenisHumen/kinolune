@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 use pa_model::{MediaKey, MediaKind};
 
 use crate::hlc::Hlc;
-use crate::op::{Op, OpBody, OpId};
+use crate::op::{Op, OpBody, OpId, UploadPhase};
 
 /// Order key of a register write.
 pub type Stamp = (Hlc, OpId);
@@ -73,6 +73,9 @@ pub struct SyncState {
     pub category_items: BTreeMap<LabelKey, Reg<bool>>,
     /// Tags of items by `(profile, tag name key, target)`.
     pub tags: BTreeMap<LabelKey, Reg<bool>>,
+    /// Library uploads (LIB-028) by upload id: the newest step and its
+    /// info. The library keeps them in `live_uploads`.
+    pub uploads: BTreeMap<String, Reg<(UploadPhase, String)>>,
 }
 
 /// `(profile sync_id, category sync id or tag name key, item target)`.
@@ -185,6 +188,11 @@ impl SyncState {
                 let key = pa_library::labels::name_key(&tag);
                 lww(&mut self.tags, (profile, key, target), s, tagged)
             }
+            OpBody::UploadEvent {
+                upload,
+                phase,
+                info,
+            } => lww(&mut self.uploads, upload, s, (phase, info)),
         }
     }
 
@@ -237,6 +245,9 @@ impl SyncState {
         }
         for ((p, k, t), r) in &self.tags {
             out.push((format!("tag{S}{p}{S}{k}{S}{t}"), &r.stamp));
+        }
+        for (k, r) in &self.uploads {
+            out.push((format!("upload{S}{S}{k}"), &r.stamp));
         }
         out
     }

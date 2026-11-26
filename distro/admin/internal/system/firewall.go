@@ -26,14 +26,20 @@ type Opening struct {
 	Title    string   `json:"title"`
 	Services []string `json:"services,omitempty"`
 	Ports    []string `json:"ports,omitempty"` // "8487/tcp"
+	// Legacy services that meant the same in older images: they count as
+	// open and are removed on close (smb was the "samba" service with the
+	// NetBIOS ports 137–139 before DIST-018).
+	Legacy []string `json:"-"`
 }
 
-// OurOpenings: media server, file sharing, discovery, Cockpit (05 §5.1–5.2).
+// OurOpenings: media server, file sharing (SMB on 445 only, NetBIOS is
+// off), discovery, Cockpit, SSH (05 §5.1–5.2, DIST-018).
 var OurOpenings = []Opening{
 	{Name: "media", Title: "Медиасервер", Ports: []string{"8487/tcp"}},
-	{Name: "smb", Title: "Общие папки (SMB)", Services: []string{"samba"}},
+	{Name: "smb", Title: "Общие папки (SMB)", Ports: []string{"445/tcp"}, Legacy: []string{"samba"}},
 	{Name: "discovery", Title: "Обнаружение в сети", Services: []string{"mdns", "ws-discovery"}},
 	{Name: "cockpit", Title: "Расширенный режим (Cockpit)", Services: []string{"cockpit"}},
+	{Name: "ssh", Title: "SSH", Services: []string{"ssh"}},
 }
 
 // FirewallStatus is what the admin UI shows.
@@ -126,6 +132,11 @@ func (f *Firewalld) zone(ctx context.Context, z string) (FirewallZone, error) {
 }
 
 func zoneHas(z FirewallZone, o Opening) bool {
+	for _, s := range o.Legacy {
+		if slices.Contains(z.Services, s) {
+			return true
+		}
+	}
 	for _, s := range o.Services {
 		if !slices.Contains(z.Services, s) {
 			return false
@@ -164,6 +175,13 @@ func (f *Firewalld) SetOpening(ctx context.Context, name string, open bool) erro
 		port, proto, _ := cut(p)
 		if err := f.toggle(ctx, zone, cfgZone, "Port", open, port, proto); err != nil {
 			return err
+		}
+	}
+	if !open {
+		for _, svc := range o.Legacy {
+			if err := f.toggle(ctx, zone, cfgZone, "Service", false, svc); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
