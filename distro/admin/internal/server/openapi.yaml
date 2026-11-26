@@ -16,6 +16,8 @@ info:
 
     Administrators only: members of `wheel` or `alpha-admin` (UID >= 1000)
     can log in; other users get 403 `not_admin` ("Нет прав администратора").
+    A successful log-in of any NAS user (administrator or not) also sets
+    the same password for the shares (Samba, DIST-018).
 
     Errors have the body `{"error": "<code>", "message": "<text>"}`.
 license:
@@ -75,8 +77,46 @@ components:
           type: string
           enum: [bad_request, unauthorized, invalid_credentials, not_admin, locked, csrf, forbidden, not_found,
                  conflict, confirmation_invalid, method_not_allowed, unavailable, update_agent_unavailable,
-                 system, timeout]
+                 system, timeout, wrong_admin_password]
         message: {type: string}
+    User:
+      type: object
+      properties:
+        name: {type: string, pattern: "^[a-z_][a-z0-9_-]{0,31}$"}
+        full_name: {type: string}
+        uid: {type: integer}
+        admin: {type: boolean, description: "member of wheel or alpha-admin"}
+        nas: {type: boolean, description: "may use the shares (alpha-users, wheel, alpha-admin)"}
+        samba: {type: boolean, description: "has a Samba password (set at creation, password change or log-in)"}
+    AdminPassword:
+      type: string
+      description: |
+        Password of the administrator who is logged in (re-authentication,
+        checked with PAM by the root helper). Wrong passwords answer 403
+        `wrong_admin_password` and count in the log-in lockout.
+    Sharing:
+      type: object
+      properties:
+        media_guest_read:
+          type: boolean
+          description: Media readable without a password (never writable). Off by default.
+        time_machine: {type: boolean, description: "TimeMachine share on (default)"}
+        shares:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string, enum: [Media, Users, TimeMachine]}
+              comment: {type: string}
+              path: {type: string}
+              guest: {type: boolean}
+    SSH:
+      type: object
+      properties:
+        enabled: {type: boolean}
+        active: {type: boolean}
+        authorized_keys: {type: integer, description: "keys of root and the users (password log-in is off)"}
+        port_open: {type: boolean, description: "the ssh opening of the firewall"}
     Session:
       type: object
       properties:
@@ -404,7 +444,7 @@ paths:
     parameters: [{$ref: "#/components/parameters/uuid"}]
     post:
       security: [{session: [], csrf: []}]
-      summary: Deactivate a connection. Careful: this may be the connection the browser uses.
+      summary: "Deactivate a connection. Careful: this may be the connection the browser uses."
       responses:
         "202": {description: Deactivated}
         "409": {$ref: "#/components/responses/Error"}
@@ -434,7 +474,7 @@ paths:
               schema: {$ref: "#/components/schemas/Firewall"}
   /api/v1/firewall/openings/{name}:
     parameters:
-      - {name: name, in: path, required: true, schema: {type: string, enum: [media, smb, discovery, cockpit]}}
+      - {name: name, in: path, required: true, schema: {type: string, enum: [media, smb, discovery, cockpit, ssh]}}
     put:
       security: [{session: [], csrf: []}]
       summary: Open or close one of our ports, now and after reboot
@@ -450,6 +490,167 @@ paths:
       responses:
         "200": {description: OK}
         "404": {$ref: "#/components/responses/Error"}
+  /api/v1/users:
+    get:
+      summary: People's accounts (UID >= 1000) with administrator, NAS and Samba status
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users: {type: array, items: {$ref: "#/components/schemas/User"}}
+        "503": {$ref: "#/components/responses/Error"}
+    post:
+      security: [{session: [], csrf: []}]
+      summary: Create a NAS user (OS account, Samba password, own folders in Users and TimeMachine)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password, admin_password]
+              properties:
+                username: {type: string, pattern: "^[a-z_][a-z0-9_-]{0,31}$"}
+                full_name: {type: string, maxLength: 64}
+                password: {type: string, minLength: 8}
+                admin: {type: boolean, default: false}
+                admin_password: {$ref: "#/components/schemas/AdminPassword"}
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/User"}
+        "400": {$ref: "#/components/responses/Error"}
+        "403": {$ref: "#/components/responses/Error"}
+        "409": {$ref: "#/components/responses/Error"}
+        "429": {$ref: "#/components/responses/Error"}
+  /api/v1/users/{name}:
+    parameters:
+      - {name: name, in: path, required: true, schema: {type: string}}
+    delete:
+      security: [{session: [], csrf: []}]
+      summary: Delete a user; their folders are kept as deleted-<name>-<time> for the administrators (root:wheel)
+      description: Not yourself, not the last administrator (409).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [admin_password]
+              properties:
+                admin_password: {$ref: "#/components/schemas/AdminPassword"}
+      responses:
+        "204": {description: Deleted}
+        "403": {$ref: "#/components/responses/Error"}
+        "404": {$ref: "#/components/responses/Error"}
+        "409": {$ref: "#/components/responses/Error"}
+  /api/v1/users/{name}/password:
+    parameters:
+      - {name: name, in: path, required: true, schema: {type: string}}
+    put:
+      security: [{session: [], csrf: []}]
+      summary: Set the OS and Samba password of a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password, admin_password]
+              properties:
+                password: {type: string, minLength: 8}
+                admin_password: {$ref: "#/components/schemas/AdminPassword"}
+      responses:
+        "204": {description: Changed}
+        "400": {$ref: "#/components/responses/Error"}
+        "403": {$ref: "#/components/responses/Error"}
+        "404": {$ref: "#/components/responses/Error"}
+  /api/v1/users/{name}/admin:
+    parameters:
+      - {name: name, in: path, required: true, schema: {type: string}}
+    put:
+      security: [{session: [], csrf: []}]
+      summary: Make a user an administrator (wheel) or take the rights away
+      description: You cannot take your own rights or the last administrator's (409).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [admin, admin_password]
+              properties:
+                admin: {type: boolean}
+                admin_password: {$ref: "#/components/schemas/AdminPassword"}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/User"}
+        "403": {$ref: "#/components/responses/Error"}
+        "404": {$ref: "#/components/responses/Error"}
+        "409": {$ref: "#/components/responses/Error"}
+  /api/v1/sharing:
+    get:
+      summary: Samba shares and their settings (DIST-018)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Sharing"}
+    put:
+      security: [{session: [], csrf: []}]
+      summary: Change the sharing settings; the configuration is rendered, checked with testparm and reloaded
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                media_guest_read: {type: boolean}
+                time_machine: {type: boolean}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Sharing"}
+  /api/v1/ssh:
+    get:
+      summary: SSH server state (off by default, keys only)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SSH"}
+    put:
+      security: [{session: [], csrf: []}]
+      summary: Turn the SSH server and its firewall opening on or off, now and after reboot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: {type: boolean}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SSH"}
   /api/v1/disks:
     get:
       summary: Drives with SMART summary, partitions and file systems

@@ -580,6 +580,8 @@ func TestOpenAPICoversRoutes(t *testing.T) {
 		"/api/v1/network/connections:", "/api/v1/network/connections/{uuid}/up:", "/api/v1/network/connections/{uuid}/down:",
 		"/api/v1/network/wireless:", "/api/v1/firewall:", "/api/v1/firewall/openings/{name}:", "/api/v1/disks:",
 		"/api/v1/disks/{device}/mount:", "/api/v1/disks/{device}/unmount:", "/api/v1/power:", "/api/v1/power/{action}:",
+		"/api/v1/users:", "/api/v1/users/{name}:", "/api/v1/users/{name}/password:", "/api/v1/users/{name}/admin:",
+		"/api/v1/sharing:", "/api/v1/ssh:",
 	} {
 		if !strings.Contains(doc, "\n  "+p+"\n") {
 			t.Errorf("openapi.yaml lacks %s", p)

@@ -2193,3 +2193,19 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 | INST-11 | Ручная установка на реальное железо с монитором и USB-клавиатурой: все экраны читаются (кириллица, без обрезанных строк), установленная система загружается и открывается панель https://<имя>.local | — | — | — | — | — | — | — | ⬜ |
 
 Автотесты: INST-02…INST-10 — `distro/installer/internal/tui/tui_test.go` (вызовы Update() на снимках дисков, эталонные экраны 80×24 на uk/en/ru в `testdata/golden/`) и `distro/installer/cmd/alpha-installer/tui_test.go`; INST-01, INST-02, INST-06, INST-10 — `distro/tests/iso-boot.sh` (ISO в QEMU/OVMF по последовательной консоли, пробная установка через все экраны).
+
+## 25. Kinolune OS: общие папки, пользователи, firewall (DIST-018)
+
+Samba на NAS с Kinolune OS (ADR-NNNN). Проверки делаются с компьютера в той же сети: колонки macOS, Windows и Linux — откуда подключаются к шаре (Finder, Проводник, файловый менеджер или `smbclient`). К приложению Kinolune не относится: остальные платформы «—».
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| NAS-01 | NAS виден в сети без ввода адреса: Finder «Сеть» / Проводник «Сеть» / <имя>.local; описание сервера «Kinolune OS (<имя>)» | — | — | — | — | — | ⬜ | ⬜ | 🤖 |
+| NAS-02 | Без пароля (гость) → список шар и Media не открываются; логин и пароль администратора из установщика → видны Media, Users, TimeMachine, в Media можно положить файл | — | — | — | — | — | ⬜ | ⬜ | 🤖 |
+| NAS-03 | Пользователь, созданный в админке (POST /api/v1/users), входит своим паролем: в Users видит только свою папку, пишет в неё и в Media; чужую папку не открыть | — | — | — | — | — | ⬜ | ⬜ | 🤖 |
+| NAS-04 | В админке «Чтение медиатеки без пароля» (media_guest_read) → телевизор или гость читает Media, но не может записать; Users и TimeMachine гостю закрыты; выключение возвращает пароль | — | — | — | — | — | ⬜ | ⬜ | 🤖 |
+| NAS-05 | Mac: «Системные настройки → Time Machine → Добавить диск» показывает NAS; резервная копия создаётся в своей папке пользователя | — | — | — | — | — | ⬜ | — | — |
+| NAS-06 | Firewall: открытие smb закрыто в админке → шара недоступна с другого компьютера; открыто → снова доступна; состояние переживает перезагрузку | — | — | — | — | — | ⬜ | ⬜ | 🤖 |
+| NAS-07 | SSH: после установки без ключей порт 22 закрыт; PUT /api/v1/ssh включает (только ключи, пароль отклоняется) и выключает | — | — | — | — | — | ⬜ | ⬜ | 🤖 |
+
+Автотесты: NAS-01…NAS-04, NAS-06, NAS-07 — `distro/admin/tests/vm-admin-e2e.sh` (QEMU, `smbclient` снаружи VM через проброс порта и firewall VM, `tests/vm_samba_check.py`), NAS-02…NAS-04 также `distro/admin/tests/samba-container.sh`; API — `distro/admin/internal/server/accounts_test.go`, помощник — `distro/admin/internal/privhelper/privhelper_test.go`.
