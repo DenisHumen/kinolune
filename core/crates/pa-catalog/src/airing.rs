@@ -399,8 +399,7 @@ fn aired(next: &NextEpisode, now_ms: i64) -> bool {
 
 /// The file of the next episode is in the library.
 fn in_library(conn: &Connection, work: i64, next: &NextEpisode) -> Result<bool, Error> {
-    let sql = concat!(
-        "SELECT EXISTS (
+    let sql = "SELECT EXISTS (
             SELECT 1 FROM episodes e
             JOIN match_episodes me ON me.episode_id = e.id
             JOIN matches m ON m.id = me.match_id AND m.state <> 'rejected'
@@ -413,11 +412,8 @@ fn in_library(conn: &Connection, work: i64, next: &NextEpisode) -> Result<bool, 
                     OR (e.episode_number = ?3 AND e.season_number = (
                         SELECT max(season_number) FROM episodes
                         WHERE work_id = ?1 AND season_number >= 1)))))
-        )"
-    );
-    Ok(conn.query_row(sql, params![work, next.season, next.episode], |r| {
-        r.get(0)
-    })?)
+        )";
+    Ok(conn.query_row(sql, params![work, next.season, next.episode], |r| r.get(0))?)
 }
 
 fn visible(conn: &Connection, r: Row, now_ms: i64) -> Result<Option<ShowAiring>, Error> {
@@ -479,8 +475,7 @@ impl Catalog {
                 "{ROW_SQL} WHERE status <> 'unknown' AND {}",
                 pa_library::work_allowed!("work_id")
             ))?;
-            stmt.query_map([], row)?
-                .collect::<Result<Vec<_>, _>>()?
+            stmt.query_map([], row)?.collect::<Result<Vec<_>, _>>()?
         };
         let mut out = Vec::with_capacity(rows.len());
         for r in rows {
@@ -628,7 +623,11 @@ fn parse_rfc3339_ms(s: &str) -> Option<i64> {
     let mut millis = 0i64;
     if let Some(frac) = rest.strip_prefix('.') {
         let digits = frac.bytes().take_while(u8::is_ascii_digit).count();
-        let ms: String = frac[..digits].chars().chain("000".chars()).take(3).collect();
+        let ms: String = frac[..digits]
+            .chars()
+            .chain("000".chars())
+            .take(3)
+            .collect();
         millis = ms.parse().ok()?;
         rest = &frac[digits..];
     }

@@ -380,11 +380,18 @@ fn anime_from_anilist_counts_to_the_hour() {
     f.work(
         1,
         "anime",
-        &[("anilist", "", "500"), ("mal", "", "500"), ("tmdb", "tv", "100")],
+        &[
+            ("anilist", "", "500"),
+            ("mal", "", "500"),
+            ("tmdb", "tv", "100"),
+        ],
     );
     let at = NOW_S + 2 * 24 * 3600 + 5 * 3600;
-    f.fake
-        .set("anilist 500", 200, &anilist(500, "RELEASING", Some((8, at))));
+    f.fake.set(
+        "anilist 500",
+        200,
+        &anilist(500, "RELEASING", Some((8, at))),
+    );
     let a = f.refresh(1, NOW).unwrap();
     assert_eq!(a.source, "anilist");
     assert_eq!(a.status, AiringStatus::Airing);
@@ -430,7 +437,11 @@ fn anime_falls_back_to_shikimori_then_tmdb() {
     f.work(
         1,
         "anime",
-        &[("anilist", "", "500"), ("mal", "", "600"), ("tmdb", "tv", "100")],
+        &[
+            ("anilist", "", "500"),
+            ("mal", "", "600"),
+            ("tmdb", "tv", "100"),
+        ],
     );
     // AniList is down (5xx); Shikimori knows the next episode (ADR-0142).
     f.fake.set("anilist 500", 503, "busy");
@@ -445,7 +456,10 @@ fn anime_falls_back_to_shikimori_then_tmdb() {
     let next = a.next.unwrap();
     assert_eq!(next.episode, 8);
     // 18:30 in Moscow is 15:30 UTC.
-    assert_eq!(next.air_at_ms, Some(NOW + 2 * DAY + 3 * HOUR + 30 * 60 * 1000));
+    assert_eq!(
+        next.air_at_ms,
+        Some(NOW + 2 * DAY + 3 * HOUR + 30 * 60 * 1000)
+    );
 
     // Neither anime provider knows it: TMDB.
     f.work(2, "anime", &[("anilist", "", "700"), ("tmdb", "tv", "200")]);
