@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MPL-2.0
+# shellcheck disable=SC2034 # pinned checksums are read by name (${!var}) per architecture
 #
 # Build the Kinolune .deb and .rpm (PKG-002, PKG-023) from a Linux bundle.
 #
@@ -34,7 +35,7 @@ app_linux="$(cd "$here/../app/linux" && pwd)"
 
 die() { printf 'build-packages.sh: %s\n' "$*" >&2; exit 1; }
 
-[ $# -eq 3 ] || { sed -n '4,25p' "$0"; exit 2; }
+[ $# -eq 3 ] || { sed -n '5,25p' "$0"; exit 2; }
 input="$1"
 version="$2"
 mkdir -p "$3"

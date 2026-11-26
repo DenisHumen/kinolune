@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MPL-2.0
+# shellcheck disable=SC2034 # pinned checksums are read by name (${!var}) per architecture
 #
 # Package a Flutter Linux release bundle (R01-REL).
 #
@@ -41,7 +42,7 @@ repo_root="$(cd "$app_pkg/../.." && pwd)"
 
 die() { printf 'package.sh: %s\n' "$*" >&2; exit 1; }
 
-[ $# -eq 3 ] || { sed -n '4,25p' "$0"; exit 2; }
+[ $# -eq 3 ] || { sed -n '5,26p' "$0"; exit 2; }
 bundle="$(cd "$1" && pwd)"
 version="$2"
 mkdir -p "$3"

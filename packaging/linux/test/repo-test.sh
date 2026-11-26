@@ -75,7 +75,7 @@ docker exec -u "$uidgid" -e HOME=/w -e PA_REPO_URL="$url" -e URL="$url" "$builde
     for v in 0.0.1 0.0.2 0.0.3-rc.1; do
         PA_REPO_KEY=/w/test-key.asc /src/packaging/linux/build-packages.sh "$in" "$v" /w/pkgs
     done
-    # The bundle's architecture (x86_64 or aarch64, PKG-026) names the files.
+    # The architecture of the bundle (x86_64 or aarch64, PKG-026) names the files.
     p() { echo "$1" /w/pkgs/kinolune-"$1"-linux-*.deb /w/pkgs/kinolune-"$1"-linux-*.rpm; }
     rpmarch=$(uname -m) debarch=$(dpkg --print-architecture)
     p 0.0.1 > /w/first.txt
