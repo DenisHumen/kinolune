@@ -63,6 +63,10 @@ title { romaji english native } synonyms startDate { year month day } \
 endDate { year month day } description(asHtml: false) genres averageScore popularity siteUrl \
 coverImage { large } nextAiringEpisode { episode airingAt }";
 
+/// Status and next episode of one anime (UI-057).
+const AIRING_QUERY: &str = "query Airing($id: Int) { Media(id: $id, type: ANIME) { id idMal format \
+status episodes nextAiringEpisode { episode airingAt } } }";
+
 /// Fields of a related work.
 const RELATION_FIELDS: &str = "relations { edges { relationType(version: 2) node { id idMal type \
 format status seasonYear isAdult title { romaji english native } startDate { year month day } } } }";
@@ -271,6 +275,25 @@ impl AniListClient {
         self.media_with(vars, &format!("anime with MAL id {mal_id}"))
     }
 
+    /// The airing schedule of an anime by AniList id (UI-057): status and
+    /// `nextAiringEpisode` only. A cached answer is used while fresh (a day
+    /// for airing anime); an expired one is never returned in place of a
+    /// failed request, so the caller knows it is offline.
+    pub fn airing(&self, id: u64) -> Result<Media, FetchError> {
+        let mut vars = Map::new();
+        vars.insert("id".into(), json!(id));
+        let body = self.query_body_with(AIRING_QUERY, vars, TtlClass::Media, false)?;
+        let response: GraphqlResponse<MediaData> =
+            serde_json::from_str(&body).map_err(|e| FetchError::Decode(format!("AniList: {e}")))?;
+        response
+            .data
+            .and_then(|d| d.media)
+            .ok_or_else(|| FetchError::NotFound {
+                provider: PROVIDER,
+                what: format!("anime {id}"),
+            })
+    }
+
     fn media_with(&self, vars: Map<String, Value>, what: &str) -> Result<Media, FetchError> {
         let data: MediaData = self.query(&media_query(), vars, TtlClass::Media)?;
         let not_found = || FetchError::NotFound {
@@ -311,6 +334,16 @@ impl AniListClient {
         variables: Map<String, Value>,
         class: TtlClass,
     ) -> Result<String, FetchError> {
+        self.query_body_with(query, variables, class, true)
+    }
+
+    fn query_body_with(
+        &self,
+        query: &str,
+        variables: Map<String, Value>,
+        class: TtlClass,
+        stale_ok: bool,
+    ) -> Result<String, FetchError> {
         let request = HttpRequest {
             base: self.config.base_url.trim_end_matches('/').to_owned(),
             path: "/".to_owned(),
@@ -318,13 +351,14 @@ impl AniListClient {
             headers: vec![("accept".into(), "application/json".into())],
         };
         let body = json!({ "query": query, "variables": variables }).to_string();
-        self.fetcher.fetch(
+        self.fetcher.fetch_with(
             &request,
             Some(&body),
             &AniListHooks {
                 client: self,
                 class,
             },
+            stale_ok,
         )
     }
 

@@ -102,6 +102,7 @@
 //! Item ids are strings, stable while the catalog rows live: `m<work>` (a
 //! movie), `s<work>` (a show or anime), `e<episode>`, `t<track>`.
 
+pub mod airing;
 pub mod anime_db;
 pub mod anime_order;
 mod audiobooks;
@@ -164,6 +165,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use pa_library::rusqlite::Connection;
 
+pub use airing::{AiringReport, AiringStatus, NextEpisode, ShowAiring};
 pub use anime_db::{AnimeDb, AnimeDbInfo, AnimeDbOrigin, AnimeTitles, LoadedAnimeDb};
 pub use anime_order::AnimeLists;
 pub use audiobooks::{Audiobook, BookChapter, BookProgress};

@@ -101,6 +101,7 @@ const TABLES: &[&str] = &[
     "user_tags",
     "version_prefs",
     "view_prefs",
+    "work_airing",
     "work_candidates",
     "work_certifications",
     "work_credits",
