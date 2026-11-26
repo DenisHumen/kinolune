@@ -1,0 +1,30 @@
+---
+// SPDX-License-Identifier: MPL-2.0
+// GitHub Pages serves this for any missing path of the site. /apt and /rpm
+// are real directories of the same Pages artifact and never reach it.
+import '../generated/tokens.css';
+import '../styles/site.css';
+import { locales, strings, href } from '../i18n/strings.mjs';
+---
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>404 — Kinolune</title>
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href={href('favicon.svg')} type="image/svg+xml" />
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"></div>
+    <main class="picker">
+      <img src={href('assets/lockup-dark.svg')} alt="Kinolune" width="245" height="80" />
+      {locales.map((l) => (
+        <section lang={l}>
+          <h1>{strings[l]['notfound.title']}</h1>
+          <p class="muted">{strings[l]['notfound.text']} <a href={href(`${l}/`)}>{strings[l]['notfound.home']}</a></p>
+        </section>
+      ))}
+    </main>
+  </body>
+</html>
