@@ -304,6 +304,9 @@ impl Catalog {
         if matches!(op.body, OpBody::FolderRule { .. }) {
             return self.apply_remote_folder_rule(op);
         }
+        if matches!(op.body, OpBody::UploadEvent { .. }) {
+            return self.apply_remote_upload(op);
+        }
         let conn = self.lock();
         let mut sync = self.sync_lock();
         let Some(replica) = sync.as_mut() else {

@@ -18,6 +18,9 @@ type Cmd struct {
 	Stdin string
 	// SecretStdin keeps Stdin out of logs and plans (passwords).
 	SecretStdin bool
+	// Output, when set, also receives stdout and stderr as they come (the
+	// progress of bootc).
+	Output io.Writer
 }
 
 func (c Cmd) String() string {
@@ -64,12 +67,16 @@ func (r ExecRunner) Run(ctx context.Context, c Cmd) ([]byte, error) {
 		cmd.Stdin = strings.NewReader(c.Stdin)
 	}
 	var out, errb bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &errb
+	var stdout, stderr io.Writer = &out, &errb
 	if r.Log != nil {
 		// Long steps (bootc) print progress; show it live.
-		cmd.Stderr = io.MultiWriter(&errb, r.Log)
+		stderr = io.MultiWriter(stderr, r.Log)
 	}
+	if c.Output != nil {
+		stdout = io.MultiWriter(stdout, c.Output)
+		stderr = io.MultiWriter(stderr, c.Output)
+	}
+	cmd.Stdout, cmd.Stderr = stdout, stderr
 	if err := cmd.Run(); err != nil {
 		msg := strings.TrimSpace(errb.String())
 		if len(msg) > 2000 {
