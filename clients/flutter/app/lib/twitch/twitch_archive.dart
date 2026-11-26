@@ -52,6 +52,7 @@ class TwitchRecordingItem {
     this.error,
     this.file,
     this.createdAt,
+    this.end,
   });
 
   final int jobId;
@@ -70,17 +71,25 @@ class TwitchRecordingItem {
   final String? file;
   final DateTime? createdAt;
 
+  /// Why a finished recording ended: `offline`, `stopped` (the user's
+  /// "Stop"), `disk_full` (kept as is, without a remux) and others.
+  final String? end;
+
   RecordingActivity get activity => RecordingActivity.of(state);
 
-  /// Pause/resume and stop of a running recording; remove when finished.
+  /// Ended because the disk was full (TWI-035).
+  bool get diskFull => end == 'disk_full';
+
+  /// Pause/resume and stop of a running recording (stop keeps what was
+  /// recorded, TWI-035); remove when finished.
   List<TwitchDownloadAction> get actions => switch (activity) {
     RecordingActivity.active => const [
       TwitchDownloadAction.pause,
-      TwitchDownloadAction.cancel,
+      TwitchDownloadAction.stop,
     ],
     RecordingActivity.paused => const [
       TwitchDownloadAction.resume,
-      TwitchDownloadAction.cancel,
+      TwitchDownloadAction.stop,
     ],
     RecordingActivity.failed when state == TwitchDownloadState.failed => const [
       TwitchDownloadAction.retry,
@@ -272,6 +281,17 @@ class TwitchImportResult {
   final int chapters;
 }
 
+/// A recording that could not start (TWI-035): [code] is the core's —
+/// `no_space` (it can never fit), `archive_disabled`, `native_off`,
+/// `signed_out`, `not_found` (no such channel) and others.
+class TwitchRecordError implements Exception {
+  const TwitchRecordError(this.code, this.message);
+  final String code;
+  final String message;
+  @override
+  String toString() => '$code: $message';
+}
+
 /// Error of a template check, with the core's message.
 class TwitchTemplateError implements Exception {
   const TwitchTemplateError(this.message);
@@ -284,6 +304,10 @@ class TwitchTemplateError implements Exception {
 abstract interface class TwitchArchive {
   Future<List<TwitchRecordingItem>> recordings();
   Future<void> controlRecording(int jobId, TwitchDownloadAction action);
+
+  /// Starts recording a channel now; an empty [userId] is looked up by
+  /// [login]. Returns the job id (an active recording's, if there is one);
+  /// throws [TwitchRecordError].
   Future<int> recordNow(int profileId, String userId, {String? login});
 
   Future<List<TwitchRecordRule>> rules(int profileId);
@@ -362,6 +386,7 @@ class CoreTwitchArchive implements TwitchArchive {
         error: r.error,
         file: r.file,
         createdAt: _at(r.createdAtMs.toInt()),
+        end: r.end,
       ),
   ];
 
@@ -370,12 +395,17 @@ class CoreTwitchArchive implements TwitchArchive {
       _core.control(jobId: jobId, action: action.name);
 
   @override
-  Future<int> recordNow(int profileId, String userId, {String? login}) async =>
-      (await _core.recordNow(
+  Future<int> recordNow(int profileId, String userId, {String? login}) async {
+    try {
+      return (await _core.recordNow(
         profileId: profileId,
         userId: userId,
         login: login,
       )).toInt();
+    } on core.CoreDownloadError catch (e) {
+      throw TwitchRecordError(e.code, e.message);
+    }
+  }
 
   @override
   Future<List<TwitchRecordRule>> rules(int profileId) async => [

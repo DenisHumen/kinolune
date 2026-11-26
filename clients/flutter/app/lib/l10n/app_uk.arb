@@ -2383,5 +2383,19 @@
   "twitchSearchRecent": "Нещодавні запити",
   "twitchChatSentBubble": "Повідомлення надіслано",
   "twitchChatNotSentBubble": "Повідомлення не надіслано: {reason}",
-  "twitchChatBubbleHide": "Сховати"
+  "twitchChatBubbleHide": "Сховати",
+  "twitchRecordLive": "Записати",
+  "twitchRecordLiveTooltip": "Записати ефір з цього моменту",
+  "twitchRecordLiveStatus": "Іде запис {elapsed} · {size}",
+  "twitchRecordLiveKeepsGoing": "Іде запис. Він триватиме й після закриття плеєра, поки Kinolune запущено.",
+  "twitchRecordLiveStopTitle": "Зупинити запис?",
+  "twitchRecordLiveStopBody": "Записане збережеться й з'явиться в «Записах».",
+  "twitchRecordLiveStopped": "Запис зупинено. Незабаром він з'явиться в «Записах».",
+  "twitchRecordLiveNoSpace": "Бракує місця для запису. Звільніть місце або виберіть іншу теку в налаштуваннях записів.",
+  "twitchRecordLiveOff": "Запис ефірів Twitch зараз вимкнено.",
+  "twitchRecordLiveError": "Не вдалося почати запис: {error}",
+  "twitchRecordReadyTitle": "Запис ефіру {channel} готовий",
+  "twitchRecordReadyBody": "Він у розділі «Записи й завантаження».",
+  "twitchRecordDiskFullTitle": "Диск заповнено: запис {channel} зупинено",
+  "twitchRecordDiskFullBody": "Записане збережено як є, без перепакування (файл .ts)."
 }

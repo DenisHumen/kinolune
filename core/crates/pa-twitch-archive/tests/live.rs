@@ -35,7 +35,7 @@ use pa_twitch_archive::live::testing::{
 };
 use pa_twitch_archive::live::{
     AutoDecision, AutoRecord, LiveChat, LiveClock, LiveRecorder, LiveRequest, LiveSettings,
-    LiveSource, LiveStream, TwitchLiveSource,
+    LiveSource, LiveStops, LiveStream, TwitchLiveSource,
 };
 use pa_twitch_archive::testing::{ConcatMuxer, segments_from_dir};
 use pa_twitch_archive::{ArchiveError, FfmpegMuxer, HelixAccess, Muxer, TwitchSource};
@@ -86,6 +86,8 @@ struct TestSource {
     stream: FakeLiveStream,
     chat_every_ms: i64,
     allowed: AtomicBool,
+    /// Runs before every request of the recorder (on its thread).
+    on_get: std::sync::Mutex<Option<Box<dyn FnMut() + Send>>>,
 }
 
 impl LiveSource for TestSource {
@@ -102,10 +104,16 @@ impl LiveSource for TestSource {
         self.inner.master_playlist(login)
     }
     fn get(&self, url: &str) -> Result<HttpResponse, ArchiveError> {
+        if let Some(hook) = self.on_get.lock().unwrap().as_mut() {
+            hook();
+        }
         self.inner.get(url)
     }
     fn timeline(&self, stream_id: &str) -> Option<LiveTimeline> {
         self.inner.timeline(stream_id)
+    }
+    fn avatar_url(&self, user_id: &str) -> Option<String> {
+        self.inner.avatar_url(user_id)
     }
     fn chat(&self, _stream: &LiveStream) -> Option<Box<dyn LiveChat>> {
         Some(Box::new(FakeLiveChat::new(
@@ -140,6 +148,7 @@ struct Env {
     source: Arc<TestSource>,
     fs: Arc<FakeFs>,
     volume: PathBuf,
+    stops: LiveStops,
 }
 
 fn env(
@@ -192,6 +201,7 @@ fn env(
         stream: stream.clone(),
         chat_every_ms: 7000,
         allowed: AtomicBool::new(true),
+        on_get: std::sync::Mutex::new(None),
     });
     // Checkpoints are database commits; on the virtual clock a 10-second
     // interval would be thousands of them.
@@ -199,10 +209,11 @@ fn env(
         checkpoint_every: Duration::from_secs(600),
         ..settings
     };
-    LiveRecorder::new(source.clone(), storage.clone(), muxer)
+    let recorder = LiveRecorder::new(source.clone(), storage.clone(), muxer)
         .with_clock(clock.clone())
-        .with_settings(settings)
-        .register(&queue);
+        .with_settings(settings);
+    let stops = recorder.stops();
+    recorder.register(&queue);
     Env {
         _dir: dir,
         target,
@@ -211,6 +222,7 @@ fn env(
         source,
         fs,
         volume,
+        stops,
     }
 }
 
@@ -698,4 +710,216 @@ fn rules_start_one_recording_per_channel() {
         (Some(10), Some(14))
     );
     let _ = clock.now_ms();
+}
+
+/// Waits (real time) until the job is terminal.
+fn wait_terminal(env: &Env, id: i64) -> pa_jobs::Job {
+    let deadline = std::time::Instant::now() + Duration::from_secs(120);
+    while !env.queue.get(id).unwrap().state.is_terminal() {
+        assert!(std::time::Instant::now() < deadline, "the job did not end");
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    env.queue.get(id).unwrap()
+}
+
+/// TWI-035: "Stop" of the app ends a recording in the middle of the
+/// broadcast and keeps it, finalised like the end of the broadcast: one
+/// MKV with tags, the cover and the channel's avatar, chat and chapters.
+#[test]
+fn stop_finalises_what_was_recorded() {
+    const MIN: i64 = 60_000;
+    let stream = FakeLiveStream::new(T0, 1800);
+    let clock = Arc::new(VirtualClock::new(T0 + 1000));
+    let fake = FakeLiveTwitch::start(stream.clone(), Arc::clone(&clock)).unwrap();
+    let env = env(
+        &fake,
+        &stream,
+        &clock,
+        true,
+        LiveSettings::default(),
+        Arc::new(ConcatMuxer),
+    );
+    let id = env
+        .storage
+        .enqueue(&env.queue, &request(&stream).to_job("recordings"))
+        .unwrap();
+    let _driver = env.queue.start();
+    while clock.now_ms() < T0 + 5 * MIN {
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    env.stops.request(id);
+    let job = wait_terminal(&env, id);
+    assert_eq!(job.state, JobState::Done, "{:?}", job.error);
+    assert!(!env.stops.is_requested(id), "the request is used up");
+    let result = job.result.unwrap();
+    assert_eq!(result["end"], "stopped");
+    let recorded = result["expected_ms"].as_i64().unwrap();
+    // Five minutes, give or take the segments still in flight.
+    assert!(
+        (4 * MIN + 30_000..=6 * MIN).contains(&recorded),
+        "{recorded}"
+    );
+    // The broadcast goes on; the recorder does not.
+    assert!(clock.now_ms() < T0 + 7 * MIN);
+
+    let dir = recording_dir(&env, &result);
+    let mkv = file_in(&dir, ".mkv");
+    let mux = read_json(&PathBuf::from(format!("{}.mux.json", mkv.display())));
+    let meta = mux["ffmetadata"].as_str().unwrap();
+    for tag in [
+        "TWITCH_STREAM_ID=90001\n",
+        "TWITCH_LOGIN=madeupstreamer\n",
+        "TWITCH_CATEGORIES=Elden Ring\n",
+        "TWITCH_STARTED_AT=",
+    ] {
+        assert!(meta.contains(tag), "{tag} not in {meta}");
+    }
+    assert!(meta.contains(&format!("title={}", stream.title)), "{meta}");
+    let names: Vec<&str> = mux["attachments"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|a| a["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, ["cover.jpg", "avatar.jpg"]);
+    let info = read_json(&file_in(&dir, ".info.json"));
+    assert_eq!(info["end"], "stopped");
+    assert!(file_in(&dir, ".chat.json.gz").exists());
+    assert_eq!(env.storage.items("recordings").unwrap().len(), 1);
+}
+
+/// TWI-035: a paused recording that is stopped is finalised when it runs
+/// again (the app resumes it), without recording more.
+#[test]
+fn stopping_a_paused_recording_keeps_it() {
+    const MIN: i64 = 60_000;
+    let stream = FakeLiveStream::new(T0, 1800);
+    let clock = Arc::new(VirtualClock::new(T0 + 1000));
+    let fake = FakeLiveTwitch::start(stream.clone(), Arc::clone(&clock)).unwrap();
+    let env = env(
+        &fake,
+        &stream,
+        &clock,
+        false,
+        LiveSettings::default(),
+        Arc::new(ConcatMuxer),
+    );
+    let id = env
+        .storage
+        .enqueue(&env.queue, &request(&stream).to_job("recordings"))
+        .unwrap();
+    let _driver = env.queue.start();
+    while clock.now_ms() < T0 + 3 * MIN {
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    env.queue.pause(id).unwrap();
+    while env.queue.get(id).unwrap().state != JobState::Paused {
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let served = fake.served_segments();
+    env.stops.request(id);
+    env.queue.resume(id).unwrap();
+    let job = wait_terminal(&env, id);
+    assert_eq!(job.state, JobState::Done, "{:?}", job.error);
+    let result = job.result.unwrap();
+    assert_eq!(result["end"], "stopped");
+    assert_eq!(fake.served_segments(), served, "nothing recorded after");
+    assert_eq!(result["segments"].as_u64().unwrap() as usize, served);
+}
+
+/// TWI-035: stopped before the first segment: nothing to keep.
+#[test]
+fn stop_before_anything_was_recorded_fails_cleanly() {
+    let stream = FakeLiveStream::new(T0, 600);
+    let clock = Arc::new(VirtualClock::new(T0 + 1000));
+    let fake = FakeLiveTwitch::start(stream.clone(), Arc::clone(&clock)).unwrap();
+    let env = env(
+        &fake,
+        &stream,
+        &clock,
+        false,
+        LiveSettings::default(),
+        Arc::new(ConcatMuxer),
+    );
+    let id = env
+        .storage
+        .enqueue(&env.queue, &request(&stream).to_job("recordings"))
+        .unwrap();
+    env.stops.request(id);
+    assert!(env.queue.run_until_idle(Duration::from_secs(60)).unwrap());
+    let job = env.queue.get(id).unwrap();
+    assert_eq!(job.state, JobState::Failed);
+    assert!(job.error.unwrap().contains("stopped"));
+    assert_eq!(fake.served_segments(), 0);
+    assert!(env.storage.items("recordings").unwrap().is_empty());
+}
+
+/// TWI-035: the disk fills up in the middle of the broadcast (a write fails
+/// with ENOSPC: the second part file is `/dev/full`). The recording stops
+/// cleanly and keeps what it has as MPEG-TS, without a remux that would
+/// need the same space again.
+#[cfg(target_os = "linux")]
+#[test]
+fn a_full_disk_stops_and_keeps_the_recording() {
+    const MIN: i64 = 60_000;
+    let stream = FakeLiveStream::new(T0, 1800);
+    let clock = Arc::new(VirtualClock::new(T0 + 1000));
+    let fake = FakeLiveTwitch::start(stream.clone(), Arc::clone(&clock)).unwrap();
+    let env = env(
+        &fake,
+        &stream,
+        &clock,
+        false,
+        LiveSettings::default(),
+        Arc::new(ConcatMuxer),
+    );
+    let mut req = request(&stream);
+    req.part_minutes = 4;
+    let id = env
+        .storage
+        .enqueue(&env.queue, &req.to_job("recordings"))
+        .unwrap();
+    let tmp = env.storage.job_tmp_dir("recordings", id).unwrap();
+    let hook_clock = Arc::clone(&clock);
+    let mut armed = false;
+    *env.source.on_get.lock().unwrap() = Some(Box::new(move || {
+        if !armed && hook_clock.now_ms() >= T0 + MIN {
+            armed = true;
+            std::os::unix::fs::symlink("/dev/full", tmp.join("part-0002.ts")).unwrap();
+        }
+    }));
+    let _driver = env.queue.start();
+    let job = wait_terminal(&env, id);
+    assert_eq!(job.state, JobState::Done, "{:?}", job.error);
+    let result = job.result.unwrap();
+    assert_eq!(result["end"], "disk_full");
+    let recorded = result["expected_ms"].as_i64().unwrap();
+    assert!((4 * MIN..=5 * MIN).contains(&recorded), "{recorded}");
+    assert!(clock.now_ms() < T0 + 6 * MIN, "stopped at once");
+    let dir = recording_dir(&env, &result);
+    let ts = file_in(&dir, ".ts");
+    assert!(std::fs::metadata(&ts).unwrap().len() > 0);
+    assert_eq!(
+        result["file"].as_str().unwrap(),
+        ts.file_name().unwrap().to_str().unwrap()
+    );
+    assert!(
+        std::fs::read_dir(&dir).unwrap().all(|e| !e
+            .unwrap()
+            .path()
+            .to_string_lossy()
+            .ends_with(".mkv")),
+        "no remux"
+    );
+    let info = read_json(&file_in(&dir, ".info.json"));
+    assert_eq!(info["end"], "disk_full");
+    assert_eq!(info["file"]["container"], "ts");
+    assert!(
+        info["notes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|n| n.as_str().unwrap().starts_with("disk_full"))
+    );
+    assert_eq!(env.storage.items("recordings").unwrap().len(), 1);
 }

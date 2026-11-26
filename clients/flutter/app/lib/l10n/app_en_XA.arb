@@ -2383,5 +2383,19 @@
   "twitchSearchRecent": "[Ŕéçéñţ šéáŕçĥéš······]",
   "twitchChatSentBubble": "[Ṁéššáĝé šéñţ·····]",
   "twitchChatNotSentBubble": "[Ṁéššáĝé ñóţ šéñţ:······· {reason}]",
-  "twitchChatBubbleHide": "[Ĥíðé··]"
+  "twitchChatBubbleHide": "[Ĥíðé··]",
+  "twitchRecordLive": "[Ŕéçóŕð···]",
+  "twitchRecordLiveTooltip": "[Ŕéçóŕð ţĥíš ƀŕóáðçášţ ƒŕóɱ ñóŵ óñ··············]",
+  "twitchRecordLiveStatus": "[Ŕéçóŕðíñĝ···· {elapsed} · {size}]",
+  "twitchRecordLiveKeepsGoing": "[Ŕéçóŕðíñĝ. Íţ ĝóéš óñ áƒţéŕ ýóú çļóšé ţĥé þļáýéŕ, áš ļóñĝ áš Ķíñóļúñé íš ŕúññíñĝ.·································]",
+  "twitchRecordLiveStopTitle": "[Šţóþ ŕéçóŕðíñĝ?······]",
+  "twitchRecordLiveStopBody": "[Ŵĥáţ ŵáš ŕéçóŕðéð íš ķéþţ áñð áþþéáŕš íñ Ŕéçóŕðíñĝš.·····················]",
+  "twitchRecordLiveStopped": "[Ŕéçóŕðíñĝ šţóþþéð. Íţ áþþéáŕš íñ Ŕéçóŕðíñĝš íñ á ɱóɱéñţ.·······················]",
+  "twitchRecordLiveNoSpace": "[Ñóţ éñóúĝĥ šþáçé ƒóŕ á ŕéçóŕðíñĝ. Ƒŕéé šóɱé úþ óŕ çĥóóšé áñóţĥéŕ ƒóļðéŕ íñ ţĥé ŕéçóŕðíñĝ šéţţíñĝš.········································]",
+  "twitchRecordLiveOff": "[Ŕéçóŕðíñĝ Ţŵíţçĥ ƀŕóáðçášţš íš šŵíţçĥéð óƒƒ ŕíĝĥţ ñóŵ.······················]",
+  "twitchRecordLiveError": "[Çóúļð ñóţ šţáŕţ ţĥé ŕéçóŕðíñĝ:············ {error}]",
+  "twitchRecordReadyTitle": "[Ŕéçóŕðíñĝ óƒ····· {channel} íš ŕéáðý····]",
+  "twitchRecordReadyBody": "[Íţ íš íñ Ŕéçóŕðíñĝš áñð ðóŵñļóáðš.··············]",
+  "twitchRecordDiskFullTitle": "[Ðíšķ ƒúļļ: ŕéçóŕðíñĝ óƒ·········· {channel} šţóþþéð···]",
+  "twitchRecordDiskFullBody": "[Ŵĥáţ ŵáš ŕéçóŕðéð íš ķéþţ áš íš, ŵíţĥóúţ çóñṽéŕšíóñ (á .ţš ƒíļé).··························]"
 }

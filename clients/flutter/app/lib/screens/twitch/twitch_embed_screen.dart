@@ -32,6 +32,7 @@ import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 import '../../features/twitch/chat/chat_host.dart';
 import '../../features/twitch/chat/chat_model.dart';
+import '../../flavor.dart';
 import '../../integration/player.dart' show setWindowFullscreen;
 import '../../l10n/l10n.dart';
 import '../../platform/form_factor.dart';
@@ -54,6 +55,7 @@ import 'twitch_player_screen.dart'
         saveTwitchChatWidth,
         twitchSideChatWidth,
         twitchWideLayout;
+import 'twitch_record_live.dart';
 import 'twitch_widgets.dart';
 
 /// Twitch: the embed is at least 400×300.
@@ -510,6 +512,17 @@ class TwitchEmbedScreenState extends State<TwitchEmbedScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 actions: [
+                  // TWI-035: record this broadcast (full builds).
+                  if (AppFlavor.twitchArchive &&
+                      widget.target.isLive &&
+                      login != null &&
+                      login.isNotEmpty &&
+                      _services.visibleArchive != null)
+                    TwitchRecordLiveButton(
+                      login: login,
+                      userId: _services.twitch.channelOf(login).userId,
+                      compact: _phone,
+                    ),
                   if (chatToggle)
                     IconButton(
                       key: const ValueKey('twitch-embed-chat-toggle'),
