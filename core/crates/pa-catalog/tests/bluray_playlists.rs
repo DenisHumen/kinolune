@@ -29,13 +29,22 @@ fn item(clip: &str, secs: u32) -> PlayItem {
         clip_id: clip.into(),
         in_time: 27_000_000,
         out_time: 27_000_000 + secs * 45_000,
+        angles: Vec::new(),
     }
 }
 
 fn playlist(root: &Path, name: &str, items: Vec<PlayItem>) {
     let path = root.join(format!("{BD}/BDMV/PLAYLIST/{name}.mpls"));
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-    std::fs::write(path, Playlist { items }.to_bytes()).unwrap();
+    std::fs::write(
+        path,
+        Playlist {
+            items,
+            ..Playlist::default()
+        }
+        .to_bytes(),
+    )
+    .unwrap();
 }
 
 fn stream(clip: &str) -> String {
@@ -76,6 +85,7 @@ fn good_playlists(root: &Path) {
         &backup,
         Playlist {
             items: vec![item("00100", 9_000)],
+            ..Playlist::default()
         }
         .to_bytes(),
     )
