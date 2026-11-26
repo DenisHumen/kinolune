@@ -8476,6 +8476,180 @@
   "@twitchRecordDiskFullBody": {
     "description": "Body of the disk-full notification of a recording (TWI-035)."
   },
+  "liveUploadFrom": "Copying from {device} · {percent} %",
+  "@liveUploadFrom": {
+    "description": "LIB-028: status of a grey card of a file being copied into the library from another (or this) device.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadBytes": "{done} of {size}",
+  "@liveUploadBytes": {
+    "description": "LIB-028: bytes copied of the file size on a grey card.",
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadSpeed": "{size}/s",
+  "@liveUploadSpeed": {
+    "description": "LIB-028: copy speed on a grey card (size per second).",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadEtaSeconds": "{count, plural, one{{count} s left} other{{count} s left}}",
+  "@liveUploadEtaSeconds": {
+    "description": "LIB-028: time left of a copy, seconds.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "liveUploadEtaMinutes": "{count, plural, one{{count} min left} other{{count} min left}}",
+  "@liveUploadEtaMinutes": {
+    "description": "LIB-028: time left of a copy, minutes.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "liveUploadEtaHours": "{hours} h {minutes} min left",
+  "@liveUploadEtaHours": {
+    "description": "LIB-028: time left of a long copy.",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "liveUploadWaiting": "Waiting on {device}",
+  "@liveUploadWaiting": {
+    "description": "LIB-028: a grey card whose file waits in the upload queue of its device.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadOffline": "Paused: {device} is offline",
+  "@liveUploadOffline": {
+    "description": "LIB-028: the device that copies went quiet; the copy resumes when it is back.",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadPaused": "Paused: no connection to the server, it goes on by itself",
+  "@liveUploadPaused": {
+    "description": "LIB-028: the device that copies cannot reach the source; it resumes by itself."
+  },
+  "liveUploadVerifying": "Checking…",
+  "@liveUploadVerifying": {
+    "description": "LIB-028: the copy is complete and is being checked and renamed."
+  },
+  "liveUploadAdding": "Adding to the library…",
+  "@liveUploadAdding": {
+    "description": "LIB-028: the copy is done; the item appears in a moment."
+  },
+  "liveUploadFailed": "Could not copy",
+  "@liveUploadFailed": {
+    "description": "LIB-028: the copy failed for good (no space …)."
+  },
+  "liveUploadUnavailable": "Available once it is copied",
+  "@liveUploadUnavailable": {
+    "description": "LIB-028: tapping a grey card that is still being copied."
+  },
+  "liveUploadCancel": "Cancel copying",
+  "@liveUploadCancel": {
+    "description": "LIB-028: action of a grey card (the device that copies, or an administrator)."
+  },
+  "liveUploadCancelled": "Copying cancelled",
+  "@liveUploadCancelled": {
+    "description": "LIB-028: snack bar after a copy was cancelled."
+  },
+  "liveUploadGuess": "Is this “{title}”?",
+  "@liveUploadGuess": {
+    "description": "LIB-028: the guess before copying, shown right after a drop; nothing to press if it is right.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadGuessYear": "Is this “{title}” ({year})?",
+  "@liveUploadGuessYear": {
+    "description": "LIB-028: the guess before copying with the year.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "liveUploadNotThis": "Not this",
+  "@liveUploadNotThis": {
+    "description": "LIB-028: button of the guess: search and pick by hand."
+  },
+  "liveUploadPickTitle": "What is it?",
+  "@liveUploadPickTitle": {
+    "description": "LIB-028: title of the search after «Не то»."
+  },
+  "liveUploadSearchLabel": "Title",
+  "@liveUploadSearchLabel": {
+    "description": "LIB-028: search field of «Не то»."
+  },
+  "liveUploadSearchYear": "Year",
+  "@liveUploadSearchYear": {
+    "description": "LIB-028: year field of «Не то»."
+  },
+  "liveUploadSearch": "Search",
+  "@liveUploadSearch": {
+    "description": "LIB-028: search button of «Не то»."
+  },
+  "liveUploadNoResults": "Nothing found. Check the title or leave it as it is.",
+  "@liveUploadNoResults": {
+    "description": "LIB-028: «Не то» found nothing."
+  },
+  "liveUploadEpisode": "Season {season}, episode {episode}",
+  "@liveUploadEpisode": {
+    "description": "LIB-028: episode of a grey card of a series file.",
+    "placeholders": {
+      "season": {
+        "type": "int"
+      },
+      "episode": {
+        "type": "int"
+      }
+    }
+  },
+  "liveUploadSection": "Copying now",
+  "@liveUploadSection": {
+    "description": "LIB-028: heading of the grey cards on a library page (screen readers)."
+  },
+  "liveUploadThisDevice": "this device",
+  "@liveUploadThisDevice": {
+    "description": "LIB-028: «Копируется с этого устройства» when the copy runs here."
+  },
   "twitchArchiveLibrary": "Library",
   "@twitchArchiveLibrary": {
     "description": "Tab of the Twitch archive: saved streams as streamer → game → parts (TWI-026)."

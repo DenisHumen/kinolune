@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MPL-2.0
+# Users, Samba and SSH for the admin backend (DIST-018). One helper process
+# per connection (Accept=yes). Only the alpha-admin user (the web daemon) and
+# root can connect; the helper checks SO_PEERCRED again.
+[Unit]
+Description=Kinolune OS admin helper socket (users, Samba, SSH)
+Documentation=https://github.com/DenisHumen/kinolune/tree/main/distro/admin
+
+[Socket]
+ListenStream=/run/alpha-admin/priv.sock
+Accept=yes
+SocketUser=alpha-admin
+SocketGroup=alpha-admin
+SocketMode=0600
+DirectoryMode=0755
+MaxConnections=4
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target
