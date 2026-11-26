@@ -56,6 +56,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   Stream<List<(LibraryItem, Progress)>>? _cw;
   LibraryItem get _item => widget.item;
   ItemDetails _details = ItemDetails.empty;
+
+  /// Other titles of a Blu-ray or DVD (PLAY-017), after the extras.
+  List<MediaExtra> _discExtras = const [];
   List<MediaVersion> _versions = const [];
   bool? _favorite;
   (MediaCollection, List<LibraryItem>)? _collection;
@@ -119,9 +122,12 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         debugPrint('Lists of $id not read: $e');
       }
     }
+    // PLAY-017: the other playlists of a disc are extras of the film.
+    final disc = await discOf(library, _item);
     if (!mounted) return;
     setState(() {
       _details = details;
+      _discExtras = disc?.extraCards ?? const [];
       _versions = versions;
       _favorite = favorite;
       _collection = collection;
@@ -359,11 +365,14 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 child: CreditsRow(credits: cast),
               ),
             ),
-          if (details.extras.isNotEmpty)
+          if (details.extras.isNotEmpty || _discExtras.isNotEmpty)
             SliverToBoxAdapter(
               child: DetailSection(
                 title: l.detailExtras,
-                child: ExtrasRow(item: item, extras: details.extras),
+                child: ExtrasRow(
+                  item: item,
+                  extras: [...details.extras, ..._discExtras],
+                ),
               ),
             ),
           if (collection != null)

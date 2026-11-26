@@ -97,6 +97,9 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.Limiter.Success(user, addr)
+	// The same password opens the shares (DIST-018), for every NAS user,
+	// administrator or not.
+	s.syncSamba(r, id.User, req.Password)
 	// No session fixation: an old cookie of this browser is dropped.
 	if c, err := r.Cookie(CookieName); err == nil {
 		s.Sessions.Delete(c.Value)

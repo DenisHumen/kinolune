@@ -30,6 +30,8 @@ class PlayRequest {
     this.itemId,
     this.subtitleSearch,
     this.audioFormat,
+    this.angles = const [],
+    this.streamLanguages = const {},
   });
 
   /// File path, `file://` URI or any URI libmpv understands.
@@ -103,6 +105,43 @@ class PlayRequest {
   /// read them from the file (MUS-001), for the Now Playing format line
   /// (MUS-005). Null: unknown; the engine's codec is shown if it has one.
   final AudioFormat? audioFormat;
+
+  /// A Blu-ray or DVD title shot from several angles (PLAY-017): one URI
+  /// per angle, [uri] being one of them. The video tab lists them; a pick
+  /// reopens the title at the same position. Empty: no angles.
+  final List<String> angles;
+
+  /// Languages of a disc's streams by the id libmpv reports as `src-id`
+  /// (the PID of a Blu-ray stream, PLAY-017): an `.m2ts` does not carry
+  /// them, the disc's playlist does. Used for tracks without a language.
+  final Map<int, String> streamLanguages;
+
+  /// The same request playing [uri] from [startPositionMs] (another angle
+  /// of a disc title).
+  PlayRequest withUri(String uri, {required int startPositionMs}) =>
+      PlayRequest(
+        uri: uri,
+        title: title,
+        startPositionMs: startPositionMs,
+        subtitleUri: subtitleUri,
+        artist: artist,
+        album: album,
+        albumId: albumId,
+        artworkUri: artworkUri,
+        durationMs: durationMs,
+        subtitles: subtitles,
+        seriesKey: seriesKey,
+        subtitleMemory: subtitleMemory,
+        originalLanguage: originalLanguage,
+        trickplay: trickplay,
+        chapters: chapters,
+        skipSegments: skipSegments,
+        itemId: itemId,
+        subtitleSearch: subtitleSearch,
+        audioFormat: audioFormat,
+        angles: angles,
+        streamLanguages: streamLanguages,
+      );
 
   @override
   String toString() => 'PlayRequest($title, $uri)';

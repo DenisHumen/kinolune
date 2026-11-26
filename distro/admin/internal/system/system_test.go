@@ -186,7 +186,7 @@ func TestFirewall(t *testing.T) {
 	for _, o := range st.Openings {
 		open[o.Name] = o.Open
 	}
-	if !open["media"] || !open["smb"] || !open["discovery"] || open["cockpit"] {
+	if !open["media"] || !open["smb"] || !open["discovery"] || open["cockpit"] || open["ssh"] {
 		t.Fatalf("openings %v", open)
 	}
 	// Close the media port, open Cockpit: runtime and permanent both change.
@@ -207,13 +207,54 @@ func TestFirewall(t *testing.T) {
 	if err := fw.SetOpening(ctx, "cockpit", true); err != nil {
 		t.Fatalf("second open: %v", err)
 	}
-	if err := fw.SetOpening(ctx, "ssh", true); !errors.Is(err, ErrNotFound) {
+	if err := fw.SetOpening(ctx, "telnet", true); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("unknown opening: %v", err)
 	}
-	f.Deny("runtime.removeService")
+	// SSH (DIST-018): closed by default, opens as the ssh service.
+	if err := fw.SetOpening(ctx, "ssh", true); err != nil {
+		t.Fatal(err)
+	}
+	if rtS, _, pS, _ := f.Zone("home"); !slices.Contains(rtS, "ssh") || !slices.Contains(pS, "ssh") {
+		t.Errorf("ssh not open: %v %v", rtS, pS)
+	}
+	// SMB is 445/tcp only; an older image's "samba" service (NetBIOS
+	// 137-139 too) counts as open and goes away on close.
+	if err := fw.SetOpening(ctx, "smb", false); err != nil {
+		t.Fatal(err)
+	}
+	var ignored string
+	if err := bus.call(ctx, fwDest, fwPath, fwIface+".zone.addService", []any{&ignored}, "home", "samba", int32(0)); err != nil {
+		t.Fatal(err)
+	}
+	if st, _ := fw.Status(ctx); !openingOpen(st, "smb") {
+		t.Errorf("legacy samba service not seen as smb open")
+	}
+	if err := fw.SetOpening(ctx, "smb", false); err != nil {
+		t.Fatal(err)
+	}
+	if rtS, rtP, _, pP := f.Zone("home"); slices.Contains(rtS, "samba") || slices.Contains(rtP, "445/tcp") || slices.Contains(pP, "445/tcp") {
+		t.Errorf("smb still open: %v %v %v", rtS, rtP, pP)
+	}
+	if err := fw.SetOpening(ctx, "smb", true); err != nil {
+		t.Fatal(err)
+	}
+	if rtS, rtP, pS, pP := f.Zone("home"); slices.Contains(rtS, "samba") || slices.Contains(pS, "samba") ||
+		!slices.Contains(rtP, "445/tcp") || !slices.Contains(pP, "445/tcp") {
+		t.Errorf("smb open: %v %v %v %v", rtS, rtP, pS, pP)
+	}
+	f.Deny("runtime.removePort")
 	if err := fw.SetOpening(ctx, "smb", false); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("denied: %v", err)
 	}
+}
+
+func openingOpen(st FirewallStatus, name string) bool {
+	for _, o := range st.Openings {
+		if o.Name == name {
+			return o.Open
+		}
+	}
+	return false
 }
 
 func TestDisks(t *testing.T) {

@@ -214,6 +214,13 @@ enum SyncEventKind {
   /// New devices asking to join came or went (SYNC-015): read
   /// [DeviceSync.joinRequests].
   joinRequests,
+
+  /// Live progress of another device's library uploads changed (LIB-028).
+  uploads,
+
+  /// Another device asks this one to cancel uploads (LIB-028,
+  /// [SyncEvent.payload]: a JSON array of upload ids).
+  uploadCancel,
 }
 
 /// What a text field is for (UI-027): the phone picks its keyboard by it.
@@ -777,6 +784,8 @@ class CoreDeviceSync implements DeviceSync {
       CoreSyncEventKind.input => SyncEventKind.input,
       CoreSyncEventKind.music => SyncEventKind.music,
       CoreSyncEventKind.joinRequests => SyncEventKind.joinRequests,
+      CoreSyncEventKind.uploads => SyncEventKind.uploads,
+      CoreSyncEventKind.uploadCancel => SyncEventKind.uploadCancel,
     },
     deviceId: e.deviceId,
     name: e.name,

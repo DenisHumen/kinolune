@@ -7,6 +7,7 @@
 /// the app automatically.
 library;
 
+export 'src/rust/api/airing.dart';
 export 'src/rust/api/anime_db.dart';
 export 'src/rust/api/app_update.dart';
 export 'src/rust/api/audiobooks.dart';
@@ -14,6 +15,7 @@ export 'src/rust/api/availability.dart';
 export 'src/rust/api/cloud.dart';
 export 'src/rust/api/content_kind.dart';
 export 'src/rust/api/details.dart';
+export 'src/rust/api/disc.dart';
 export 'src/rust/api/diagnostics.dart';
 export 'src/rust/api/discovery.dart';
 export 'src/rust/api/dlna.dart';
@@ -33,6 +35,7 @@ export 'src/rust/api/library.dart';
 export 'src/rust/api/library_labels.dart';
 export 'src/rust/api/library_lists.dart';
 export 'src/rust/api/library_query.dart';
+export 'src/rust/api/live_uploads.dart';
 export 'src/rust/api/lyrics.dart';
 export 'src/rust/api/music.dart';
 export 'src/rust/api/offline.dart';

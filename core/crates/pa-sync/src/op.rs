@@ -224,7 +224,46 @@ pub enum OpBody {
         target: String,
         tagged: bool,
     },
+    /// A step of a library upload (LIB-028): the durable part of the grey
+    /// card on every device. `upload` is the upload id (the `i` of the
+    /// ephemeral `up` ticks, [`crate::upload`]); `info` is a JSON object
+    /// the apps read (file name, size, kind, the guess before copying, the
+    /// source and folder, the sending device's name), without credentials.
+    /// Progress itself is never an op.
+    #[serde(rename = "upload.event")]
+    UploadEvent {
+        upload: String,
+        phase: UploadPhase,
+        info: String,
+    },
 }
+
+/// The durable steps of a library upload (LIB-028).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UploadPhase {
+    /// Dropped and queued: the grey card appears.
+    Started,
+    /// Recognized before (or after) copying: title, year, poster.
+    Recognized,
+    /// Copied, checked and renamed: the card turns into the item.
+    Done,
+    /// Cancelled: the card goes away.
+    Cancelled,
+    /// A phase of a newer version; kept, never shown.
+    #[serde(other)]
+    Other,
+}
+
+impl UploadPhase {
+    /// The upload has ended.
+    pub fn is_final(self) -> bool {
+        matches!(self, Self::Done | Self::Cancelled)
+    }
+}
+
+/// Largest `info` of an `upload.event`, in bytes.
+pub const MAX_UPLOAD_INFO_LEN: usize = 8 * 1024;
 
 /// Words that mark a setting key as a secret; such settings never sync in
 /// clear text (SYNC-010 adds an E2E container for them).
@@ -364,6 +403,7 @@ impl OpBody {
                 let key = pa_library::labels::name_key(tag);
                 return format!("tag\u{1f}{profile}\u{1f}{key}\u{1f}{target}");
             }
+            Self::UploadEvent { upload, .. } => ["upload", "", upload],
         };
         parts.join("\u{1f}")
     }
@@ -528,6 +568,20 @@ impl OpBody {
                 check_ref(profile, "profile")?;
                 check_label_name(tag, MAX_TAG_NAME, "tag")?;
                 check_ref(target, "target")
+            }
+            Self::UploadEvent { upload, info, .. } => {
+                if !crate::upload::is_valid_id(upload) {
+                    return Err(Error::Invalid("upload id"));
+                }
+                if info.len() > MAX_UPLOAD_INFO_LEN {
+                    return Err(Error::Invalid("upload info"));
+                }
+                let value: serde_json::Value =
+                    serde_json::from_str(info).map_err(|_| Error::Invalid("upload info"))?;
+                if !value.is_object() || has_credential_field(&value) {
+                    return Err(Error::Invalid("upload info"));
+                }
+                Ok(())
             }
         }
     }

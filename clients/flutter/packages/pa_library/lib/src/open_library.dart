@@ -81,6 +81,8 @@ Future<OpenedLibrary> openAppLibrary(
     lib = await RustLibrary.open(p.join(dataDir, coreDbFileName));
     // META-021: MusicBrainz and Cover Art Archive after every scan.
     lib.musicMetadata = true;
+    // UI-057: when the next episodes of ongoing shows air.
+    lib.airingRefresh = true;
     final report = await lib.importLegacyV0(v0Path);
     return OpenedLibrary._(
       lib,
