@@ -587,3 +587,73 @@ func (t *Tracker) Overall(now int64) float64 {
 	}
 	return float64(spent) / float64(spent+left)
 }
+
+// --- checking a recording ---------------------------------------------------
+
+// ETATolerance is how far the total time predicted halfway through may be
+// from the real one in CheckRecording.
+const ETATolerance = 0.25
+
+// CheckRecording replays a recorded installation: it prints every task with
+// its time and number of updates, and the total time the screen predicted at
+// a quarter, half and three quarters of the way, and fails when a task did
+// not finish, the copy did not move, or the prediction halfway was off by
+// more than ETATolerance (the QEMU test of the ISO, DIST-034).
+func CheckRecording(evs []Event, w io.Writer) error {
+	if len(evs) == 0 {
+		return fmt.Errorf("empty recording")
+	}
+	end := evs[len(evs)-1].At
+	full := NewTracker()
+	updates := map[StepID]int{}
+	var problems []string
+	last := map[StepID]int64{}
+	for _, e := range evs {
+		full.Apply(e)
+		if e.Kind == EventProgress {
+			updates[e.Step]++
+			if e.Done < last[e.Step] {
+				problems = append(problems, fmt.Sprintf("%s went back from %d to %d", e.Step, last[e.Step], e.Done))
+			}
+			last[e.Step] = e.Done
+		}
+	}
+	for _, k := range full.Tasks {
+		fmt.Fprintf(w, "%-10s %-8s %8s %4d updates", k.ID, stateName[k.State], k.Elapsed(end).Round(100*time.Millisecond), updates[k.ID])
+		if k.Bytes {
+			fmt.Fprintf(w, ", %d MB", k.Done/1e6)
+		}
+		fmt.Fprintln(w)
+		if k.State != Finished {
+			problems = append(problems, fmt.Sprintf("%s did not finish", k.ID))
+		}
+	}
+	if updates[StepCopy] < 3 {
+		problems = append(problems, fmt.Sprintf("the copy moved %d times", updates[StepCopy]))
+	}
+	total := time.Duration(end) * time.Millisecond
+	fmt.Fprintf(w, "total      %s\n", total.Round(time.Second))
+	for _, q := range []int64{25, 50, 75} {
+		at := end * q / 100
+		tr := NewTracker()
+		for _, e := range evs {
+			if e.At > at {
+				break
+			}
+			tr.Apply(e)
+		}
+		pred := time.Duration(at)*time.Millisecond + tr.Remaining(at)
+		off := float64(pred-total) / float64(total)
+		fmt.Fprintf(w, "at %d%%     predicted %s (%+.0f%%)\n", q, pred.Round(time.Second), off*100)
+		if q == 50 && (off > ETATolerance || off < -ETATolerance) {
+			problems = append(problems, fmt.Sprintf("the prediction halfway was off by %+.0f%%", off*100))
+		}
+	}
+	if len(problems) > 0 {
+		return fmt.Errorf("progress check: %s", strings.Join(problems, "; "))
+	}
+	fmt.Fprintln(w, "progress check: OK")
+	return nil
+}
+
+var stateName = map[State]string{Pending: "pending", Running: "running", Finished: "done", Failed: "failed"}
