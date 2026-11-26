@@ -39,14 +39,16 @@ void _log(String line) {
   final text = 'LIVE ${_now()} $_role $line';
   // ignore: avoid_print
   print(text);
-  File(
-    '${_dir.path}/$_role.log',
-  ).writeAsStringSync('$text\n', mode: FileMode.append);
+  File('${_dir.path}/$_role.log')
+      .writeAsStringSync('$text\n', mode: FileMode.append);
 }
 
 File _step(String name) => File('${_dir.path}/$name');
 
-Future<String> _waitFor(String name, {Duration max = const Duration(minutes: 10)}) async {
+Future<String> _waitFor(
+  String name, {
+  Duration max = const Duration(minutes: 10),
+}) async {
   final end = DateTime.now().add(max);
   while (DateTime.now().isBefore(end)) {
     final f = _step(name);
@@ -123,6 +125,10 @@ Future<void> _source(WidgetTester t, AppServices s) async {
     ),
   );
   _log('source ${made.id}');
+  await s.refreshSources();
+  _log(
+    'sources ${s.managedSources.map((x) => '${x.id}:${x.type.name}:${x.enabled}').join(',')}',
+  );
   final invite = await s.sync.invite();
   _step('invite').writeAsStringSync(invite.qr);
   await _waitFor('joined');
@@ -136,7 +142,46 @@ Future<void> _source(WidgetTester t, AppServices s) async {
   _step('drop-ms').writeAsStringSync('${_now()}');
   _log('drop $file ${File(file).lengthSync()}');
   final zone = t.state<LibraryDropZoneState>(find.byType(LibraryDropZone));
-  unawaited(zone.drop([file]));
+  for (var i = 0; i < 3; i++) {
+    try {
+      final id = int.parse(made.id);
+      final list = await s.files!.list(id, '');
+      _log('list ${list.map((e) => e.name).join(',')}');
+      _log('writable-core ${await s.files!.writable(id)}');
+    } catch (e) {
+      _log('probe failed $e');
+    }
+    await _pump(t, const Duration(seconds: 2));
+  }
+  try {
+    final w = await s.filesControl!.writableSources();
+    _log('writable ${w.map((x) => '${x.id}:${x.name}').join(',')}');
+  } catch (e) {
+    _log('writable failed $e');
+  }
+  var dropped = false;
+  unawaited(
+    zone
+        .drop([file])
+        .then((jobs) {
+          dropped = true;
+          _log('dropped jobs=${jobs.length}');
+        })
+        .catchError((Object e) {
+          dropped = true;
+          _log('drop failed $e');
+        }),
+  );
+  for (var i = 0; i < 600 && !dropped; i++) {
+    await _pump(t, const Duration(milliseconds: 100));
+  }
+  for (final e in find.byType(SnackBar).evaluate()) {
+    _log('snack ${(e.widget as SnackBar).content}');
+  }
+  for (final e in find.byType(Text).evaluate().take(400)) {
+    final d = (e.widget as Text).data ?? '';
+    if (d.contains('медиатек') || d.contains('Это')) _log('text $d');
+  }
   // Copying: keep the frames coming (the watcher takes the screenshots).
   LiveUpload? card;
   for (var i = 0; i < 20 * 60 * 5; i++) {
@@ -167,7 +212,9 @@ Future<void> _watcher(WidgetTester t, AppServices s) async {
     card = s.liveUploads.uploads.where((u) => !u.local).firstOrNull;
   }
   final seen = _now();
-  _log('card ${card.id} after_ms=${seen - drop} title=${card.info.value.guess.title}');
+  _log(
+    'card ${card.id} after_ms=${seen - drop} title=${card.info.value.guess.title}',
+  );
   _step('card-ms').writeAsStringSync('$seen');
   var ticks = 0;
   var last = card.progress.value;
@@ -196,10 +243,16 @@ Future<void> _watcher(WidgetTester t, AppServices s) async {
     }
   }
   final doneAt = int.parse(_step('done-ms').readAsStringSync());
-  for (var i = 0; i < 100 && card.progress.value.state != LiveUploadState.done; i++) {
+  for (
+    var i = 0;
+    i < 100 && card.progress.value.state != LiveUploadState.done;
+    i++
+  ) {
     await _pump(t, const Duration(milliseconds: 50));
   }
-  _log('done_seen after_ms=${_now() - doneAt} state=${card.progress.value.state.name}');
+  _log(
+    'done_seen after_ms=${_now() - doneAt} state=${card.progress.value.state.name}',
+  );
   final span = tickTimes.isEmpty ? 0 : tickTimes.last - tickTimes.first;
   _log(
     'summary ticks=$ticks span_ms=$span hz=${span == 0 ? 0 : ((ticks - 1) * 1000 / span).toStringAsFixed(2)} '

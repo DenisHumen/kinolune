@@ -112,6 +112,8 @@ class _LibraryGridScreenState extends State<LibraryGridScreen> {
     _badgeSub = _queries
         .badges(widget.kind)
         .listen((b) => setState(() => _badges = b));
+    // LIB-028: the empty state gives way to the first card on its way.
+    _services.liveUploads.addListener(_onLive);
     unawaited(_loadPrefs());
   }
 
@@ -209,8 +211,13 @@ class _LibraryGridScreenState extends State<LibraryGridScreen> {
     );
   }
 
+  void _onLive() {
+    if (mounted && _paged?.total == 0) setState(() {});
+  }
+
   @override
   void dispose() {
+    _services.liveUploads.removeListener(_onLive);
     _badgeSub?.cancel();
     _paged?.removeListener(_onPaged);
     _paged?.dispose();
@@ -338,6 +345,12 @@ class _LibraryGridScreenState extends State<LibraryGridScreen> {
           ),
         ),
         if (paged == null || total == null)
+          const SliverToBoxAdapter(child: SizedBox.shrink())
+        // LIB-028: a first file on its way is not an empty library.
+        else if (total == 0 &&
+            _services.liveUploads
+                .forPage(shows: widget.kind == ItemKind.show)
+                .isNotEmpty)
           const SliverToBoxAdapter(child: SizedBox.shrink())
         else if (total == 0)
           SliverFillRemaining(

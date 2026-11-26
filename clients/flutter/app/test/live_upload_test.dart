@@ -104,6 +104,7 @@ FilesController _controller(FakeSourceFiles files) => FilesController(
 );
 
 void main() {
+  setUpAll(loadAppFonts);
   tearDown(() => libraryLocalFs = const IoLocalFs());
 
   group('the cards', () {

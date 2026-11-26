@@ -171,8 +171,11 @@ class LiveUploadCard extends StatelessWidget {
                               url: info.guess.posterUrl,
                               seed: upload.id,
                               style: ArtStyle.poster,
-                              title: title,
-                              subtitle: info.guess.year?.toString(),
+                              // The caption below names it; the status
+                              // takes the bottom of the art.
+                              title: info.guess.posterUrl == null
+                                  ? null
+                                  : title,
                             ),
                           ),
                           if (!done)
