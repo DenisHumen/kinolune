@@ -35,7 +35,9 @@ func (f *fakeAccounts) Do(_ context.Context, req privhelper.Request) (privhelper
 		}
 		return nil
 	}
-	find := func(name string) int { return slices.IndexFunc(f.users, func(u privhelper.User) bool { return u.Name == name }) }
+	find := func(name string) int {
+		return slices.IndexFunc(f.users, func(u privhelper.User) bool { return u.Name == name })
+	}
 	switch req.Op {
 	case privhelper.OpUsers:
 		return privhelper.Response{OK: true, Users: slices.Clone(f.users)}, nil

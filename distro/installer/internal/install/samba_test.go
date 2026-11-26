@@ -22,14 +22,9 @@ func TestMD4Vectors(t *testing.T) {
 	}
 }
 
+// TestNTHash checks the well-known NT hash of the word "password" (a public
+// test vector, not a secret) through the smbpasswd line Samba imports.
 func TestNTHash(t *testing.T) {
-	for pw, want := range map[string]string{
-		"password": "8846f7eaee8fb117ad06bdd830b7586c",
-	} {
-		if got := hex.EncodeToString(NTHash(pw)); got != want {
-			t.Errorf("NTHash(%q) = %s, want %s", pw, got, want)
-		}
-	}
 	if got := SambaImportLine("anna", 1000, "password", 0x6a000000); got !=
 		"anna:1000:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:8846F7EAEE8FB117AD06BDD830B7586C:[U          ]:LCT-6A000000:\n" {
 		t.Fatalf("%q", got)
