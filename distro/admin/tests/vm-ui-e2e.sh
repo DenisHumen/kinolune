@@ -28,7 +28,9 @@ KEY="${WORK_DIR}/vm_key"
 read -r -a qemu_exec <<< "${QEMU_EXEC:-}"
 
 export VM_ADMIN_PORT="${VM_ADMIN_PORT:-$((VM_SSH_PORT + 2))}"
-PLAYWRIGHT_IMAGE="${PLAYWRIGHT_IMAGE:-mcr.microsoft.com/playwright/python:v1.49.1-noble}"
+# The image carries the browsers; the Python package (same version) is installed per run.
+PLAYWRIGHT_VERSION="${PLAYWRIGHT_VERSION:-1.49.1}"
+PLAYWRIGHT_IMAGE="${PLAYWRIGHT_IMAGE:-mcr.microsoft.com/playwright/python:v${PLAYWRIGHT_VERSION}-noble}"
 OUT="${WORK_DIR}/ui-e2e"
 
 LOCAL_REPO="localhost:${REGISTRY_PORT}/alpha-os"
@@ -118,7 +120,8 @@ else
         --name "${CONTAINER_PREFIX:-pa-test}-ui-e2e-browser" \
         -e UI_URL -e UI_USER -e UI_PASS -e UI_V1 -e UI_V2 -e UI_OUT=/out -e HOME=/tmp \
         -v "${ADMIN_TESTS}:/t:ro" -v "${OUT}:/out" \
-        "${PLAYWRIGHT_IMAGE}" python3 /t/ui_update_rollback.py &
+        "${PLAYWRIGHT_IMAGE}" sh -c "pip install -q --disable-pip-version-check --target /tmp/pw \
+            'playwright==${PLAYWRIGHT_VERSION}' && PYTHONPATH=/tmp/pw python3 /t/ui_update_rollback.py" &
 fi
 BROWSER=$!
 
