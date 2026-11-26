@@ -61,6 +61,9 @@ enum MediaExtraKind {
   interview,
   short,
   scene,
+
+  /// Another title of a Blu-ray or DVD (PLAY-017).
+  discTitle,
   other;
 
   static MediaExtraKind parse(String slug) => switch (slug) {

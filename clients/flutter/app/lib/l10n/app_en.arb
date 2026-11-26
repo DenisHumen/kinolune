@@ -1719,7 +1719,7 @@
   "settingsTakeoverPause": "Pause when another device takes over",
   "settingsTakeoverPauseSubtitle": "Starting the same title on another device of the family pauses it here.",
   "libraryUnplayableTitle": "This file can't be played",
-  "libraryUnplayableDiscImage": "Disc images (.iso) can't be played. Extract the disc to a folder (BDMV or VIDEO_TS) or remux the main title to MKV.",
+  "libraryUnplayableDiscImage": "Disc images play from the library: add the folder with this image as a source, and the film opens with all its tracks.",
   "libraryUnplayableOther": "Kinolune can't play this file yet.",
   "libraryUnplayableOk": "OK",
   "settingsLibrarySourcesTitle": "Library & sources",
@@ -8649,5 +8649,7 @@
   "liveUploadThisDevice": "this device",
   "@liveUploadThisDevice": {
     "description": "LIB-028: «Копируется с этого устройства» when the copy runs here."
-  }
+  },
+  "libraryUnplayableProtectedDisc": "This disc is copy-protected (AACS, BD+ or CSS). Kinolune doesn't remove protection, so it can't play it. Discs and images without protection play by themselves.",
+  "detailExtraDiscTitle": "From the disc"
 }
