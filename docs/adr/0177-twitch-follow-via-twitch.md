@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
-# ADR-NNNN. Фоллов Twitch: избранное Kinolune + страница канала на самом Twitch
+# ADR-0177. Фоллов Twitch: избранное Kinolune + страница канала на самом Twitch
 
 - Статус: **принят** (TWI-033)
 - Дата: 2026-11-26
