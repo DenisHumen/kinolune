@@ -153,7 +153,12 @@ fn child(role: &str, qr: &str) {
                 if matches!(event, Ok(ServiceEvent::LibraryChanged)) {
                     for u in catalog.live_uploads().unwrap() {
                         if phases.insert(u.upload_id.clone(), u.phase) != Some(u.phase) {
-                            say(format!("PHASE {} {:?} {}", u.upload_id, u.phase, system_ms()));
+                            say(format!(
+                                "PHASE {} {:?} {}",
+                                u.upload_id,
+                                u.phase,
+                                system_ms()
+                            ));
                         }
                     }
                 }
@@ -377,8 +382,11 @@ fn a_dropped_file_shows_on_every_device_with_live_progress() {
     let mut server = Child::spawn("server", &invite.qr);
     // No mDNS on loopback: everybody is told where the others are.
     let src_addr = src.service.sync_addr().unwrap().to_string();
-    src.service
-        .peer_up(&server.id, DeviceClass::Server, server.addr.parse().unwrap());
+    src.service.peer_up(
+        &server.id,
+        DeviceClass::Server,
+        server.addr.parse().unwrap(),
+    );
     src.service
         .peer_up(&phone.id, DeviceClass::Mobile, phone.addr.parse().unwrap());
     let (sid, saddr, pid, paddr) = (
@@ -410,8 +418,11 @@ fn a_dropped_file_shows_on_every_device_with_live_progress() {
         .record_upload_event("u1", UploadPhase::Started, &info("Dune.Part.Two.2024.mkv"))
         .unwrap();
     src.service.flush();
-    src.service.upload_report("u1", UploadState::Waiting, 0, SIZE);
-    let card = phone.expect("PHASE u1 Started", "")[3].parse::<u64>().unwrap();
+    src.service
+        .upload_report("u1", UploadState::Waiting, 0, SIZE);
+    let card = phone.expect("PHASE u1 Started", "")[3]
+        .parse::<u64>()
+        .unwrap();
     let card_ms = card - t0;
     eprintln!("LIB-028 card on the phone after {card_ms} ms");
     assert!(card_ms < 1_000, "card after {card_ms} ms");
@@ -440,7 +451,8 @@ fn a_dropped_file_shows_on_every_device_with_live_progress() {
 
     // 4. Done: the card is available < 1 s after the copy ends.
     let t_done = system_ms();
-    src.service.upload_report("u1", UploadState::Done, SIZE, SIZE);
+    src.service
+        .upload_report("u1", UploadState::Done, SIZE, SIZE);
     src.catalog
         .record_upload_event("u1", UploadPhase::Done, &info("Dune.Part.Two.2024.mkv"))
         .unwrap();
@@ -466,15 +478,22 @@ fn a_dropped_file_shows_on_every_device_with_live_progress() {
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
         let left = deadline.saturating_duration_since(Instant::now());
-        match events.recv_timeout(left).expect("cancel reaches the source") {
+        match events
+            .recv_timeout(left)
+            .expect("cancel reaches the source")
+        {
             ServiceEvent::UploadCancel { ids, device_id } => {
-                assert_eq!((ids.as_slice(), device_id.as_str()), (&["u2".to_owned()][..], pid.as_str()));
+                assert_eq!(
+                    (ids.as_slice(), device_id.as_str()),
+                    (&["u2".to_owned()][..], pid.as_str())
+                );
                 break;
             }
             _ => continue,
         }
     }
-    src.service.upload_report("u2", UploadState::Cancelled, offset, SIZE);
+    src.service
+        .upload_report("u2", UploadState::Cancelled, offset, SIZE);
     src.catalog
         .record_upload_event("u2", UploadPhase::Cancelled, &info("b.mkv"))
         .unwrap();
@@ -509,7 +528,10 @@ fn a_dropped_file_shows_on_every_device_with_live_progress() {
     let mut back = 0;
     let deadline = Instant::now() + Duration::from_secs(20);
     while back == 0 {
-        assert!(Instant::now() < deadline, "the bar moves on after the source is back");
+        assert!(
+            Instant::now() < deadline,
+            "the bar moves on after the source is back"
+        );
         copy(&src.service, &["u3"], &mut offset, 500);
         phone.drain();
         back = phone
@@ -631,6 +653,9 @@ fn the_guess_before_copying_matches_the_scan_after_it() {
             eprintln!("{n}: guess {guess:?}, scan {scanned:?}");
         }
     }
-    eprintln!("LIB-028 guess before copy = scan after copy: {same}/{}", names.len());
+    eprintln!(
+        "LIB-028 guess before copy = scan after copy: {same}/{}",
+        names.len()
+    );
     assert_eq!(same, names.len());
 }

@@ -50,8 +50,8 @@ use tokio::task::{JoinHandle, JoinSet};
 
 use crate::input::InputFrame;
 use crate::music::MusicFrame;
-use crate::upload::UploadFrame;
 use crate::proto::{Message, PROTOCOL_VERSION, PlaybackUpdate, Takeover};
+use crate::upload::UploadFrame;
 use crate::{Error, Op, OpId};
 use election::Hub;
 use state::{Shared, Source};

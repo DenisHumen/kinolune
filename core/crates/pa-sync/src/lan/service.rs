@@ -1422,9 +1422,7 @@ impl Inner {
         u.expired_ms = now;
         let mut wake = u.pacer.next_poll_ms(now);
         if u.watching {
-            let at = u
-                .watch_sent_ms
-                .map_or(now, |t| t + upload::WATCH_RENEW_MS);
+            let at = u.watch_sent_ms.map_or(now, |t| t + upload::WATCH_RENEW_MS);
             wake = Some(wake.map_or(at, |w| w.min(at)));
         }
         if !u.board.is_empty() {
@@ -2445,11 +2443,9 @@ async fn upload_loop(weak: Weak<Inner>, node: Weak<LanNode>) {
         }
         drop(node);
         // Nothing to do: sleep until a report or a subscription comes.
-        let wait = step
-            .wake_ms
-            .map_or(Duration::from_secs(3600), |at| {
-                Duration::from_millis(at.saturating_sub(now).max(5))
-            });
+        let wait = step.wake_ms.map_or(Duration::from_secs(3600), |at| {
+            Duration::from_millis(at.saturating_sub(now).max(5))
+        });
         let _ = tokio::time::timeout(wait, inner.upload_notify.notified()).await;
     }
 }

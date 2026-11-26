@@ -236,7 +236,10 @@ mod tests {
     #[test]
     fn the_guess_is_what_the_scan_will_plan() {
         let g = guess_upload("Movies/Dune.Part.Two.2024.2160p.WEB-DL.mkv");
-        assert_eq!((g.kind.as_str(), g.title.as_str()), ("movie", "Dune Part Two"));
+        assert_eq!(
+            (g.kind.as_str(), g.title.as_str()),
+            ("movie", "Dune Part Two")
+        );
         assert_eq!(g.year, Some(2024));
         let g = guess_upload("TV Shows/Severance/Severance.S02E03.1080p.mkv");
         assert_eq!(g.kind, "show");

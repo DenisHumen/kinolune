@@ -553,10 +553,7 @@ impl Connection {
             // UI-027: remote text input, sealed; MUS-015: a music queue
             // handed to another device, sealed; LIB-028: live upload
             // progress. Relayed unread, never stored.
-            Message::PbTakeover(_)
-            | Message::Input(_)
-            | Message::Music(_)
-            | Message::Upload(_) => {
+            Message::PbTakeover(_) | Message::Input(_) | Message::Music(_) | Message::Upload(_) => {
                 self.hub.publish(self.id, text)
             }
             Message::Op(frame) => self.store(frame).await?,

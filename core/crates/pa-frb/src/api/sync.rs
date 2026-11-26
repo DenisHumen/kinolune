@@ -38,9 +38,9 @@ use pa_catalog::pa_sync::lan::service::{
 };
 use pa_catalog::pa_sync::matching::ItemKeys;
 use pa_catalog::pa_sync::music::MusicAction;
-use pa_catalog::pa_sync::upload::UploadState;
 use pa_catalog::pa_sync::proto::{PlayState, PlaybackUpdate};
 use pa_catalog::pa_sync::seal::SealKey;
+use pa_catalog::pa_sync::upload::UploadState;
 use pa_catalog::pa_sync::{Op, OpId};
 use pa_catalog::{Catalog, FolderJournal};
 use pa_catalog::{ItemRef, LOCAL_DEVICE_ID};

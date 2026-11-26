@@ -39,10 +39,10 @@ use crate::Error;
 use crate::hlc::{Hlc, is_valid_device_id};
 use crate::input::InputFrame;
 use crate::music::MusicFrame;
-use crate::upload::UploadFrame;
 use crate::nodelog::{Digest, LogMeta, Range, VersionVector};
 use crate::op::{Op, OpId, check_ref};
 use crate::outbox;
+use crate::upload::UploadFrame;
 
 /// Protocol version spoken by this build.
 pub const PROTOCOL_VERSION: u16 = 2;

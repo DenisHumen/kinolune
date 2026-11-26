@@ -18,12 +18,12 @@ use crate::OpId;
 use crate::hlc::Hlc;
 use crate::input::{InputAction, InputFrame};
 use crate::music::MusicFrame;
-use crate::upload::UploadFrame;
 use crate::nodelog::{Inserted, NodeLog, Range};
 use crate::proto::{
     Ack, Change, Cursor, DigestFrame, ErrorFrame, Hello, MAX_PULL_LIMIT, Message, OpFrame,
     PlaybackUpdate, ProtoRange, Pull, Role, VvFrame, code, encode, negotiate,
 };
+use crate::upload::UploadFrame;
 
 /// Frames to a link's writer; `None` closes the link.
 pub(crate) type LinkTx = mpsc::UnboundedSender<Option<String>>;

@@ -305,8 +305,12 @@ pub fn open_frame(
     from: &str,
     sealed: &str,
 ) -> Result<UploadFrame, crate::seal::SealError> {
-    let plain =
-        crate::seal::open_up_to(key, &seal_context(from), sealed, crate::proto::MAX_FRAME_LEN)?;
+    let plain = crate::seal::open_up_to(
+        key,
+        &seal_context(from),
+        sealed,
+        crate::proto::MAX_FRAME_LEN,
+    )?;
     let frame: UploadFrame =
         serde_json::from_slice(&plain).map_err(|_| crate::seal::SealError::Malformed)?;
     if frame.hlc.device != from || frame.validate().is_err() {
@@ -435,10 +439,7 @@ impl Pacer {
 
     /// The uploads this device reports, as ticks (for its own screen).
     pub fn local(&self) -> Vec<UploadTick> {
-        self.uploads
-            .iter()
-            .map(|(id, l)| tick(id, l))
-            .collect()
+        self.uploads.iter().map(|(id, l)| tick(id, l)).collect()
     }
 
     /// Device `device` shows upload cards for `ttl_ms` from `now_ms`.
@@ -483,10 +484,9 @@ impl Pacer {
         if urgent {
             return Some(now_ms);
         }
-        Some(
-            self.last_frame_ms
-                .map_or(now_ms, |t| t.saturating_add(self.period(now_ms)).max(now_ms)),
-        )
+        Some(self.last_frame_ms.map_or(now_ms, |t| {
+            t.saturating_add(self.period(now_ms)).max(now_ms)
+        }))
     }
 
     /// The ticks to send now, if any. Batches every upload that is due:
@@ -515,8 +515,8 @@ impl Pacer {
                 Some((s, _, _)) if s != l.state => true,
                 Some((_, bytes, at)) => {
                     let moved = l.done != bytes;
-                    let step = l.done.abs_diff(bytes).saturating_mul(MIN_STEP_DIVISOR) >= l.size
-                        && moved;
+                    let step =
+                        l.done.abs_diff(bytes).saturating_mul(MIN_STEP_DIVISOR) >= l.size && moved;
                     let stale = now_ms.saturating_sub(at) >= KEEPALIVE_MS && l.state.is_active();
                     (period_over && (moved || stale)) || step
                 }
@@ -702,7 +702,13 @@ mod tests {
         for t in (0..=secs * 1000).step_by(10) {
             if t % report_ms == 0 {
                 for id in ids {
-                    pacer.report(id, UploadState::Copying, (bps * t / 1000).min(size), size, t);
+                    pacer.report(
+                        id,
+                        UploadState::Copying,
+                        (bps * t / 1000).min(size),
+                        size,
+                        t,
+                    );
                 }
             }
             if let Some(ticks) = pacer.poll(t) {
@@ -735,7 +741,14 @@ mod tests {
     fn several_uploads_share_one_frame() {
         let mut pacer = Pacer::new(Pace::LAN);
         pacer.watch("tv", 60_000, 0);
-        let frames = run(&mut pacer, &["a", "b", "c", "d"], 3_000_000_000, 50_000_000, 50, 3);
+        let frames = run(
+            &mut pacer,
+            &["a", "b", "c", "d"],
+            3_000_000_000,
+            50_000_000,
+            50,
+            3,
+        );
         assert!(frames.iter().skip(1).all(|(_, t)| t.len() == 4));
         assert!(frames.len() <= 32);
     }
@@ -853,7 +866,9 @@ mod tests {
         let mut bad = cancel;
         bad.to = None;
         assert!(bad.validate().is_err());
-        UploadFrame::watching(hlc(1, "tv"), 3_000).validate().unwrap();
+        UploadFrame::watching(hlc(1, "tv"), 3_000)
+            .validate()
+            .unwrap();
         // A state of a newer version reads as `Other`.
         let t: UploadTick = serde_json::from_str(r#"{"i":"a","s":"z","b":1,"n":2}"#).unwrap();
         assert_eq!(t.state, UploadState::Other);
@@ -866,7 +881,10 @@ mod tests {
         let sealed = seal_frame(&key, &frame).unwrap();
         assert!(!sealed.contains("watch"));
         assert_eq!(open_frame(&key, "tv", &sealed).unwrap(), frame);
-        assert!(open_frame(&key, "pc", &sealed).is_err(), "bound to its sender");
+        assert!(
+            open_frame(&key, "pc", &sealed).is_err(),
+            "bound to its sender"
+        );
         let mut cloud = Pacer::new(Pace::CLOUD);
         cloud.watch("tv", 60_000, 0);
         assert_eq!(cloud.period(0), 1_000);
