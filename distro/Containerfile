@@ -93,7 +93,7 @@ RUN set -eux; \
     systemctl mask bootc-fetch-apply-updates.timer bootc-fetch-apply-updates.service; \
     # Enable/disable services according to rootfs/usr/lib/systemd/system-preset/.
     # Cockpit is shipped but off; the admin UI turns it on for LAN only (05 §5.1).
-    systemctl preset alpha-media.service alpha-admin.service alpha-admin-auth.socket alpha-updated.service alpha-updated.socket \
+    systemctl preset alpha-media.service alpha-admin.service alpha-admin-auth.socket alpha-updated.service alpha-updated.socket alpha-var-restore.service \
         smb.service wsdd.service avahi-daemon.service firewalld.service smartd.service \
         chronyd.service sshd.service cockpit.socket; \
     # Firewall: default zone "home", only the services we need (05 §5.2).
