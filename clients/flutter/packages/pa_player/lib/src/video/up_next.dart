@@ -41,11 +41,16 @@ enum UpNextPhase {
 class UpNextController extends ChangeNotifier {
   UpNextController({
     required this.onPlay,
+    this.onAutoPlay,
     this.countdown = const Duration(seconds: 10),
     this.continuous = true,
   });
 
   final void Function(UpNextItem item) onPlay;
+
+  /// The countdown ran out (no press): plays the item instead of [onPlay]
+  /// (the sleep timer counts these, PLAY-022). Null: [onPlay].
+  final void Function(UpNextItem item)? onAutoPlay;
   final Duration countdown;
   final bool continuous;
 
@@ -78,7 +83,14 @@ class UpNextController extends ChangeNotifier {
   void _tick() {
     _remaining -= const Duration(seconds: 1);
     if (_remaining <= Duration.zero) {
-      playNow();
+      final item = _item;
+      final auto = onAutoPlay;
+      if (item == null || auto == null) {
+        playNow();
+        return;
+      }
+      hide();
+      auto(item);
     } else {
       notifyListeners();
     }

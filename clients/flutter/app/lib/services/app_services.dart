@@ -8,7 +8,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart'
     show getApplicationCacheDirectory, getApplicationDocumentsDirectory;
 import 'package:pa_player/pa_player.dart'
-    show AudioProfile, Equalizer, ReplayGainMode, kSkipStepsSeconds;
+    show
+        AudioProfile,
+        Equalizer,
+        ReplayGainMode,
+        SleepTimerController,
+        kSkipStepsSeconds;
 
 import '../build_info.dart';
 import '../errors/friendly_errors.dart' show errorDetailOf;
@@ -678,6 +683,19 @@ class AppServices extends ChangeNotifier {
   /// once, or off. A button by default.
   final ValueNotifier<SkipMode> skipMode = ValueNotifier(SkipMode.button);
 
+  /// The sleep timer and «Вы ещё смотрите?» (PLAY-022): one for the app,
+  /// shared by the video player and both Twitch players. The number of
+  /// episodes before the question is stored.
+  late final SleepTimerController sleepTimer = SleepTimerController(
+    clock: clock,
+    onStillWatchingAfterChanged: (n) => unawaited(
+      preferences.write(
+        Preferences.stillWatchingAfter,
+        n == SleepTimerController.kDefaultStillWatchingAfter ? null : '$n',
+      ),
+    ),
+  );
+
   /// Seek previews (PLAY-009): videos without previews of their own get
   /// them generated while they play. On by default.
   final ValueNotifier<bool> trickplayGenerate = ValueNotifier(true);
@@ -903,6 +921,10 @@ class AppServices extends ChangeNotifier {
       await preferences.read(Preferences.skipSeconds) ?? '',
     );
     skipSeconds.value = kSkipStepsSeconds.contains(skip) ? skip! : 10;
+    final after = int.tryParse(
+      await preferences.read(Preferences.stillWatchingAfter) ?? '',
+    );
+    if (after != null) sleepTimer.restoreStillWatchingAfter(after);
     final mode = await preferences.read(Preferences.skipMode);
     skipMode.value = SkipMode.values.firstWhere(
       (m) => m.name == mode,
@@ -1789,6 +1811,7 @@ class AppServices extends ChangeNotifier {
     lyricsOnline.dispose();
     skipSeconds.dispose();
     skipMode.dispose();
+    sleepTimer.dispose();
     trackPolicy.dispose();
     audioProcessing.dispose();
     trickplayGenerate.dispose();

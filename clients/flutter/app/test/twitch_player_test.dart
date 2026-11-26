@@ -785,6 +785,71 @@ void main() {
     });
   });
 
+  // PLAY-022: the sleep timer in the native Twitch player — live and VOD,
+  // phone, computer and TV, ru/en/uk; never «в конце серии».
+  group('sleep timer', () {
+    const texts = {
+      'ru': (m30: '30 мин', end: 'В конце этой серии или фильма'),
+      'en': (m30: '30 min', end: 'At the end of this episode or movie'),
+      'uk': (m30: '30 хв', end: 'Наприкінці цієї серії або фільму'),
+    };
+    const devices = {
+      FormFactor.phone: _phoneLandscape,
+      FormFactor.desktop: _desktop,
+      FormFactor.tv: _tv,
+    };
+    for (final MapEntry(key: form, value: size) in devices.entries) {
+      for (final MapEntry(key: lang, value: x) in texts.entries) {
+        for (final live in [true, false]) {
+          final kind = live ? 'live' : 'VOD';
+          testWidgets(
+            '${form.name} $lang $kind: menu without «в конце серии»',
+            (t) async {
+              setSurface(t, size);
+              final h = await _harness();
+              await h.services.setLocale(Locale(lang));
+              await _play(
+                t,
+                h,
+                live
+                    ? const TwitchPlayTarget.live('pixelheron')
+                    : const TwitchPlayTarget.vod('9101', login: 'pixelheron'),
+                formFactor: form,
+              );
+              await _tap(t, find.byKey(const ValueKey('osd-sleep')));
+              expect(find.byKey(const ValueKey('osd-panel')), findsOneWidget);
+              expect(find.text(x.m30), findsOneWidget);
+              expect(find.text(x.end), findsNothing);
+              expect(
+                find.byKey(const ValueKey('sleep-ask-more')),
+                findsNothing,
+              );
+              await t.tap(find.text(x.m30));
+              await settle(t, 4);
+              final sleep = h.services.sleepTimer;
+              expect(sleep.option, SleepTimerOption.minutes30);
+              expect(t.takeException(), isNull);
+              // The fade and the pause reach the engine.
+              final player = t.state<PlayerScreenState>(
+                find.byType(PlayerScreen),
+              );
+              final engine = h.engines.last;
+              player.sleepFade(0.5);
+              expect(engine.state.value.volume, 50);
+              player.sleepPause();
+              player.sleepFade(1);
+              expect(engine.state.value.playing, isFalse);
+              expect(engine.state.value.volume, 100);
+              await _close(t);
+              // Leaving the player cancels the timer.
+              expect(sleep.active, isFalse);
+            },
+          );
+        }
+      }
+    }
+  });
+
   testWidgets('Russian strings', (t) async {
     setSurface(t, _desktop);
     final h = await _harness();

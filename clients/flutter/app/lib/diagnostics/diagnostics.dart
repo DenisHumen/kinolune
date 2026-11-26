@@ -138,6 +138,7 @@ const diagnosticsConfigKeys = [
   Preferences.continuousPlayback,
   Preferences.skipSeconds,
   Preferences.skipMode,
+  Preferences.stillWatchingAfter,
   Preferences.trickplayGenerate,
   Preferences.displayMatch,
   Preferences.audioOutputMode,
