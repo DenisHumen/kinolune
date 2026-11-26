@@ -68,6 +68,7 @@ import '../../twitch/twitch_native.dart';
 import '../../twitch/twitch_service.dart';
 import '../../twitch/twitch_skip_chatting.dart';
 import '../../widgets/error_boundary.dart';
+import 'twitch_clip.dart';
 import 'twitch_follow.dart';
 import 'twitch_record_live.dart';
 import 'twitch_widgets.dart';
@@ -889,48 +890,65 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _attachOsd();
     });
+    final login = widget.target.login;
     return Stack(
       fit: StackFit.expand,
       children: [
-        PlayerScreen(
-          key: _playerKey,
-          request: request,
-          engineFactory: ({bool video = true}) => _createEngine(),
-          onProgress: progress == null ? (_, _) {} : progress.report,
-          onFinished: progress == null
-              ? null
-              : () => progress.finished(
-                  _engine?.state.value.duration.inMilliseconds ?? 0,
-                ),
-          seekStep: Duration(seconds: _services.skipSeconds.value),
-          // From the start the VOD may play faster to catch up.
-          speeds: playingLive ? kTwitchLiveSpeeds : kTwitchVodSpeeds,
-          osdActions: _osdActions,
-          liveBar: isLive ? _liveBar : null,
-          canSeek: playingLive
-              ? () => _controller?.status.value.seekAllowed ?? true
-              : null,
-          onLiveSeek: isLive ? liveSeekBy : null,
-          onGoLive: isLive ? () => unawaited(goToLive()) : null,
-          // PLAY-022: the app's timer; it goes on over a quality switch
-          // (a new player), «в конце серии» is not offered on Twitch.
-          sleepTimer: _services.sleepTimer,
-          sleepEndOfItem: false,
-          arrowChapters:
-              !isLive &&
-              _chapters.length > 1 &&
-              FormFactorScope.of(context) == FormFactor.tv,
-          timelineHeader: isLive || _chapters.length < 2
-              ? null
-              : (context, s) => TwitchChapterStrip(
-                  chapters: _chapters,
-                  duration: s.duration,
-                  position: s.position,
-                  onSeek: seekTo,
-                  height: FormFactorScope.of(context) == FormFactor.tv
-                      ? 40
-                      : 30,
-                ),
+        // TWI-040: Alt+X makes a clip on a computer; the player's own keys
+        // go first, the chat panel is outside.
+        Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: (node, event) {
+            if (!isLive ||
+                login == null ||
+                login.isEmpty ||
+                !isTwitchClipShortcut(event)) {
+              return KeyEventResult.ignored;
+            }
+            unawaited(makeTwitchClip(context, login));
+            return KeyEventResult.handled;
+          },
+          child: PlayerScreen(
+            key: _playerKey,
+            request: request,
+            engineFactory: ({bool video = true}) => _createEngine(),
+            onProgress: progress == null ? (_, _) {} : progress.report,
+            onFinished: progress == null
+                ? null
+                : () => progress.finished(
+                    _engine?.state.value.duration.inMilliseconds ?? 0,
+                  ),
+            seekStep: Duration(seconds: _services.skipSeconds.value),
+            // From the start the VOD may play faster to catch up.
+            speeds: playingLive ? kTwitchLiveSpeeds : kTwitchVodSpeeds,
+            osdActions: _osdActions,
+            liveBar: isLive ? _liveBar : null,
+            canSeek: playingLive
+                ? () => _controller?.status.value.seekAllowed ?? true
+                : null,
+            onLiveSeek: isLive ? liveSeekBy : null,
+            onGoLive: isLive ? () => unawaited(goToLive()) : null,
+            // PLAY-022: the app's timer; it goes on over a quality switch
+            // (a new player), «в конце серии» is not offered on Twitch.
+            sleepTimer: _services.sleepTimer,
+            sleepEndOfItem: false,
+            arrowChapters:
+                !isLive &&
+                _chapters.length > 1 &&
+                FormFactorScope.of(context) == FormFactor.tv,
+            timelineHeader: isLive || _chapters.length < 2
+                ? null
+                : (context, s) => TwitchChapterStrip(
+                    chapters: _chapters,
+                    duration: s.duration,
+                    position: s.position,
+                    onSeek: seekTo,
+                    height: FormFactorScope.of(context) == FormFactor.tv
+                        ? 40
+                        : 30,
+                  ),
+          ),
         ),
         if (q.audioOnly) const _AudioOnlyNote(),
         if (playingLive) _AdBadgeLayer(state: this),
@@ -1039,6 +1057,9 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
           icon: const Icon(Icons.download_rounded),
           onPressed: () => unawaited(_download(context)),
         ),
+      // TWI-040: a clip of the last seconds (store and full builds).
+      if (isLive && (widget.target.login ?? '').isNotEmpty)
+        TwitchClipButton(login: widget.target.login!, compact: compact),
       // TWI-035: record this broadcast (full builds, archive open).
       if (AppFlavor.twitchArchive &&
           isLive &&

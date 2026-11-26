@@ -19,6 +19,7 @@ import (
 
 	"github.com/DenisHumen/kinolune/distro/updated/internal/bootc"
 	"github.com/DenisHumen/kinolune/distro/updated/internal/settings"
+	"github.com/DenisHumen/kinolune/distro/updated/internal/varsnap"
 )
 
 // Bootc is the subset of bootc.Client the agent uses.
@@ -30,6 +31,13 @@ type Bootc interface {
 	Upgrade(ctx context.Context) error
 	Switch(ctx context.Context, image string) error
 	Rollback(ctx context.Context) error
+}
+
+// VarSnapshotter keeps snapshots of /var (varsnap.Manager on a device).
+type VarSnapshotter interface {
+	Prepare(ctx context.Context, p varsnap.Pending) (varsnap.Pending, error)
+	Confirm(ctx context.Context) error
+	State(ctx context.Context) (varsnap.State, error)
 }
 
 // Rebooter restarts the machine (systemctl reboot on a device).
@@ -78,6 +86,11 @@ type Config struct {
 	// OSVersion is shown in the status (ALPHA_OS_VERSION).
 	OSVersion string
 	Logger    *slog.Logger
+	// VarSnap snapshots /var before an update (DIST-010); nil disables it.
+	VarSnap VarSnapshotter
+	// BootHealthy tells that the booted deployment passed its health checks
+	// (boot-complete.target); the /var marker is dropped only then.
+	BootHealthy func(ctx context.Context) bool
 	// Now is the clock (tests replace it).
 	Now func() time.Time
 }
@@ -105,6 +118,8 @@ type ApplyRecord struct {
 	// Result: "pending" (rebooting), "booted" or "not-booted" (the old
 	// deployment came back: greenboot rollback or a manual choice).
 	Result string `json:"result"`
+	// VarSnapshot is the /var snapshot taken right before the reboot.
+	VarSnapshot string `json:"var_snapshot,omitempty"`
 }
 
 // state is persisted in state.json.
@@ -138,6 +153,8 @@ type Agent struct {
 	hostErr      error
 	failedAt     map[string]time.Time
 	lastPostpone time.Time
+	varState     *varsnap.State
+	varErr       error
 	ctx          context.Context
 	wg           sync.WaitGroup
 }
@@ -197,6 +214,11 @@ func (a *Agent) Start(ctx context.Context) {
 	a.mu.Lock()
 	a.ctx = ctx
 	a.mu.Unlock()
+	a.loadVar(ctx)
+	if vs := a.varStateCopy(); vs != nil && vs.LastRestore != nil {
+		a.log.Info("last /var restore", "snapshot", vs.LastRestore.Snapshot,
+			"at", vs.LastRestore.At, "update_that_did_not_hold", vs.LastRestore.Version)
+	}
 	h := a.refresh(ctx)
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -225,6 +247,83 @@ func (a *Agent) Start(ctx context.Context) {
 		a.st.Downloaded = "" // the staged download is gone (applied or discarded)
 		a.saveState()
 	}
+}
+
+// loadVar reads the /var snapshot state.
+func (a *Agent) loadVar(ctx context.Context) {
+	if a.cfg.VarSnap == nil {
+		return
+	}
+	st, err := a.cfg.VarSnap.State(ctx)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if err != nil {
+		a.varState, a.varErr = nil, err
+		if !errors.Is(err, varsnap.ErrNoLayout) {
+			a.log.Warn("cannot read /var snapshots", "err", err)
+		}
+		return
+	}
+	a.varState, a.varErr = &st, nil
+}
+
+func (a *Agent) varStateCopy() *varsnap.State {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.varState == nil {
+		return nil
+	}
+	st := *a.varState
+	return &st
+}
+
+// confirmVar drops the /var marker once the update booted and is healthy.
+func (a *Agent) confirmVar(ctx context.Context, h *bootc.Host) {
+	vs := a.varStateCopy()
+	if vs == nil || vs.Pending == nil || h == nil {
+		return
+	}
+	if cs := h.Status.Booted.Checksum(); cs == "" || cs != vs.Pending.ToChecksum {
+		return
+	}
+	if a.cfg.BootHealthy == nil || !a.cfg.BootHealthy(ctx) {
+		return
+	}
+	if err := a.cfg.VarSnap.Confirm(ctx); err != nil {
+		a.log.Warn("cannot drop the /var snapshot marker", "err", err)
+		return
+	}
+	a.log.Info("update is healthy, /var is kept", "version", vs.Pending.ToVersion, "snapshot", vs.Pending.Snapshot)
+	a.loadVar(ctx)
+}
+
+// snapshotVar takes the /var snapshot right before rebooting into staged.
+func (a *Agent) snapshotVar(ctx context.Context, h *bootc.Host) (string, error) {
+	if a.cfg.VarSnap == nil {
+		return "", nil
+	}
+	b, s := h.Status.Booted, h.Status.Staged
+	if b.Checksum() == "" || s.Checksum() == "" {
+		a.log.Warn("bootc status has no ostree checksums, /var snapshot skipped")
+		return "", nil
+	}
+	p := varsnap.Pending{FromChecksum: b.Checksum(), ToChecksum: s.Checksum(), ToDigest: s.Digest()}
+	if b.Image != nil {
+		p.FromVersion = b.Image.Version
+	}
+	if s.Image != nil {
+		p.ToVersion = s.Image.Version
+	}
+	p, err := a.cfg.VarSnap.Prepare(ctx, p)
+	if errors.Is(err, varsnap.ErrNoLayout) {
+		a.log.Warn("no @var subvolume, update without a /var snapshot", "err", err)
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("snapshot of /var before the update: %w", err)
+	}
+	a.loadVar(ctx)
+	return p.Snapshot, nil
 }
 
 func validChannel(c string) bool {
@@ -451,7 +550,11 @@ func (a *Agent) doApply(ctx context.Context, auto bool) error {
 			return nil // staged and unlocked; the next tick in the window reboots
 		}
 	}
-	rec := &ApplyRecord{Digest: h.Status.Staged.Digest(), At: a.cfg.Now(), Result: "pending"}
+	snap, err := a.snapshotVar(ctx, h)
+	if err != nil {
+		return err // staged stays; nothing reboots without the snapshot
+	}
+	rec := &ApplyRecord{Digest: h.Status.Staged.Digest(), At: a.cfg.Now(), Result: "pending", VarSnapshot: snap}
 	if h.Status.Staged.Image != nil {
 		rec.Version = h.Status.Staged.Image.Version
 	}
@@ -622,6 +725,7 @@ func (a *Agent) Tick(ctx context.Context, now time.Time) {
 	if h == nil {
 		return
 	}
+	a.confirmVar(ctx, h)
 	a.mu.Lock()
 	ph := a.phase(h)
 	pending := a.st.PendingApply
@@ -738,6 +842,9 @@ type Status struct {
 	Settings       settings.Settings `json:"settings"`
 	NextWindow     *time.Time        `json:"next_window,omitempty"`
 	BootcError     string            `json:"bootc_error,omitempty"`
+	// VarSnapshots: /var snapshots, the marker of an update being tried and
+	// the last restore (DIST-010); absent without the @var layout.
+	VarSnapshots *varsnap.State `json:"var_snapshots,omitempty"`
 }
 
 // Status refreshes bootc status unless an operation runs (then the cached
@@ -764,6 +871,10 @@ func (a *Agent) Status(ctx context.Context) Status {
 	}
 	if a.hostErr != nil {
 		s.BootcError = a.hostErr.Error()
+	}
+	if a.varState != nil {
+		vs := *a.varState
+		s.VarSnapshots = &vs
 	}
 	if h != nil {
 		if h.Spec.Image != nil {

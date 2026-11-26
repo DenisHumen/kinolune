@@ -1,0 +1,9 @@
+{
+  "status": 403,
+  "headers": {},
+  "body": {
+    "error": "Forbidden",
+    "status": 403,
+    "message": "The specified broadcaster has not enabled clips on their channel"
+  }
+}

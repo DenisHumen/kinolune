@@ -1208,8 +1208,66 @@ class TwitchService extends ChangeNotifier {
 
   // ----- sign-in -------------------------------------------------------------
 
-  Future<TwitchDeviceLogin> startLogin({bool chat = false}) =>
-      backend.startLogin(chat: chat);
+  Future<TwitchDeviceLogin> startLogin({
+    bool chat = false,
+    bool clips = false,
+  }) => backend.startLogin(chat: chat, clips: clips);
+
+  // ----- clips (TWI-040) -----------------------------------------------------
+
+  /// The signed-in account may make clips (`clips:edit`). No network.
+  bool get canMakeClips => backend.canMakeClips;
+
+  /// Channels (by login) whose clips are off, with Twitch's reason: the
+  /// button stays off until the app restarts.
+  final Map<String, String> _clipsOff = {};
+
+  /// Why clips of [login] are off, or null.
+  String? clipsOffReason(String login) => _clipsOff[login];
+
+  /// Channels a clip is being made of: one press at a time.
+  final Set<String> _clipping = {};
+
+  /// A clip of [login] is being made.
+  bool clipping(String login) => _clipping.contains(login);
+
+  /// Makes a clip of the live stream of [login] (TWI-040).
+  Future<TwitchClipResult> makeClip(String login) async {
+    _clipping.add(login);
+    notifyListeners();
+    try {
+      return await _makeClip(login);
+    } finally {
+      _clipping.remove(login);
+      notifyListeners();
+    }
+  }
+
+  Future<TwitchClipResult> _makeClip(String login) async {
+    try {
+      var userId = channelOf(login).userId;
+      if (userId == null) {
+        final found = await backend.users(logins: [login]);
+        for (final c in found) {
+          _channels[c.login] = c;
+        }
+        userId = found.where((c) => c.login == login).firstOrNull?.userId;
+      }
+      if (userId == null) {
+        return const TwitchClipResult(TwitchClipOutcome.offline);
+      }
+      final r = await backend.makeClip(userId);
+      if (r.outcome == TwitchClipOutcome.disabled) _clipsOff[login] = r.message;
+      return r;
+    } on TwitchUnavailable catch (e) {
+      return TwitchClipResult(switch (e.reason) {
+        TwitchUnavailableReason.signedOut ||
+        TwitchUnavailableReason.signIn => TwitchClipOutcome.signInRequired,
+        TwitchUnavailableReason.network => TwitchClipOutcome.network,
+        _ => TwitchClipOutcome.failed,
+      });
+    }
+  }
 
   /// Polls once; on success refreshes the section.
   Future<TwitchAccount?> pollLogin() async {

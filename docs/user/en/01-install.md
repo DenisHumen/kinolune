@@ -9,7 +9,8 @@ Download Kinolune from [GitHub Releases](https://github.com/DenisHumen/kinolune/
 | Windows 10 and 11 (64-bit) | `kinolune-<version>-windows-x64-setup.exe` — installer (recommended), or `…-windows-x64.zip` — portable copy |
 | Mac with Apple silicon (M1 or newer) | `kinolune-<version>-macos-arm64.dmg` |
 | Mac with an Intel processor | `kinolune-<version>-macos-x86_64.dmg` |
-| Linux (x86_64) | `kinolune-<version>-x86_64.AppImage` (recommended) or `…-linux-x86_64.tar.gz` |
+| Linux (x86_64) | `kinolune-<version>-x86_64.AppImage` (recommended), `…-linux-amd64.deb` or `…-linux-x86_64.rpm` |
+| Linux on ARM (aarch64: Raspberry Pi 5, ARM laptops) | `kinolune-<version>-aarch64.AppImage`, `…-linux-arm64.deb` or `…-linux-aarch64.rpm` |
 | Android phone, tablet, Android TV, Google TV | `kinolune-<version>-android-universal.apk` works everywhere. If you know the processor: `arm64-v8a` (nearly all modern devices), `armeabi-v7a` (old and budget TV boxes), `x86_64` (emulators) |
 
 There are no builds for iPhone, iPad or Apple TV yet.
@@ -50,7 +51,7 @@ You need a distribution with glibc 2.39 or newer (for example Ubuntu 24.04+, Fed
 1. Make the file executable: tick "Allow executing file as program" in its properties, or run
 
    ```bash
-   chmod +x kinolune-*-x86_64.AppImage
+   chmod +x kinolune-*.AppImage
    ```
 
 2. Start the AppImage with a double-click or from a terminal.

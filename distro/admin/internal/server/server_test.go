@@ -308,6 +308,15 @@ func TestUnauthenticated(t *testing.T) {
 	want(t, c.do("POST", "/api/v1/services/smb.service/restart", nil), 401, "unauthorized")
 	// Public endpoints.
 	want(t, c.do("GET", "/healthz", nil), 200, "")
+	// The web UI is public (it holds no data); the CSP stays strict.
+	ui := c.do("GET", "/", nil)
+	if ui.code != 200 || !strings.Contains(ui.raw, "/static/js/app.js") || !strings.Contains(ui.header.Get("Content-Security-Policy"), "default-src 'self'") {
+		t.Fatalf("index: %d %s", ui.code, ui.header.Get("Content-Security-Policy"))
+	}
+	if r := c.do("GET", "/static/i18n/uk.json", nil); r.code != 200 || r.body["nav.updates"] != "Оновлення" {
+		t.Fatalf("static: %d %.80s", r.code, r.raw)
+	}
+	want(t, c.do("GET", "/static/missing.js", nil), 404, "")
 	r := c.do("GET", "/api/v1/info", nil)
 	want(t, r, 200, "")
 	if r.body["tls_fingerprint"] != "ab:cd" {

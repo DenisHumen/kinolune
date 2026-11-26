@@ -9,7 +9,8 @@ Kinolune скачивается со страницы [GitHub Releases](https://
 | Windows 10 и 11 (64 бита) | `kinolune-<версия>-windows-x64-setup.exe` — установщик (рекомендуем) или `…-windows-x64.zip` — портативная копия |
 | Mac с Apple silicon (M1 и новее) | `kinolune-<версия>-macos-arm64.dmg` |
 | Mac с процессором Intel | `kinolune-<версия>-macos-x86_64.dmg` |
-| Linux (x86_64) | `kinolune-<версия>-x86_64.AppImage` (рекомендуем) или `…-linux-x86_64.tar.gz` |
+| Linux (x86_64) | `kinolune-<версия>-x86_64.AppImage` (рекомендуем), `…-linux-amd64.deb` или `…-linux-x86_64.rpm` |
+| Linux на ARM (aarch64: Raspberry Pi 5, ARM-ноутбуки) | `kinolune-<версия>-aarch64.AppImage`, `…-linux-arm64.deb` или `…-linux-aarch64.rpm` |
 | Android-телефон, планшет, Android TV, Google TV | `kinolune-<версия>-android-universal.apk` — подходит всем. Если знаете процессор: `arm64-v8a` (почти все современные), `armeabi-v7a` (старые и недорогие ТВ-приставки), `x86_64` (эмуляторы) |
 
 Сборок для iPhone, iPad и Apple TV пока нет.
@@ -50,7 +51,7 @@ Kinolune скачивается со страницы [GitHub Releases](https://
 1. Сделайте файл исполняемым: в свойствах файла отметьте «Разрешить запуск как программы» или выполните
 
    ```bash
-   chmod +x kinolune-*-x86_64.AppImage
+   chmod +x kinolune-*.AppImage
    ```
 
 2. Запустите AppImage двойным щелчком или из терминала.
