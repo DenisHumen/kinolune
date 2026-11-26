@@ -403,19 +403,20 @@ const (
 // ETA of tasks that have not started or report no measurable progress. The
 // copy takes almost all of the time and is measured by its speed; the
 // others took under a second each on the QEMU install of the ISO (DIST-034)
-// and get a few seconds for slower disks. The copy's own figure only
+// and get a second or two for slower disks. The copy's own figure only
 // matters before its speed is known (a 2.2 GB write at ~20 MB/s).
 var Expected = map[StepID]time.Duration{
-	StepPartition:  2 * time.Second,
-	StepFormat:     2 * time.Second,
+	StepPartition:  time.Second,
+	StepFormat:     time.Second,
 	StepCopy:       120 * time.Second,
-	StepBootloader: 3 * time.Second,
-	StepConfigure:  2 * time.Second,
-	StepFinalize:   2 * time.Second,
+	StepBootloader: 2 * time.Second,
+	StepConfigure:  time.Second,
+	StepFinalize:   time.Second,
 }
 
-// speedWindow is how far back the speed of a task is measured.
-const speedWindow = 5 * time.Second
+// speedWindow is how far back the speed of a task is measured: the page
+// cache writes to the disk in bursts, a short window jumps with them.
+const speedWindow = 10 * time.Second
 
 // Task is the state of one task as the progress screen draws it.
 type Task struct {

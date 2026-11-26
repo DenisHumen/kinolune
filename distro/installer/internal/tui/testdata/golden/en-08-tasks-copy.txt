@@ -2,13 +2,13 @@
 
  Installing Kinolune OS
 
-      Total                      [#######-------------]  34%  ~1m52s left
-      Elapsed 58s
+      Total                      [########------------]  42%  ~18s left
+      Elapsed 13s
 
- [ok] Partitioning the disk      [####################] 100%     2s
- [ok] Creating file systems      [####################] 100%     4s
- [>>] Copying the system image   [########------------]  40%    52s
-      446 MB of 1.1 GB, 8.5 MB/s, 1m17s left
+ [ok] Partitioning the disk      [####################] 100%     0s
+ [ok] Creating file systems      [####################] 100%     0s
+ [>>] Copying the system image   [########------------]  41%    13s
+      949 MB of 2.3 GB, 90.8 MB/s, 14s left
  [  ] Installing the bootloader
  [  ] User and network
  [  ] Finishing

@@ -2,12 +2,12 @@
 
  Installing Kinolune OS
 
-      Total                      [##############------]  70%
-      Elapsed 1m24s
+      Total                      [#################---]  83%
+      Elapsed 20s
 
- [ok] Partitioning the disk      [####################] 100%     2s
- [ok] Creating file systems      [####################] 100%     4s
- [!!] Copying the system image   [############--------]  60%  1m18s
+ [ok] Partitioning the disk      [####################] 100%     0s
+ [ok] Creating file systems      [####################] 100%     0s
+ [!!] Copying the system image   [############--------]  60%    19s
       bootc install: podman: exit status 1: error: writing objects: No space le
  [  ] Installing the bootloader
  [  ] User and network

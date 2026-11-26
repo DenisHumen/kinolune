@@ -9,7 +9,7 @@
     device list.
  3. Sign in as admin with the password you set.
 
- Elapsed 2m56s
+ Elapsed 31s
 
  > Reboot
    Save an answer file for repeat installs
