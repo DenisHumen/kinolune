@@ -116,7 +116,7 @@ func TestI18nComplete(t *testing.T) {
 		"disk.health.": {"ok", "warning", "failing", "unknown"},
 		"fw.":          {"media", "smb", "discovery"},
 		"power.":       {"reboot", "reboot_text", "reboot_going", "poweroff", "poweroff_text", "poweroff_going"},
-		"err.":         {"bad_request", "unauthorized", "invalid_credentials", "not_admin", "locked", "csrf", "forbidden", "not_found", "conflict", "confirmation_invalid", "method_not_allowed", "unavailable", "update_agent_unavailable", "system", "timeout", "network"},
+		"err.":         {"bad_request", "unauthorized", "invalid_credentials", "not_admin", "locked", "csrf", "forbidden", "not_found", "conflict", "confirmation_invalid", "method_not_allowed", "unavailable", "update_agent_unavailable", "system", "timeout", "wrong_admin_password", "network"},
 	}
 	for p, vs := range dyn {
 		for _, v := range vs {

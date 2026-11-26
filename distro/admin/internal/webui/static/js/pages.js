@@ -5,7 +5,7 @@
 
 import { ApiError, del, get, post, put, waitForService } from './api.js';
 import { bytes, dateTime, duration, num, t } from './i18n.js';
-import { askAdminPassword, chip, confirmDialog, dialog, errText, every, fail, h, kv, meter, switchEl, toast } from './ui.js';
+import { askAdminPassword, chip, confirmDialog, dialog, errText, every, fail, h, kv, meter, stopTimer, switchEl, toast } from './ui.js';
 
 const RELEASES_URL = 'https://github.com/DenisHumen/kinolune/releases';
 
@@ -36,6 +36,7 @@ const updateStateChip = (u) => {
 
 /** Reboot-like action: waits for the machine to come back, then reloads to the login page. */
 async function waitReboot(main, text) {
+  stopTimer(); // the page's own refresh would only show errors while the server is down
   const status = h('p.muted.busy', text);
   main.replaceChildren(head(t('reboot.title')), panel(null, status, h('p.caption', t('reboot.hint'))));
   const back = await waitForService({

@@ -6,6 +6,7 @@
 # Set VM_UEFI=1 to boot with OVMF instead of SeaBIOS (the generic image supports both).
 # VM_EXTRA_DISKS="a.raw b.raw" attaches more virtio disks (vdb, vdc, ...).
 # VM_SMB_PORT=N also forwards 127.0.0.1:N to SMB (445) in the VM.
+# VM_ADMIN_PORT=N also forwards 127.0.0.1:N to alpha-admin (443) in the VM.
 # QEMU_EXEC="docker exec <container>" runs QEMU through a helper container that has
 # qemu and /dev/kvm (the paths must be the same inside it).
 set -euo pipefail
@@ -33,6 +34,9 @@ fi
 fwd="hostfwd=tcp:127.0.0.1:${VM_SSH_PORT}-:22"
 if [[ -n "${VM_SMB_PORT:-}" ]]; then
     fwd+=",hostfwd=tcp:127.0.0.1:${VM_SMB_PORT}-:445"
+fi
+if [[ -n "${VM_ADMIN_PORT:-}" ]]; then
+    fwd+=",hostfwd=tcp:127.0.0.1:${VM_ADMIN_PORT}-:443"
 fi
 
 extra=()

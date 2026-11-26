@@ -44,6 +44,7 @@
   "err.update_agent_unavailable": "The update service does not respond.",
   "err.system": "System error. See the service log for details.",
   "err.timeout": "The system did not respond in time.",
+  "err.wrong_admin_password": "Wrong administrator password.",
   "err.network": "No connection to the server.",
 
   "svc.active": "Running",
@@ -184,7 +185,7 @@
   "users.revoke": "Remove admin",
   "users.revoke_text": "Take administrator rights away from {name}?",
   "users.delete": "Delete",
-  "users.delete_text": "Delete the account {name}? Its home folder will be deleted.",
+  "users.delete_text": "Delete the account {name}? Its folders stay with the administrators as deleted-{name}-…",
   "users.created": "User {name} created",
   "users.bad_login": "Login name: lowercase Latin letters, digits, “-” and “_”.",
   "users.short_password": "The password is shorter than 8 characters.",
