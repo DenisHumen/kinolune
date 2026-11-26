@@ -40,6 +40,7 @@ use pa_catalog::pa_sync::matching::ItemKeys;
 use pa_catalog::pa_sync::music::MusicAction;
 use pa_catalog::pa_sync::proto::{PlayState, PlaybackUpdate};
 use pa_catalog::pa_sync::seal::SealKey;
+use pa_catalog::pa_sync::upload::UploadState;
 use pa_catalog::pa_sync::{Op, OpId};
 use pa_catalog::{Catalog, FolderJournal};
 use pa_catalog::{ItemRef, LOCAL_DEVICE_ID};
@@ -381,6 +382,71 @@ pub enum CoreSyncEventKind {
     /// New devices asking to join came or went (SYNC-015): read
     /// `join_requests`.
     JoinRequests,
+    /// Live progress of another device's library uploads changed
+    /// (LIB-028): read `uploads`.
+    Uploads,
+    /// Another device asks this one to cancel uploads (LIB-028):
+    /// `device_id` the asker, `payload` a JSON array of upload ids.
+    UploadCancel,
+}
+
+/// State of a library upload on the wire (LIB-028).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CoreUploadState {
+    Waiting,
+    Copying,
+    /// Copied; checked and renamed from `.part`.
+    Verifying,
+    /// The source cannot be reached; resumes by itself.
+    Paused,
+    Done,
+    Cancelled,
+    Failed,
+    /// Its device went quiet: «Пауза: <устройство> не в сети».
+    Offline,
+}
+
+impl From<CoreUploadState> for UploadState {
+    fn from(s: CoreUploadState) -> Self {
+        match s {
+            CoreUploadState::Waiting => Self::Waiting,
+            CoreUploadState::Copying => Self::Copying,
+            CoreUploadState::Verifying => Self::Verifying,
+            CoreUploadState::Paused => Self::Paused,
+            CoreUploadState::Done => Self::Done,
+            CoreUploadState::Cancelled => Self::Cancelled,
+            CoreUploadState::Failed => Self::Failed,
+            CoreUploadState::Offline => Self::Offline,
+        }
+    }
+}
+
+impl From<UploadState> for CoreUploadState {
+    fn from(s: UploadState) -> Self {
+        match s {
+            UploadState::Waiting => Self::Waiting,
+            UploadState::Copying | UploadState::Other => Self::Copying,
+            UploadState::Verifying => Self::Verifying,
+            UploadState::Paused => Self::Paused,
+            UploadState::Done => Self::Done,
+            UploadState::Cancelled => Self::Cancelled,
+            UploadState::Failed => Self::Failed,
+            UploadState::Offline => Self::Offline,
+        }
+    }
+}
+
+/// Live progress of a library upload of another device (LIB-028).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreUploadTick {
+    pub upload_id: String,
+    /// The device that uploads.
+    pub device_id: String,
+    pub state: CoreUploadState,
+    pub done: i64,
+    pub size: i64,
+    /// Bytes per second, averaged by the sender.
+    pub rate: i64,
 }
 
 /// What a text field is for (UI-027): the phone picks its keyboard by it.
@@ -633,6 +699,12 @@ impl From<ServiceEvent> for CoreSyncEvent {
                 ..Self::of(K::Music)
             },
             ServiceEvent::JoinRequestsChanged => Self::of(K::JoinRequests),
+            ServiceEvent::Uploads => Self::of(K::Uploads),
+            ServiceEvent::UploadCancel { ids, device_id } => Self {
+                device_id: Some(device_id),
+                payload: serde_json::to_string(&ids).ok(),
+                ..Self::of(K::UploadCancel)
+            },
         }
     }
 }
@@ -1199,6 +1271,49 @@ impl CoreSync {
         Ok(self
             .service
             .music_send(&to, action, queue.as_deref(), session.as_deref())?)
+    }
+
+    /// Reports a library upload of this device (LIB-028), as often as the
+    /// upload callback runs: the core sends it to the family at 10 Hz
+    /// while another device shows its card, else once a second, a new
+    /// state at once. Cheap; works while sync is off too.
+    #[frb(sync)]
+    pub fn upload_report(&self, upload_id: String, state: CoreUploadState, done: i64, size: i64) {
+        let n = |v: i64| u64::try_from(v).unwrap_or(0);
+        self.service
+            .upload_report(&upload_id, state.into(), n(done), n(size));
+    }
+
+    /// This app shows upload cards now (`true`: a library or «Загрузки»
+    /// screen with a card is open) or no longer: the uploading devices go
+    /// to 10 Hz while somebody watches.
+    #[frb(sync)]
+    pub fn upload_watch(&self, on: bool) {
+        self.service.upload_watch(on);
+    }
+
+    /// Asks device `to` to cancel its uploads `ids` (the source device or
+    /// an administrator cancels).
+    pub fn upload_cancel(&self, to: String, ids: Vec<String>) -> SyncResult<()> {
+        Ok(self.service.upload_cancel(&to, ids)?)
+    }
+
+    /// Live progress of the other devices' uploads now.
+    #[frb(sync)]
+    pub fn uploads(&self) -> Vec<CoreUploadTick> {
+        let n = |v: u64| i64::try_from(v).unwrap_or(i64::MAX);
+        self.service
+            .uploads()
+            .into_iter()
+            .map(|u| CoreUploadTick {
+                upload_id: u.tick.id,
+                device_id: u.device,
+                state: u.tick.state.into(),
+                done: n(u.tick.done),
+                size: n(u.tick.size),
+                rate: n(u.tick.rate),
+            })
+            .collect()
     }
 
     /// Heartbeat of the playback session (SYNC-003): every second while

@@ -1,0 +1,45 @@
+#!/usr/bin/bash
+# SPDX-License-Identifier: MPL-2.0
+# Kinolune OS (DIST-018): SSH is off by default. Runs once, at the first boot
+# of a system or of the first image with this rule (ADR-NNNN):
+#
+# - fresh install with keys: the installer left /var/lib/alpha/ssh-keys-at-install
+#   (keys in the answers), or the system was installed by `bootc install
+#   --root-ssh-authorized-keys` directly, without our installer (no
+#   install.json; developer and CI installs) -> turn SSH on, open its port;
+# - anything else, notably a system upgraded from an older image: nothing is
+#   turned on or opened; sshd stays enabled or disabled as it was, and the
+#   firewall keeps what the merged /etc has (an unmodified zone file of an
+#   older image is replaced by the new one without ssh: reopen it in the
+#   admin UI).
+#
+# Afterwards only the admin UI changes it (PUT /api/v1/ssh). Runs before
+# firewalld, so the firewall is changed offline.
+set -euo pipefail
+
+marker=/var/lib/alpha/ssh-firstboot.done
+keys=0
+for f in /root/.ssh/authorized_keys /var/home/*/.ssh/authorized_keys; do
+    if [[ -f "${f}" && ! -L "${f}" ]] && grep -qE '^[[:space:]]*[^#[:space:]]' "${f}"; then
+        keys=1
+    fi
+done
+fresh=0
+if [[ -e /var/lib/alpha/ssh-keys-at-install ]]; then
+    fresh=1
+elif [[ ! -e /var/lib/alpha/install.json && -e /etc/tmpfiles.d/bootc-root-ssh.conf ]]; then
+    fresh=1
+fi
+
+zone="$(firewall-offline-cmd --get-default-zone)"
+if [[ "${fresh}" == 1 && "${keys}" == 1 ]]; then
+    echo "fresh install with SSH keys: turning SSH on (keys only)"
+    firewall-offline-cmd --zone="${zone}" --add-service=ssh >/dev/null
+    systemctl enable sshd.service
+    systemctl start --no-block sshd.service
+else
+    echo "not a fresh install with keys: SSH left as it is ($(systemctl is-enabled sshd.service 2>/dev/null || true))"
+fi
+rm -f /var/lib/alpha/ssh-keys-at-install
+mkdir -p "$(dirname "${marker}")"
+touch "${marker}"

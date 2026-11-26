@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MPL-2.0
+# One request of the admin backend about users, Samba or SSH (DIST-018),
+# started per connection by alpha-admin-priv.socket. Root because it runs
+# useradd/chpasswd/smbpasswd/pdbedit and writes the Samba configuration; it
+# accepts only fixed, typed operations (distro/admin/internal/privhelper),
+# and changes to users need an administrator's password checked with PAM.
+[Unit]
+Description=Kinolune OS admin helper (users, Samba, SSH)
+Documentation=https://github.com/DenisHumen/kinolune/tree/main/distro/admin
+CollectMode=inactive-or-failed
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/alpha/alpha-admin-priv
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+RuntimeMaxSec=120
+NoNewPrivileges=yes
+# /usr and /boot read-only; /etc, /var (users, shares, passdb) writable.
+ProtectSystem=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
