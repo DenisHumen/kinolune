@@ -533,6 +533,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
 
   @override
   void dispose() {
+    _services.sleepTimer.cancel();
     _unfollowEngine();
     _replay?.close();
     _detachOsd();
@@ -909,6 +910,10 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
               : null,
           onLiveSeek: isLive ? liveSeekBy : null,
           onGoLive: isLive ? () => unawaited(goToLive()) : null,
+          // PLAY-022: the app's timer; it goes on over a quality switch
+          // (a new player), «в конце серии» is not offered on Twitch.
+          sleepTimer: _services.sleepTimer,
+          sleepEndOfItem: false,
           arrowChapters:
               !isLive &&
               _chapters.length > 1 &&

@@ -77,6 +77,10 @@ abstract class Preferences {
   /// name; absent = button.
   static const skipMode = 'playback_skip_mode';
 
+  /// Automatic Up Next episodes in a row before «Вы ещё смотрите?»
+  /// (PLAY-022), 0 = never; absent = 3.
+  static const stillWatchingAfter = 'playback_still_watching_after';
+
   /// 'false' stops generating seek previews for videos without them
   /// (PLAY-009); absent = on.
   static const trickplayGenerate = 'playback_trickplay_generate';

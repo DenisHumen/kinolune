@@ -180,11 +180,25 @@ const _page = r'''<!DOCTYPE html>
     try { paused = player.isPaused(); } catch (e) {}
     if (vod && !paused) report('time');
   }, 5000);
+  // PLAY-022: the sleep timer fades the embed's own volume (0..1) before
+  // it pauses, and puts it back after.
+  var fadeBase = null;
   window.kinolune = {
     seek: function (s) { player.seek(s); },
     pause: function () { player.pause(); },
     play: function () { player.play(); },
-    report: function () { report('time'); }
+    report: function () { report('time'); },
+    fade: function (f) {
+      try {
+        if (f >= 1) {
+          if (fadeBase !== null) player.setVolume(fadeBase);
+          fadeBase = null;
+          return;
+        }
+        if (fadeBase === null) fadeBase = player.getVolume();
+        player.setVolume(fadeBase * f);
+      } catch (e) {}
+    }
   };
 })();
 </script></body></html>''';

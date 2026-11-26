@@ -31,6 +31,9 @@ import 'osd_overlays.dart';
 import 'osd_panels.dart';
 import 'progress_reporter.dart';
 import 'screen_brightness.dart';
+import 'sleep_timer.dart';
+import 'sleep_timer_strings.dart';
+import 'sleep_timer_widgets.dart';
 import 'up_next.dart';
 
 /// Fullscreen video player with a tvOS-style OSD.
@@ -95,6 +98,13 @@ import 'up_next.dart';
 /// (PiP off or unsupported, Android TV) the video pauses when the app goes
 /// to the background ([pauseInBackground], ADR-NNNN): only music plays on
 /// without the UI.
+///
+/// Sleep timer (PLAY-022): the OSD's moon button opens the [sleepTimer]
+/// choices («в конце серии» only with [sleepEndOfItem] and not live); in
+/// the last 30 s the volume fades and «Пауза через 30 с — Продлить» shows,
+/// then the video pauses, saves its progress and Up Next does not start.
+/// After a few automatic Up Next episodes in a row without a key, click or
+/// tap it asks «Вы ещё смотрите?» and pauses without an answer.
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({
     super.key,
@@ -131,6 +141,8 @@ class PlayerScreen extends StatefulWidget {
     this.onSubtitleSettings,
     this.arrowChapters = false,
     this.timelineHeader,
+    this.sleepTimer,
+    this.sleepEndOfItem = true,
   });
 
   final PlayRequest request;
@@ -253,6 +265,13 @@ class PlayerScreen extends StatefulWidget {
   final Widget Function(BuildContext context, EngineState state)?
   timelineHeader;
 
+  /// The app's sleep timer (PLAY-022), shared by all players; null: one of
+  /// this player's own. Leaving the player cancels it.
+  final SleepTimerController? sleepTimer;
+
+  /// «В конце этой серии или фильма» is offered (off for Twitch).
+  final bool sleepEndOfItem;
+
   /// Whether a video player is on screen (BUG-016): the app holds its
   /// banners and notice cards until it closes, so nothing covers the
   /// picture.
@@ -275,8 +294,19 @@ class PlayerScreen extends StatefulWidget {
 
 /// Public for tests.
 class PlayerScreenState extends State<PlayerScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver
+    implements SleepTimerHost {
   late final PlayerEngine engine;
+
+  /// The sleep timer and «Вы ещё смотрите?» (PLAY-022).
+  late final SleepTimerController sleepTimer;
+  bool _ownSleepTimer = false;
+
+  /// The volume the user set while the sleep timer fades it.
+  double? _sleepVolume;
+
+  /// The timer paused this item at its end: no Up Next card for it.
+  bool _sleepHeldEnd = false;
   ProgressReporter? _progress;
   late final UpNextController upNext;
 
@@ -402,9 +432,13 @@ class PlayerScreenState extends State<PlayerScreen>
     _loadNext = widget.loadNext;
     upNext = UpNextController(
       onPlay: playNext,
+      onAutoPlay: (next) => playNext(next, auto: true),
       countdown: widget.upNextCountdown,
       continuous: widget.continuousPlayback,
     );
+    final sleep = widget.sleepTimer;
+    _ownSleepTimer = sleep == null;
+    sleepTimer = (sleep ?? SleepTimerController())..attach(this);
     _startProgress();
     engine.state.addListener(_onEngine);
     osd.addListener(_onOsd);
@@ -475,6 +509,10 @@ class PlayerScreenState extends State<PlayerScreen>
   void _onSessionCommand(MediaSessionCommand command, Duration? position) {
     if (!mounted || _closing) return;
     final s = engine.state.value;
+    if (command != MediaSessionCommand.duck &&
+        command != MediaSessionCommand.unduck) {
+      sleepTimer.userInput();
+    }
     switch (command) {
       case MediaSessionCommand.play:
         resume();
@@ -501,7 +539,7 @@ class PlayerScreenState extends State<PlayerScreen>
       case MediaSessionCommand.unduck:
         final v = _duckedFrom;
         _duckedFrom = null;
-        if (v != null) engine.setVolume(v);
+        if (v != null) engine.setVolume(v * sleepTimer.volume);
     }
   }
 
@@ -856,7 +894,11 @@ class PlayerScreenState extends State<PlayerScreen>
     }
     if (!mounted || generation != _nextGeneration) return;
     _next = next;
-    if (next != null && _endHandled && !upNext.visible && !_closing) {
+    if (next != null &&
+        _endHandled &&
+        !_sleepHeldEnd &&
+        !upNext.visible &&
+        !_closing) {
       upNext.show(next);
     }
   }
@@ -882,18 +924,75 @@ class PlayerScreenState extends State<PlayerScreen>
       widget.onFinished?.call();
     }
     final ended = s.completed && s.duration > Duration.zero;
+    _sleepProgress(s, ended);
     _checkCredits(s, ended);
     if (!ended) _checkAutoSkip(s);
     if (ended && !_endHandled) {
       _endHandled = true;
+      // PLAY-022: «в конце серии» pauses here, without Up Next.
+      _sleepHeldEnd = !_closing && sleepTimer.itemEnded();
       final next = _next;
-      if (next != null && !_closing) upNext.show(next);
+      if (next != null && !_closing && !_sleepHeldEnd) upNext.show(next);
     } else if (!ended && _endHandled) {
       // Played again or seeking back: the card is no longer relevant.
       _endHandled = false;
+      _sleepHeldEnd = false;
       upNext.hide();
     }
   }
+
+  /// Time to the end of the item for «в конце серии» (PLAY-022).
+  void _sleepProgress(EngineState s, bool ended) {
+    if (_closing) return;
+    if (_live || s.duration <= Duration.zero) {
+      sleepTimer.itemProgress(null, playing: s.playing);
+      return;
+    }
+    final rate = s.rate <= 0 ? 1.0 : s.rate;
+    final left = ended ? Duration.zero : remainingOf(s);
+    sleepTimer.itemProgress(
+      Duration(milliseconds: (left.inMilliseconds / rate).round()),
+      playing: s.playing && !ended,
+    );
+  }
+
+  // ---- PLAY-022: sleep timer -------------------------------------------------
+
+  /// The sleep timer ran out or nobody answered «Вы ещё смотрите?»: pause,
+  /// save, no Up Next.
+  @override
+  void sleepPause() {
+    if (!mounted || _closing) return;
+    upNext.hide();
+    if (engine.state.value.completed) _sleepHeldEnd = true;
+    engine.pause();
+    _progress?.report();
+    osd.show();
+  }
+
+  /// The fade before the pause: [factor] of the user's volume.
+  @override
+  void sleepFade(double factor) {
+    if (!mounted || _closing) return;
+    if (factor >= 1.0) {
+      final v = _sleepVolume;
+      _sleepVolume = null;
+      if (v != null) engine.setVolume(v);
+      return;
+    }
+    final base = _sleepVolume ??= engine.state.value.volume;
+    engine.setVolume(base * factor);
+  }
+
+  /// «Пауза» in «Вы ещё смотрите?».
+  void stillWatchingPause() {
+    engine.pause();
+    _progress?.report();
+    osd.show();
+  }
+
+  /// Whether «в конце серии» is offered here.
+  bool get sleepEndOfItem => widget.sleepEndOfItem && !_live;
 
   /// During the credits (a [SkipKind.credits] segment) the Up Next card
   /// comes up early, as on tvOS; leaving the credits backwards hides it.
@@ -910,7 +1009,7 @@ class PlayerScreenState extends State<PlayerScreen>
     }
     if (credits == _creditsOffered) return;
     final next = _next;
-    if (next == null || _closing) return;
+    if (next == null || _closing || sleepTimer.holdsUpNext) return;
     _creditsOffered = credits;
     upNext.show(next);
   }
@@ -942,8 +1041,11 @@ class PlayerScreenState extends State<PlayerScreen>
     final toEnd =
         s.duration > Duration.zero &&
         s.duration - seg.end <= const Duration(seconds: 5);
-    if (seg.kind == SkipKind.credits && toEnd && next != null) {
-      playNext(next);
+    if (seg.kind == SkipKind.credits &&
+        toEnd &&
+        next != null &&
+        !sleepTimer.holdsUpNext) {
+      playNext(next, auto: true);
       return;
     }
     if (widget.canSeek?.call() == false) return;
@@ -953,8 +1055,12 @@ class PlayerScreenState extends State<PlayerScreen>
 
   /// Switches the player to [next] (Up Next): the old item gets its final
   /// report, the new one its own progress callback.
-  void playNext(UpNextItem next) {
+  ///
+  /// [auto]: Up Next went on by itself (PLAY-022 counts these for «Вы ещё
+  /// смотрите?»).
+  void playNext(UpNextItem next, {bool auto = false}) {
     if (_closing || !mounted) return;
+    if (auto) sleepTimer.autoAdvanced();
     _progress?.close();
     _progress = null;
     final old = request.trickplay;
@@ -965,6 +1071,7 @@ class PlayerScreenState extends State<PlayerScreen>
       _loadNext = next.loadNext;
       _finished = false;
       _endHandled = false;
+      _sleepHeldEnd = false;
       _creditsOffered = null;
       _autoSegment = null;
       _autoSkipped.clear();
@@ -1026,6 +1133,8 @@ class PlayerScreenState extends State<PlayerScreen>
     if (_counted) PlayerScreen._countOpen(-1);
     WidgetsBinding.instance.removeObserver(this);
     engine.state.removeListener(_onEngine);
+    sleepTimer.detach(this);
+    if (_ownSleepTimer) sleepTimer.dispose();
     _sessionClaim.release();
     pip.dismissals.removeListener(_onPipDismissed);
     unawaited(pip.configure(autoEnter: false));
@@ -1237,7 +1346,14 @@ class PlayerScreenState extends State<PlayerScreen>
 
   void setVolume(double v) {
     final value = v.clamp(0.0, 100.0);
-    engine.setVolume(value);
+    // While the sleep timer fades, the new level is the user's; the fade
+    // goes on from it.
+    if (_sleepVolume != null) {
+      _sleepVolume = value;
+      engine.setVolume(value * sleepTimer.volume);
+    } else {
+      engine.setVolume(value);
+    }
     final l = PaPlayerStrings.of(context);
     showFeedback(
       OsdFeedback(
@@ -1359,6 +1475,12 @@ class PlayerScreenState extends State<PlayerScreen>
     if (_closing) return;
     _closing = true;
     upNext.hide();
+    // PLAY-022: the timer belongs to this viewing.
+    sleepTimer.detach(this);
+    sleepTimer.cancel();
+    final v = _sleepVolume;
+    _sleepVolume = null;
+    if (v != null) engine.setVolume(v);
     _progress?.report();
     final nav = Navigator.maybeOf(context);
     if (nav != null && nav.canPop()) nav.pop();
@@ -1376,6 +1498,23 @@ class PlayerScreenState extends State<PlayerScreen>
     final k = e.logicalKey;
     final wasVisible = osd.visible;
     final repeat = e is KeyRepeatEvent;
+
+    // PLAY-022: any key answers «Вы ещё смотрите?» (and does nothing
+    // else); with the OSD hidden, Select takes «Продлить».
+    if (sleepTimer.asking) {
+      sleepTimer.stillWatching();
+      return KeyEventResult.handled;
+    }
+    sleepTimer.userInput();
+    if (sleepTimer.warning &&
+        !wasVisible &&
+        (k == LogicalKeyboardKey.select ||
+            k == LogicalKeyboardKey.enter ||
+            k == LogicalKeyboardKey.numpadEnter ||
+            k == LogicalKeyboardKey.gameButtonA)) {
+      if (!repeat) sleepTimer.extend();
+      return KeyEventResult.handled;
+    }
 
     if (upNext.visible) {
       if (k == LogicalKeyboardKey.escape ||
@@ -1616,75 +1755,81 @@ class PlayerScreenState extends State<PlayerScreen>
           onKeyEvent: _onKey,
           child: Scaffold(
             backgroundColor: const Color(0xFF000000),
-            body: MouseRegion(
-              onHover: (_) => osd.show(),
-              cursor: SystemMouseCursors.basic,
-              child: ValueListenableBuilder<bool>(
-                valueListenable: pip.active,
-                builder: (context, inPip, _) => Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Semantics(
-                      label: PaPlayerStrings.of(context).toggleControls,
-                      onTap: osd.toggle,
-                      child: GestureDetector(
-                        key: const ValueKey('osd-video'),
-                        excludeFromSemantics: true,
-                        behavior: HitTestBehavior.opaque,
+            body: Listener(
+              // PLAY-022: a click or a tap counts as someone watching.
+              onPointerDown: (_) => sleepTimer.userInput(),
+              child: MouseRegion(
+                onHover: (_) => osd.show(),
+                cursor: SystemMouseCursors.basic,
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: pip.active,
+                  builder: (context, inPip, _) => Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Semantics(
+                        label: PaPlayerStrings.of(context).toggleControls,
                         onTap: osd.toggle,
-                        onDoubleTapDown: (d) => _doubleTapAt = d.localPosition,
-                        onDoubleTap: _onDoubleTap,
-                        onLongPressStart: (_) => startHold(),
-                        onLongPressEnd: (_) => endHold(),
-                        onLongPressCancel: endHold,
-                        onScaleStart: _onScaleStart,
-                        onScaleUpdate: _onScaleUpdate,
-                        onScaleEnd: _onScaleEnd,
-                        child: _ZoomedVideo(state: this),
-                      ),
-                    ),
-                    _DimLayer(state: this),
-                    ValueListenableBuilder<EngineState>(
-                      valueListenable: engine.state,
-                      builder: (context, s, _) => SubtitleOverlay(
-                        // Styled ASS and bitmaps are in the video (PLAY-006).
-                        lines:
-                            s.subtitleTrack?.isOff == true ||
-                                s.subtitleRenderer == SubtitleRenderer.engine
-                            ? const []
-                            : s.subtitleLines,
-                        appearance: subtitleAppearance,
-                      ),
-                    ),
-                    _BufferingIndicator(engine: engine),
-                    // In a PiP window: the picture and subtitles only.
-                    if (!inPip) ...[
-                      ValueListenableBuilder<bool>(
-                        valueListenable: statsVisible,
-                        builder: (context, on, _) => on
-                            ? StatsOverlay(engine: engine, zoom: zoom)
-                            : const SizedBox.shrink(),
-                      ),
-                      OsdFeedbackPill(feedback: feedback),
-                      HoldSpeedBadge(holding: holding),
-                      ListenableBuilder(
-                        listenable: osd,
-                        builder: (context, _) => _Osd(
-                          state: this,
-                          visible: osd.visible,
-                          panel: osd.panel,
+                        child: GestureDetector(
+                          key: const ValueKey('osd-video'),
+                          excludeFromSemantics: true,
+                          behavior: HitTestBehavior.opaque,
+                          onTap: osd.toggle,
+                          onDoubleTapDown: (d) =>
+                              _doubleTapAt = d.localPosition,
+                          onDoubleTap: _onDoubleTap,
+                          onLongPressStart: (_) => startHold(),
+                          onLongPressEnd: (_) => endHold(),
+                          onLongPressCancel: endHold,
+                          onScaleStart: _onScaleStart,
+                          onScaleUpdate: _onScaleUpdate,
+                          onScaleEnd: _onScaleEnd,
+                          child: _ZoomedVideo(state: this),
                         ),
                       ),
-                      _SkipButtonLayer(state: this),
-                      ListenableBuilder(
-                        listenable: upNext,
-                        builder: (context, _) => upNext.visible
-                            ? _UpNextCard(controller: upNext)
-                            : const SizedBox.shrink(),
+                      _DimLayer(state: this),
+                      ValueListenableBuilder<EngineState>(
+                        valueListenable: engine.state,
+                        builder: (context, s, _) => SubtitleOverlay(
+                          // Styled ASS and bitmaps are in the video (PLAY-006).
+                          lines:
+                              s.subtitleTrack?.isOff == true ||
+                                  s.subtitleRenderer == SubtitleRenderer.engine
+                              ? const []
+                              : s.subtitleLines,
+                          appearance: subtitleAppearance,
+                        ),
                       ),
-                      _PlaybackErrorLayer(state: this),
+                      _BufferingIndicator(engine: engine),
+                      // In a PiP window: the picture and subtitles only.
+                      if (!inPip) ...[
+                        ValueListenableBuilder<bool>(
+                          valueListenable: statsVisible,
+                          builder: (context, on, _) => on
+                              ? StatsOverlay(engine: engine, zoom: zoom)
+                              : const SizedBox.shrink(),
+                        ),
+                        OsdFeedbackPill(feedback: feedback),
+                        HoldSpeedBadge(holding: holding),
+                        ListenableBuilder(
+                          listenable: osd,
+                          builder: (context, _) => _Osd(
+                            state: this,
+                            visible: osd.visible,
+                            panel: osd.panel,
+                          ),
+                        ),
+                        _SkipButtonLayer(state: this),
+                        ListenableBuilder(
+                          listenable: upNext,
+                          builder: (context, _) => upNext.visible
+                              ? _UpNextCard(controller: upNext)
+                              : const SizedBox.shrink(),
+                        ),
+                        _SleepTimerLayer(state: this),
+                        _PlaybackErrorLayer(state: this),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -1972,6 +2117,40 @@ class _UpNextCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// PLAY-022: «Пауза через 30 с — Продлить» at the top, «Вы ещё смотрите?»
+/// in the middle.
+class _SleepTimerLayer extends StatelessWidget {
+  const _SleepTimerLayer({required this.state});
+  final PlayerScreenState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final sleep = state.sleepTimer;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned(
+          left: 16,
+          right: 16,
+          top: 84,
+          child: SafeArea(
+            bottom: false,
+            child: Center(child: SleepTimerWarning(controller: sleep)),
+          ),
+        ),
+        Center(
+          child: FocusScope(
+            child: StillWatchingPrompt(
+              controller: sleep,
+              onPause: state.stillWatchingPause,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2316,6 +2495,9 @@ class _Osd extends StatelessWidget {
                       ? null
                       : state.exportStats,
                   speeds: state.widget.speeds,
+                  sleepTimer: state.sleepTimer,
+                  sleepEndOfItem: state.sleepEndOfItem,
+                  sleepStillWatching: state._loadNext != null && !state._live,
                 ),
               ),
             ),
@@ -2421,6 +2603,26 @@ class _BottomBar extends StatelessWidget {
               onPressed: () => state.osd.openPanel(OsdPanel.chapters),
             ),
           ],
+          gap,
+          ListenableBuilder(
+            listenable: state.sleepTimer,
+            builder: (context, _) {
+              final sleep = state.sleepTimer;
+              final left = sleep.remaining;
+              final name = SleepTimerStrings.of(context).sleepTimer;
+              return FocusIconButton(
+                key: const ValueKey('osd-sleep'),
+                icon: sleep.active
+                    ? Icons.bedtime_rounded
+                    : Icons.bedtime_outlined,
+                tooltip: sleep.active && left != null
+                    ? '$name · ${formatSleepRemaining(left)}'
+                    : name,
+                active: sleep.active,
+                onPressed: () => state.osd.openPanel(OsdPanel.sleepTimer),
+              );
+            },
+          ),
           gap,
           FocusIconButton(
             key: const ValueKey('osd-info'),

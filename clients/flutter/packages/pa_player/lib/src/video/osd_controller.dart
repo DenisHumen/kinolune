@@ -16,6 +16,9 @@ enum OsdPanel {
   zoom,
   chapters,
   info,
+
+  /// The sleep timer (PLAY-022).
+  sleepTimer,
 }
 
 /// Where an OSD panel opens (UI-014): next to the picture on a desktop or
