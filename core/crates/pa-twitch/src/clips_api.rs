@@ -116,8 +116,7 @@ impl HelixClient {
         if broadcaster_id.is_empty() {
             return Err(Error::InvalidArgument("clips: broadcaster_id is empty"));
         }
-        let mut query = Query::new();
-        query.push(("broadcaster_id", broadcaster_id.to_owned()));
+        let mut query: Query = vec![("broadcaster_id", broadcaster_id.to_owned())];
         if has_delay {
             query.push(("has_delay", "true".to_owned()));
         }
@@ -139,8 +138,7 @@ impl HelixClient {
         if id.is_empty() {
             return Err(Error::InvalidArgument("clips: id is empty"));
         }
-        let mut query = Query::new();
-        query.push(("id", id.to_owned()));
+        let query: Query = vec![("id", id.to_owned())];
         let env = self.get_opt::<Vec<Clip>>("clips", query, true).await?;
         Ok(env.and_then(|e| e.data.into_iter().find(|c| c.id == id)))
     }

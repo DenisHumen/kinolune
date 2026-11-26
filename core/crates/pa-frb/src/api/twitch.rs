@@ -323,6 +323,123 @@ pub struct CoreTwitchDeviceLogin {
     pub interval_secs: i64,
 }
 
+/// How pressing "Clip" ended (TWI-040).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CoreTwitchClipOutcome {
+    /// The clip is made: `clip` is set.
+    Ready,
+    /// No sign-in (or it expired): sign in, then press again.
+    SignInRequired,
+    /// The sign-in lacks `clips:edit`: [`CoreTwitch::start_clips_login`],
+    /// then press again.
+    ScopeRequired,
+    /// The channel turned clips off (or limits them to followers or
+    /// subscribers): keep the button off with `message`.
+    Disabled,
+    /// The channel is not live.
+    Offline,
+    /// Twitch did not finish the clip within 15 seconds.
+    NotReady,
+    /// Twitch rate limit: retry after `retry_after_secs`.
+    RateLimited,
+    /// No network or Twitch unreachable.
+    Network,
+    /// Any other failure (`message` says what).
+    Failed,
+}
+
+/// A clip made from the app (TWI-040).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CoreTwitchNewClip {
+    pub slug: String,
+    /// `clips.twitch.tv` page: "Copy link", "Share".
+    pub url: String,
+    /// Official clip embed ("Watch" inside the app).
+    pub embed_url: String,
+    /// Twitch page to trim and title the clip ("Open on Twitch").
+    pub edit_url: String,
+    pub title: String,
+    pub broadcaster_name: String,
+    pub thumbnail_url: Option<String>,
+    pub duration_secs: f64,
+}
+
+/// Answer of [`CoreTwitch::make_clip`]: never an exception for the
+/// expected cases, so the player can explain each one.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CoreTwitchClipResult {
+    pub outcome: CoreTwitchClipOutcome,
+    pub clip: Option<CoreTwitchNewClip>,
+    /// Twitch's explanation (`Disabled`) or the error (no tokens in it).
+    pub message: String,
+    /// `RateLimited`: seconds until Twitch accepts calls again.
+    pub retry_after_secs: i64,
+}
+
+impl CoreTwitchClipResult {
+    fn failed(outcome: CoreTwitchClipOutcome, message: impl Into<String>) -> Self {
+        Self {
+            outcome,
+            clip: None,
+            message: message.into(),
+            retry_after_secs: 0,
+        }
+    }
+}
+
+fn clip_result(result: Result<(tw::CreatedClip, tw::Clip), tw::ClipError>) -> CoreTwitchClipResult {
+    use CoreTwitchClipOutcome as O;
+    match result {
+        Ok((created, clip)) => CoreTwitchClipResult {
+            outcome: O::Ready,
+            message: String::new(),
+            retry_after_secs: 0,
+            clip: Some(CoreTwitchNewClip {
+                url: if clip.url.is_empty() {
+                    format!("https://clips.twitch.tv/{}", clip.id)
+                } else {
+                    clip.url
+                },
+                embed_url: clip.embed_url,
+                edit_url: if created.edit_url.is_empty() {
+                    format!("https://clips.twitch.tv/{}/edit", clip.id)
+                } else {
+                    created.edit_url
+                },
+                title: clip.title,
+                broadcaster_name: clip.broadcaster_name,
+                thumbnail_url: non_empty(&clip.thumbnail_url),
+                duration_secs: clip.duration,
+                slug: clip.id,
+            }),
+        },
+        Err(e) => {
+            let message = e.to_string();
+            match e {
+                tw::ClipError::SignedOut | tw::ClipError::ReauthRequired => {
+                    CoreTwitchClipResult::failed(O::SignInRequired, message)
+                }
+                tw::ClipError::ScopeRequired => {
+                    CoreTwitchClipResult::failed(O::ScopeRequired, message)
+                }
+                tw::ClipError::Disabled { message } => {
+                    CoreTwitchClipResult::failed(O::Disabled, message)
+                }
+                tw::ClipError::Offline => CoreTwitchClipResult::failed(O::Offline, message),
+                tw::ClipError::NotReady => CoreTwitchClipResult::failed(O::NotReady, message),
+                tw::ClipError::RateLimited { retry_after } => CoreTwitchClipResult {
+                    retry_after_secs: signed(retry_after.as_secs().max(1)),
+                    ..CoreTwitchClipResult::failed(O::RateLimited, message)
+                },
+                tw::ClipError::Helix(tw::Error::Transport(_)) => {
+                    CoreTwitchClipResult::failed(O::Network, message)
+                }
+                tw::ClipError::Helix(_) => CoreTwitchClipResult::failed(O::Failed, message),
+            }
+        }
+    }
+}
+
 enum Api {
     Signed(tw::AuthorizedHelix),
     /// A client with a fixed token (tests).
@@ -546,6 +663,62 @@ impl CoreTwitch {
         self.start_login_with(&[tw::SCOPE_WRITE_CHAT])
     }
 
+    /// Starts a sign-in that also asks for `clips:edit`: the first press
+    /// of "Clip" (TWI-040). Scopes granted before stay.
+    pub fn start_clips_login(&self) -> TwitchResult<CoreTwitchDeviceLogin> {
+        self.start_login_with(&[tw::SCOPE_CLIPS_EDIT])
+    }
+
+    /// The signed-in account may make clips (`clips:edit` granted). No
+    /// network.
+    #[frb(sync)]
+    pub fn can_make_clips(&self) -> bool {
+        match &self.api {
+            Some(Api::Signed(api)) => api.can_make_clips(),
+            _ => false,
+        }
+    }
+
+    /// Makes a clip of the live stream of `broadcaster_id` and waits until
+    /// Twitch finished it (`POST /clips`, then `GET /clips?id=`, at most
+    /// 15 seconds). Without `clips:edit` nothing is sent:
+    /// [`CoreTwitchClipOutcome::ScopeRequired`].
+    pub fn make_clip(&self, broadcaster_id: String) -> TwitchResult<CoreTwitchClipResult> {
+        if broadcaster_id.is_empty() || !broadcaster_id.bytes().all(|b| b.is_ascii_digit()) {
+            return Err(TwitchApiError::new(
+                TwitchErrorKind::Invalid,
+                "not a Twitch user id",
+            ));
+        }
+        match &self.api {
+            None => Err(TwitchApiError::new(
+                TwitchErrorKind::NotConfigured,
+                "no Twitch client id in this build",
+            )),
+            Some(Api::Plain(helix)) => {
+                // Tests: a fixed token, no sign-in to check scopes against.
+                let created = self
+                    .rt
+                    .block_on(helix.create_clip(&broadcaster_id, false));
+                let made = match created {
+                    Ok(c) => {
+                        let found = self.rt.block_on(helix.clip_by_id(&c.id));
+                        match found {
+                            Ok(Some(clip)) => Ok((c, clip)),
+                            Ok(None) => Err(tw::ClipError::NotReady),
+                            Err(e) => Err(e.into()),
+                        }
+                    }
+                    Err(e) => Err(e.into()),
+                };
+                Ok(clip_result(made))
+            }
+            Some(Api::Signed(api)) => Ok(clip_result(
+                self.rt.block_on(api.make_clip(&broadcaster_id, false)),
+            )),
+        }
+    }
+
     /// The signed-in account may send chat messages (`user:write:chat`
     /// granted). No network.
     #[frb(sync)]
@@ -599,9 +772,22 @@ impl CoreTwitch {
                 "no Twitch client id in this build",
             ));
         };
+        // A repeated sign-in for one more scope keeps the ones granted
+        // before (chat sending, clips): the new token replaces the old.
+        let mut scopes: Vec<String> = api
+            .auth()
+            .account()
+            .map(|a| a.scopes)
+            .unwrap_or_default();
+        for s in extra {
+            if !scopes.iter().any(|have| have == s) {
+                scopes.push((*s).to_owned());
+            }
+        }
+        let scopes: Vec<&str> = scopes.iter().map(String::as_str).collect();
         let device = self
             .rt
-            .block_on(api.auth().start_device_login_with(extra))?;
+            .block_on(api.auth().start_device_login_with(&scopes))?;
         let expires_in_secs = device
             .expires_at
             .duration_since(SystemTime::now())
@@ -1373,6 +1559,41 @@ mod tests {
         let helix = tw::HelixClient::new(config, transport);
         helix.set_access_token(tw::AccessToken::new("not-a-real-token"));
         CoreTwitch::with_helix(conn, Some(Arc::new(helix))).unwrap()
+    }
+
+    #[test]
+    fn clip_outcomes_for_the_player() {
+        let created = r#"{"status":202,"body":{"data":[{"id":"MadeUpClipSlug","edit_url":"https://clips.twitch.tv/MadeUpClipSlug/edit"}]}}"#;
+        let ready = r#"{"status":200,"body":{"data":[{"id":"MadeUpClipSlug","url":"https://clips.twitch.tv/MadeUpClipSlug",
+            "embed_url":"https://clips.twitch.tv/embed?clip=MadeUpClipSlug","broadcaster_id":"7001",
+            "broadcaster_name":"PixelHeron","title":"Night run","thumbnail_url":"","duration":30}],"pagination":{}}}"#;
+        let disabled = r#"{"status":403,"body":{"error":"Forbidden","status":403,"message":"The specified broadcaster has not enabled clips on their channel"}}"#;
+        let transport = Arc::new(FixtureTransport::new());
+        transport
+            .push_fixture(created)
+            .push_fixture(ready)
+            .push_fixture(disabled);
+        let core = core(transport);
+        assert!(!core.can_make_clips());
+        let made = core.make_clip("7001".into()).unwrap();
+        assert_eq!(made.outcome, CoreTwitchClipOutcome::Ready);
+        let clip = made.clip.unwrap();
+        assert_eq!(clip.slug, "MadeUpClipSlug");
+        assert_eq!(clip.url, "https://clips.twitch.tv/MadeUpClipSlug");
+        assert_eq!(clip.edit_url, "https://clips.twitch.tv/MadeUpClipSlug/edit");
+        assert_eq!(clip.thumbnail_url, None);
+        let off = core.make_clip("7001".into()).unwrap();
+        assert_eq!(off.outcome, CoreTwitchClipOutcome::Disabled);
+        assert!(off.message.contains("not enabled clips"), "{}", off.message);
+        assert_eq!(
+            core.make_clip("pixelheron".into()).unwrap_err().kind,
+            TwitchErrorKind::Invalid
+        );
+        let unconfigured = CoreTwitch::with_helix(pa_library::open_in_memory().unwrap(), None).unwrap();
+        assert_eq!(
+            unconfigured.make_clip("7001".into()).unwrap_err().kind,
+            TwitchErrorKind::NotConfigured
+        );
     }
 
     #[test]
