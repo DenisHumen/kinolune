@@ -80,6 +80,7 @@ class OsdSidePanel extends StatelessWidget {
     this.speeds = kPlaybackSpeeds,
     this.placement = OsdPanelPlacement.side,
     this.onSelectVideo,
+    this.onSelectAngle,
     this.subtitleSettings,
     this.onSubtitleSettings,
     this.sleepTimer,
@@ -102,6 +103,9 @@ class OsdSidePanel extends StatelessWidget {
   /// Picks a video stream (video tab); null: the engine cannot switch them,
   /// the tab only shows the stream.
   final Future<void> Function(MediaTrack track)? onSelectVideo;
+
+  /// Plays another angle of a disc title ([PlayRequest.angles], PLAY-017).
+  final Future<void> Function(String uri)? onSelectAngle;
 
   /// The subtitle style and its change (quick style in the subtitles tab,
   /// UI-014); without [onSubtitleSettings] the section is not shown.
@@ -755,7 +759,28 @@ class OsdSidePanel extends StatelessWidget {
             style: const TextStyle(color: PaTokens.text, fontSize: 15),
           ),
         ),
+      ..._angles(tl),
       if (zoom != null) ...[_Caption(l.zoom), ..._zoom(l, autofocus: !choose)],
+    ];
+  }
+
+  /// Angles of a disc title (PLAY-017), when it has several.
+  List<Widget> _angles(TrackPanelStrings tl) {
+    final angles = request.angles;
+    final select = onSelectAngle;
+    if (angles.length < 2 || select == null) return const [];
+    return [
+      _Caption(tl.angle),
+      for (var i = 0; i < angles.length; i++)
+        FocusListRow(
+          key: ValueKey('angle-$i'),
+          title: tl.angleLabel(i + 1),
+          selected: angles[i] == request.uri,
+          onPressed: () {
+            select(angles[i]);
+            onClose();
+          },
+        ),
     ];
   }
 

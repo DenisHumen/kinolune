@@ -270,6 +270,46 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
+  testWidgets('the video tab switches the angle of a disc title', (t) async {
+    // PLAY-017: each angle of a Blu-ray title is its own list of clips.
+    _surface(t, const Size(1280, 720));
+    const a1 = 'edl://%10%/d/1.m2ts;%10%/d/2.m2ts';
+    const a2 = 'edl://%10%/d/1.m2ts;%10%/d/3.m2ts';
+    final h = _Harness(
+      request: const PlayRequest(
+        uri: a1,
+        title: 'Disc',
+        subtitles: [],
+        angles: [a1, a2],
+      ),
+    );
+    await _open(t, h);
+    h.engine.advance(const Duration(minutes: 5));
+    await t.pump();
+    h.state(t).osd.openPanel(OsdPanel.video);
+    await t.pumpAndSettle();
+    expect(find.text('Angle'), findsOneWidget);
+    expect(find.text('Angle 2'), findsOneWidget);
+    await t.tap(find.byKey(const ValueKey('angle-1')));
+    await t.pumpAndSettle();
+    expect(h.engine.uris, [a2]);
+    expect(h.engine.calls.last, startsWith('open:1:0:300000:'));
+    expect(h.state(t).request.uri, a2);
+    expect(h.state(t).request.angles, [a1, a2]);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('a title without angles has no angle rows', (t) async {
+    _surface(t, const Size(1280, 720));
+    final h = _Harness();
+    await _open(t, h);
+    h.state(t).osd.openPanel(OsdPanel.video);
+    await t.pumpAndSettle();
+    expect(find.text('Angle'), findsNothing);
+    expect(find.byKey(const ValueKey('angle-0')), findsNothing);
+    await t.pumpWidget(const SizedBox());
+  });
+
   testWidgets('one video stream is shown, with the zoom modes', (t) async {
     _surface(t, const Size(1280, 720));
     final h = _Harness();

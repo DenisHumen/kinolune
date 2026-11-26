@@ -11,6 +11,7 @@ import 'api/cloud.dart';
 import 'api/content_kind.dart';
 import 'api/details.dart';
 import 'api/diagnostics.dart';
+import 'api/disc.dart';
 import 'api/discovery.dart';
 import 'api/dlna.dart';
 import 'api/episodes.dart';
@@ -747,6 +748,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CoreChatWordRule dco_decode_box_autoadd_core_chat_word_rule(dynamic raw);
 
   @protected
+  CoreDiscPlayback dco_decode_box_autoadd_core_disc_playback(dynamic raw);
+
+  @protected
+  CoreDiscTitle dco_decode_box_autoadd_core_disc_title(dynamic raw);
+
+  @protected
   CoreDiscoveryConfig dco_decode_box_autoadd_core_discovery_config(dynamic raw);
 
   @protected
@@ -1069,6 +1076,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreDeviceClass dco_decode_core_device_class(dynamic raw);
+
+  @protected
+  CoreDiscPlayback dco_decode_core_disc_playback(dynamic raw);
+
+  @protected
+  CoreDiscStream dco_decode_core_disc_stream(dynamic raw);
+
+  @protected
+  CoreDiscTitle dco_decode_core_disc_title(dynamic raw);
 
   @protected
   CoreDiscoveredService dco_decode_core_discovered_service(dynamic raw);
@@ -1832,6 +1848,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreCredit> dco_decode_list_core_credit(dynamic raw);
 
   @protected
+  List<CoreDiscStream> dco_decode_list_core_disc_stream(dynamic raw);
+
+  @protected
+  List<CoreDiscTitle> dco_decode_list_core_disc_title(dynamic raw);
+
+  @protected
   List<CoreDiscoveredService> dco_decode_list_core_discovered_service(
     dynamic raw,
   );
@@ -2115,6 +2137,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<FilenameHypothesis> dco_decode_list_filename_hypothesis(dynamic raw);
 
   @protected
+  List<List<CorePlayPart>> dco_decode_list_list_core_play_part(dynamic raw);
+
+  @protected
   Int64List dco_decode_list_prim_i_64_strict(dynamic raw);
 
   @protected
@@ -2161,6 +2186,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreChatStatus? dco_decode_opt_box_autoadd_core_chat_status(dynamic raw);
+
+  @protected
+  CoreDiscPlayback? dco_decode_opt_box_autoadd_core_disc_playback(dynamic raw);
+
+  @protected
+  CoreDiscTitle? dco_decode_opt_box_autoadd_core_disc_title(dynamic raw);
 
   @protected
   CoreEpisodeOrder? dco_decode_opt_box_autoadd_core_episode_order(dynamic raw);
@@ -3021,6 +3052,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  CoreDiscPlayback sse_decode_box_autoadd_core_disc_playback(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreDiscTitle sse_decode_box_autoadd_core_disc_title(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreDiscoveryConfig sse_decode_box_autoadd_core_discovery_config(
     SseDeserializer deserializer,
   );
@@ -3461,6 +3502,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreDeviceClass sse_decode_core_device_class(SseDeserializer deserializer);
+
+  @protected
+  CoreDiscPlayback sse_decode_core_disc_playback(SseDeserializer deserializer);
+
+  @protected
+  CoreDiscStream sse_decode_core_disc_stream(SseDeserializer deserializer);
+
+  @protected
+  CoreDiscTitle sse_decode_core_disc_title(SseDeserializer deserializer);
 
   @protected
   CoreDiscoveredService sse_decode_core_discovered_service(
@@ -4406,6 +4456,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<CoreCredit> sse_decode_list_core_credit(SseDeserializer deserializer);
 
   @protected
+  List<CoreDiscStream> sse_decode_list_core_disc_stream(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CoreDiscTitle> sse_decode_list_core_disc_title(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<CoreDiscoveredService> sse_decode_list_core_discovered_service(
     SseDeserializer deserializer,
   );
@@ -4855,6 +4915,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<List<CorePlayPart>> sse_decode_list_list_core_play_part(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   Int64List sse_decode_list_prim_i_64_strict(SseDeserializer deserializer);
 
   @protected
@@ -4913,6 +4978,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CoreChatStatus? sse_decode_opt_box_autoadd_core_chat_status(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreDiscPlayback? sse_decode_opt_box_autoadd_core_disc_playback(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CoreDiscTitle? sse_decode_opt_box_autoadd_core_disc_title(
     SseDeserializer deserializer,
   );
 
@@ -5960,6 +6035,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_core_disc_playback(
+    CoreDiscPlayback self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_core_disc_title(
+    CoreDiscTitle self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_discovery_config(
     CoreDiscoveryConfig self,
     SseSerializer serializer,
@@ -6531,6 +6618,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     CoreDeviceClass self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_core_disc_playback(
+    CoreDiscPlayback self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_disc_stream(
+    CoreDiscStream self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_core_disc_title(CoreDiscTitle self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_discovered_service(
@@ -7829,6 +7931,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_core_disc_stream(
+    List<CoreDiscStream> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_core_disc_title(
+    List<CoreDiscTitle> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_core_discovered_service(
     List<CoreDiscoveredService> self,
     SseSerializer serializer,
@@ -8381,6 +8495,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_list_core_play_part(
+    List<List<CorePlayPart>> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_prim_i_64_strict(
     Int64List self,
     SseSerializer serializer,
@@ -8455,6 +8575,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_core_chat_status(
     CoreChatStatus? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_disc_playback(
+    CoreDiscPlayback? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_core_disc_title(
+    CoreDiscTitle? self,
     SseSerializer serializer,
   );
 

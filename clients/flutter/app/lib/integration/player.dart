@@ -6,6 +6,7 @@
 export 'package:pa_player/pa_player.dart'
     show
         PlayRequest,
+        PlaybackChapter,
         PlayerScreen,
         MusicPlayerController,
         // MUS-018 audiobooks

@@ -7,6 +7,7 @@ import '../frb_generated.dart';
 import 'audiobooks.dart';
 import 'content_kind.dart';
 import 'details.dart';
+import 'disc.dart';
 import 'episodes.dart';
 import 'files.dart';
 import 'folder_rules.dart';
@@ -198,6 +199,15 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// logo, ratings, ids, cast and crew, extras and the probe data of the
   /// version the item plays.
   Future<CoreItemDetails> details({required String itemId});
+
+  /// What the disc of the file `rel_path` of source `source_id` plays
+  /// (as in `CoreItem` and `CoreVersion`: the first clip of a disc
+  /// folder or the image itself). `None` for a file that is not on a
+  /// disc.
+  Future<CoreDiscPlayback?> discPlayback({
+    required PlatformInt64 sourceId,
+    required String relPath,
+  });
 
   /// Ends the parent token at once (the app locked its settings again).
   Future<void> endParentSession();
@@ -589,7 +599,9 @@ abstract class CoreLibrary implements RustOpaqueInterface {
   /// The files that play the file `rel_path` of source `source_id` (as
   /// in `CoreItem` and `CoreVersion`) as one movie (LIB-020): every part
   /// of a split file (`cd1`, `cd2`) or of a DVD title set (VOBs) in
-  /// order, else the file alone. Empty for an unknown file.
+  /// order, else the file alone. Empty for an unknown file. A Blu-ray
+  /// or DVD folder or image plays the first angle of its main title
+  /// (PLAY-017); files inside an image go through the stream proxy.
   Future<List<CorePlayPart>> playParts({
     required PlatformInt64 sourceId,
     required String relPath,

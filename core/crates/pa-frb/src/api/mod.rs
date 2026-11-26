@@ -9,6 +9,7 @@ pub mod cloud;
 pub mod content_kind;
 pub mod details;
 pub mod diagnostics;
+pub mod disc;
 pub mod discovery;
 pub mod dlna;
 pub mod episodes;
