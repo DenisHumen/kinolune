@@ -277,6 +277,11 @@ impl LanNode {
         Ok(())
     }
 
+    /// `up` frames this node received and sent so far (LIB-028).
+    pub fn upload_traffic(&self) -> crate::upload::Traffic {
+        self.shared.lock().upload_traffic
+    }
+
     /// Pulls what the hub has and this device lacks, and waits for the
     /// answer at most `timeout` (SYNC-003: before a title starts). `true`
     /// when the hub answered in time or there is no hub to ask (this device

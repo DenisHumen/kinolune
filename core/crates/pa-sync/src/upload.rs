@@ -315,6 +315,17 @@ pub fn open_frame(
     Ok(frame)
 }
 
+/// `up` traffic of one node: frames and bytes of their JSON (without the
+/// WebSocket and TLS framing, a few dozen bytes more per frame).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Traffic {
+    pub recv_frames: u64,
+    pub recv_bytes: u64,
+    /// Per link: a frame sent to two links counts twice.
+    pub sent_frames: u64,
+    pub sent_bytes: u64,
+}
+
 // --- the sender -----------------------------------------------------------
 
 /// Speed as an exponential moving average over [`SPEED_TAU_MS`].

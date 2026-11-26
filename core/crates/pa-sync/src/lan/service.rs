@@ -1169,6 +1169,16 @@ impl SyncService {
         lock(&self.inner.uploads).board.uploads(now_ms())
     }
 
+    /// `up` traffic of this device's node so far (LIB-028); zero while
+    /// sync does not run.
+    pub fn upload_traffic(&self) -> upload::Traffic {
+        lock(&self.inner.state)
+            .running
+            .as_ref()
+            .map(|r| r.node.upload_traffic())
+            .unwrap_or_default()
+    }
+
     /// This device's uploads as last reported (LIB-028).
     pub fn local_uploads(&self) -> Vec<UploadTick> {
         lock(&self.inner.uploads).pacer.local()

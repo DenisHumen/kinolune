@@ -107,6 +107,8 @@ pub(crate) struct State {
     seen_music: HashSet<(String, Hlc)>,
     /// `up` frames already routed (LIB-028), by sender stamp.
     seen_uploads: HashSet<Hlc>,
+    /// Traffic of `up` frames on this node (LIB-028 load measure).
+    pub(crate) upload_traffic: crate::upload::Traffic,
 }
 
 /// An open `input` request as received.
@@ -160,6 +162,7 @@ impl Shared {
             seen_inputs: HashSet::new(),
             seen_music: HashSet::new(),
             seen_uploads: HashSet::new(),
+            upload_traffic: crate::upload::Traffic::default(),
         };
         Ok(Self {
             tls_server: Arc::new(super::tls::server_config()?),
@@ -630,9 +633,16 @@ impl State {
         if !self.seen_uploads.insert(frame.hlc.clone()) {
             return;
         }
+        let len = raw.len() as u64;
+        if source != Source::App {
+            self.upload_traffic.recv_frames += 1;
+            self.upload_traffic.recv_bytes += len;
+        }
         for (id, link) in &self.links {
             if Source::Link(*id) != source {
                 let _ = link.tx.send(Some(raw.to_owned()));
+                self.upload_traffic.sent_frames += 1;
+                self.upload_traffic.sent_bytes += len;
             }
         }
         if source != Source::App && frame.hlc.device != self.family.identity().device_id() {
