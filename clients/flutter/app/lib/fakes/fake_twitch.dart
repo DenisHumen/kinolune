@@ -370,6 +370,7 @@ class FakeTwitchBackend implements TwitchBackend {
   final List<TwitchClip> allClips;
   final Map<String, List<TwitchScheduleSegment>> schedules;
   final List<TwitchCategory> categories;
+
   /// User ids the user follows; tests change it (TWI-033: followed on
   /// Twitch itself).
   List<String> follows;

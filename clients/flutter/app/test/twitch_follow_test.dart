@@ -271,7 +271,10 @@ void main() {
     if (card.evaluate().isNotEmpty) {
       await t.tap(card.first, buttons: kSecondaryButton);
       await settle(t, 6);
-      expect(find.byKey(const ValueKey('twitch-stream-menu-follow')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('twitch-stream-menu-follow')),
+        findsNothing,
+      );
     }
     await _close(t);
   });

@@ -63,7 +63,11 @@ class _TwitchFollowButtonState extends State<TwitchFollowButton> {
       if (twitch.account == null) {
         await twitch.toggleFavorite(widget.channel);
       } else {
-        await followOnTwitch(context, widget.channel, unfollow: follows == true);
+        await followOnTwitch(
+          context,
+          widget.channel,
+          unfollow: follows == true,
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);

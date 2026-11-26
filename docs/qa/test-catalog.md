@@ -943,6 +943,18 @@ PLAY-AND-004, ADR-0163. Нужны: ТВ-приставка (Nvidia Shield, Chro
 
 Автотесты: TWI-153…TWI-163 — `test/twitch_browse_test.dart` (desktop; TWI-153, TWI-157 — также phone), `test/twitch_golden_test.dart` («Обзор» и страница категории на phone, tablet, desktop, tv); TWI-164 — `test/twitch_browse_test.dart` (tv); ядро — `core/crates/pa-twitch/tests/helix.rs` (страницы `games/top` по курсору без повторов, 429 с `Retry-After`) и тесты `pa-frb` `api::twitch` (`top_categories`, `category_streams`, лимит Twitch).
 
+### Фоллов Twitch (TWI-033)
+
+| ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
+|---|---|---|---|---|---|---|---|---|---|
+| TWI-201 | Вошли, не фолловите: страница канала → «Фолловить» (`twitch-follow`) → канал сразу в избранном Kinolune и открывается `twitch.tv/<логин>` в приложении Twitch или браузере; после «Follow» там и возврата в приложение кнопка «Вы фолловите на Twitch ✓» (статус из `channels/followed`) | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-202 | «Вы фолловите на Twitch ✓» → диалог «Отписаться?» (`twitch-unfollow-dialog`): «Отписаться» (`twitch-unfollow-confirm`) → канал убран из избранного Kinolune, открывается страница канала на Twitch; «Отмена» → ничего не меняется | 🤖 | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-203 | Не вошли в Twitch: кнопка только «В избранное» / «В избранном Kinolune ✓» (`twitch-channel-favorite`), без перехода на Twitch; в меню карточки эфира пункта «Фолловить» нет | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-204 | ТВ (или ссылку открыть не удалось): «Фолловить» → окно «Открыть на Twitch» с QR (`twitch-open-dialog`); закрытие окна перепроверяет статус | ⬜ | 🤖 | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+| TWI-205 | Меню карточки эфира во «Обзоре» → «Фолловить» / «Отписаться» (`twitch-stream-menu-follow`) → избранное + страница канала на Twitch; кнопка фоллова есть и в плеере (нативном и встроенном) | ⬜ | ⬜ | ⬜ | ⬜ | — | 🤖 | 🤖 | 🤖 |
+
+Автотесты: TWI-201…TWI-205 — `test/twitch_follow_test.dart` (phone, desktop, tv; кнопка в плеере — без автотеста).
+
 ### Кнопка «Записать» в эфире (TWI-035, только full)
 
 | ID | Проверка | Android | Android TV | iOS | iPadOS | tvOS | macOS | Windows | Linux |
