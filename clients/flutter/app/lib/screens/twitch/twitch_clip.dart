@@ -24,6 +24,7 @@ import '../../services/external_links.dart';
 import '../../twitch/twitch_models.dart';
 import '../../widgets/qr_code.dart';
 import '../../widgets/settings_tiles.dart' show copyLink;
+import 'twitch_embed_desktop.dart' show twitchEmbedCovered;
 import 'twitch_play.dart' show showTwitchSignIn;
 import 'twitch_widgets.dart' show formatLength, showOpenOnTwitch;
 
@@ -47,6 +48,17 @@ Future<bool> shareTwitchLink(String url) async {
   }
 }
 
+/// Runs a dialog over the embed screen: a desktop's native web view lies
+/// over Flutter and hides meanwhile (TWI-029, BUG-028).
+Future<T> _overEmbed<T>(Future<T> Function() dialog) async {
+  twitchEmbedCovered.value++;
+  try {
+    return await dialog();
+  } finally {
+    twitchEmbedCovered.value--;
+  }
+}
+
 /// Makes a clip of [login]'s live stream: sign-in with `clips:edit` when
 /// needed, then the «Клип готов» card or a snack bar with the reason.
 Future<void> makeTwitchClip(BuildContext context, String login) async {
@@ -65,7 +77,9 @@ Future<void> makeTwitchClip(BuildContext context, String login) async {
   }
 
   Future<bool> signIn() async {
-    final account = await showTwitchSignIn(context, clips: true);
+    final account = await _overEmbed(
+      () => showTwitchSignIn(context, clips: true),
+    );
     return account != null && context.mounted && twitch.canMakeClips;
   }
 
@@ -87,7 +101,7 @@ Future<void> makeTwitchClip(BuildContext context, String login) async {
   final clip = r.clip;
   switch (r.outcome) {
     case TwitchClipOutcome.ready when clip != null:
-      await showTwitchClipReady(context, clip);
+      await _overEmbed(() => showTwitchClipReady(context, clip));
     case TwitchClipOutcome.disabled:
       snack(l.twitchClipsOff);
     case TwitchClipOutcome.offline:

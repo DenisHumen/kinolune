@@ -17,6 +17,8 @@ import 'package:kinolune/fakes/fake_twitch.dart';
 import 'package:kinolune/l10n/l10n.dart';
 import 'package:kinolune/platform/form_factor.dart';
 import 'package:kinolune/screens/twitch/twitch_clip.dart';
+import 'package:kinolune/screens/twitch/twitch_embed_desktop.dart'
+    show twitchEmbedCovered;
 import 'package:kinolune/screens/twitch/twitch_embed_screen.dart';
 import 'package:kinolune/services/app_services.dart';
 import 'package:kinolune/shell/app_shell.dart';
@@ -107,6 +109,8 @@ FakeTwitchBackend _backend({bool signedIn = true}) =>
 
 void main() {
   setUpAll(loadAppFonts);
+  // Dialogs a test leaves open never return: start each test uncovered.
+  setUp(() => twitchEmbedCovered.value = 0);
 
   testWidgets('first press asks for clips:edit, then «Клип готов»', (t) async {
     setSurface(t, _desktop);
@@ -130,6 +134,8 @@ void main() {
     expect(backend.clipRequests, ['7001']);
     expect(find.byKey(const ValueKey('twitch-clip-ready')), findsOneWidget);
     expect(find.text(_l(t).twitchClipReady), findsOneWidget);
+    // Linux and Windows: the native web view hides under the card.
+    expect(twitchEmbedCovered.value, 1);
     expect(
       find.text('https://clips.twitch.tv/DemoClipFromKinolune'),
       findsOneWidget,
@@ -145,6 +151,14 @@ void main() {
     await t.tap(find.byKey(const ValueKey('twitch-clip-watch')));
     await settle(t, 4);
     expect(find.byKey(const ValueKey('twitch-open-dialog')), findsOneWidget);
+    Navigator.of(
+      t.element(find.byKey(const ValueKey('twitch-open-dialog'))),
+    ).pop();
+    await settle(t, 4);
+    await t.tap(find.byKey(const ValueKey('twitch-clip-close')));
+    await settle(t, 4);
+    expect(find.byKey(const ValueKey('twitch-clip-ready')), findsNothing);
+    expect(twitchEmbedCovered.value, 0);
     await _close(t);
 
     // The scope stays: the next press makes the clip at once.
