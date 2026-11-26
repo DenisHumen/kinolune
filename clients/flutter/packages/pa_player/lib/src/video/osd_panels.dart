@@ -17,6 +17,9 @@ import '../ui/tokens.dart';
 import 'osd_controller.dart';
 import 'osd_model.dart';
 import 'osd_overlays.dart' show OsdSidePanelLabels;
+import 'sleep_timer.dart';
+import 'sleep_timer_strings.dart';
+import 'sleep_timer_widgets.dart';
 import 'track_panel_strings.dart';
 
 /// Playback speeds offered in the speed panel.
@@ -79,7 +82,16 @@ class OsdSidePanel extends StatelessWidget {
     this.onSelectVideo,
     this.subtitleSettings,
     this.onSubtitleSettings,
+    this.sleepTimer,
+    this.sleepEndOfItem = true,
+    this.sleepStillWatching = true,
   });
+
+  /// The sleep timer panel (PLAY-022): the timer, whether «в конце серии»
+  /// is offered, and whether the «Вы ещё смотрите?» setting is.
+  final SleepTimerController? sleepTimer;
+  final bool sleepEndOfItem;
+  final bool sleepStillWatching;
 
   final OsdPanel panel;
 
@@ -176,6 +188,7 @@ class OsdSidePanel extends StatelessWidget {
       OsdPanel.zoom => l.zoom,
       OsdPanel.chapters => l.chapters,
       OsdPanel.info => l.info,
+      OsdPanel.sleepTimer => SleepTimerStrings.of(context).sleepTimer,
       OsdPanel.none => '',
     };
     final size = MediaQuery.sizeOf(context);
@@ -275,6 +288,15 @@ class OsdSidePanel extends StatelessWidget {
                         onClose();
                       },
                     ),
+                  ],
+                  OsdPanel.sleepTimer => [
+                    if (sleepTimer != null)
+                      SleepTimerMenu(
+                        controller: sleepTimer!,
+                        endOfItem: sleepEndOfItem,
+                        stillWatching: sleepStillWatching,
+                        onPicked: onClose,
+                      ),
                   ],
                   OsdPanel.subtitleSearch || OsdPanel.none => const [],
                 },
