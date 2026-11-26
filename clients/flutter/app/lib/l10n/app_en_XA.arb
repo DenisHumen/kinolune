@@ -2380,5 +2380,8 @@
   "twitchLanguageOther": "[Óţĥéŕ ļáñĝúáĝé······]",
   "twitchCategoryVodsTitle": "[Ƒáṽóŕíţéš' ṽíðéóš ŵíţĥ ţĥíš ĝáɱé·············]",
   "twitchStreamOpenChannel": "[Óþéñ çĥáññéļ·····]",
-  "twitchSearchRecent": "[Ŕéçéñţ šéáŕçĥéš······]"
+  "twitchSearchRecent": "[Ŕéçéñţ šéáŕçĥéš······]",
+  "twitchChatSentBubble": "[Ṁéššáĝé šéñţ·····]",
+  "twitchChatNotSentBubble": "[Ṁéššáĝé ñóţ šéñţ:······· {reason}]",
+  "twitchChatBubbleHide": "[Ĥíðé··]"
 }

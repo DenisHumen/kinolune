@@ -3,7 +3,8 @@
 // QA-006: UI performance budgets. Profile-mode scenarios measured with the
 // engine's frame timings (`watchPerformance`): the library grid over 10 000
 // titles (demo art, decoded poster files, the real Rust core), Home rows,
-// opening a movie page, the player OSD. Run through tool/perf_bench.sh:
+// opening a movie page, the player OSD, the chat's "Sent" bubbles over the
+// playing video (TWI-039). Run through tool/perf_bench.sh:
 //
 //   flutter drive --profile -d linux \
 //     --driver test_driver/perf_driver.dart \
@@ -29,6 +30,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:kinolune/app.dart';
 import 'package:kinolune/fakes/fake_library.dart';
+import 'package:kinolune/features/twitch/chat/sent_bubble.dart';
 import 'package:kinolune/integration/library.dart';
 import 'package:kinolune/library/library_queries.dart';
 import 'package:kinolune/platform/form_factor.dart';
@@ -484,4 +486,35 @@ void main() {
     await t.pumpWidget(const SizedBox());
     await _idle(t, 200);
   }, skip: !_enabled('osd_toggle'));
+
+  // TWI-039: "Sent" bubbles (scale, burst of particles, drift) over the
+  // playing video, one every 0.7 s with the stack of three full.
+  testWidgets('sent_bubble: chat bubbles over the player', (t) async {
+    final s = await demoServices();
+    await _pumpApp(t, s);
+    final item = (await s.library.movies().first).first;
+    final ctx = t.element(find.byType(Scaffold).first);
+    unawaited(playVideo(ctx, item));
+    await _waitFor(t, find.byType(PlayerScreen));
+    await _idle(t, 800);
+    final bubbles = SentBubbleOverlay();
+    final at = t.element(find.byType(PlayerScreen));
+    await measure('sent_bubble', () async {
+      for (var i = 0; i < 8; i++) {
+        bubbles.show(
+          at,
+          SentBubbleData(
+            kind: SentBubbleKind.sent,
+            pieces: [SentPiece.text('GG, what a play! Message $i')],
+            seed: i,
+          ),
+        );
+        await _idle(t, 700);
+      }
+      await _idle(t, 3200);
+    });
+    bubbles.dispose();
+    await t.pumpWidget(const SizedBox());
+    await _idle(t, 200);
+  }, skip: !_enabled('sent_bubble'));
 }
