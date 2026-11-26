@@ -1770,10 +1770,11 @@ project_alpha/
   - Что: check, download-only, apply, rollback через bootc; статус `bootc status --format=json`; API на unix-сокете (GET и POST update, rollback, настройки channel, auto и окна обслуживания); отключение `bootc-fetch-apply-updates.timer`.
   - deps: DIST-002 · size: M · parallel: yes · веха: M8 · ref: 05 §4.1–4.2
   - done when: go-тесты на моке bootc; ручная проверка на VM. Сделано: Go-демон `distro/updated` (только stdlib): check / `--download-only` / `--from-downloaded` + reboot / `switch` канала / rollback, статус из `bootc status --format=json`; API на `/run/alpha-updated/api.sock` (`root:alpha-admin 0660`, socket-юнит, аудит по `SO_PEERCRED`); настройки channel / auto / окно в `/var/lib/alpha/updated`; планировщик окна с вето медиасервера (`GET https://127.0.0.1:8487/api/v1/system/activity`, SRV-019, пин SHA-256 сертификата сервера; сомнение = отложить); таймер bootc замаскирован; тесты на fake bootc и через сокет; ADR-0164. Ручная проверка на VM — ожидает (чек-лист в `distro/updated/README.md`).
-- [ ] **DIST-010** Снапшоты `/var` и откат состояния
+- [x] **DIST-010** Снапшоты `/var` и откат состояния
   - Что: read-only снапшот `@var` перед apply, хранение 3 последних, маркер для отката `@var` при откате ОС; совместимость с expand→contract миграциями (LIB-002).
   - deps: DIST-009, LIB-002 · size: M · parallel: yes · веха: M8 · ref: 05 §4.2 п.6, §2.4
   - done when: после отката ОС база медиасервера возвращается к снапшоту и открывается старой версией.
+  - Сделано: `alpha-updated` перед перезагрузкой в обновление делает read-only снапшот `@var` в `@var-snapshots/` (хранит 3) и маркер `pending.json`; `alpha-var-restore.service` до `var.mount` возвращает `@var` к снапшоту, если ОС откатилась после загрузки новой версии (старый `/var` сохраняется как `…-replaced`); подтверждение по `boot-complete.target`; статус в `/v1/status`. ADR-NNNN. QEMU (`distro/tests/vm-install.sh`, шаг 7): обновление через агент → «миграция» базы → откат ОС → база снова схемы 1, медиасервер старой версии отвечает.
 - [ ] **DIST-011** greenboot и тесты обновления и отката
   - Что: `required.d` (сеть, alpha-admin `/healthz`, медиасервер `/health`, smbd, root смонтирован rw), `wanted.d` (пулы, GPU — отказ диска с данными не откатывает ОС), `red.d` (диагностика в `/var/lib/alpha/failed-updates` и уведомление); QEMU-сценарии «N-1 → N» и «плохое обновление → автооткат».
   - deps: DIST-009, DIST-008 · size: M · parallel: yes · веха: M8 · ref: 05 §4.2 п.5, §6.2
