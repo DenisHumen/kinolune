@@ -35,6 +35,10 @@ name: Release app
 on:
   push:
     tags: ["app-v*"]
+  # Nightly dry run of every platform on main (nothing is published), so a
+  # release on the owner's command needs only the server precheck and the tag.
+  schedule:
+    - cron: "30 1 * * *"
   workflow_dispatch:
     inputs:
       version:

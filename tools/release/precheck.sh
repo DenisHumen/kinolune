@@ -22,7 +22,7 @@
 #   --github-wait    like --github and wait for both runs.
 #   --only LIST      run only these stages (comma-separated, see below).
 #   --keep-going     do not stop at the first failed stage.
-#   --jobs N         CPU limit and parallel jobs (default 4, PA_PRECHECK_JOBS).
+#   --jobs N         CPU limit and parallel jobs (default: half the CPUs, at most 16; PA_PRECHECK_JOBS).
 #   --cache DIR      caches and run outputs (default PA_PRECHECK_CACHE or
 #                    ${XDG_CACHE_HOME:-~/.cache}/kinolune-precheck).
 #
@@ -461,7 +461,8 @@ GITHUB=0
 GITHUB_WAIT=0
 ONLY=""
 KEEP_GOING=0
-JOBS="${PA_PRECHECK_JOBS:-4}"
+half=$(( $(nproc 2>/dev/null || echo 8) / 2 )); (( half < 1 )) && half=1; (( half > 16 )) && half=16
+JOBS="${PA_PRECHECK_JOBS:-$half}"
 CACHE="${PA_PRECHECK_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/kinolune-precheck}"
 while [ $# -gt 0 ]; do
     case "$1" in
