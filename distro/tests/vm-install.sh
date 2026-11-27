@@ -346,9 +346,10 @@ log "Step 8: a device tracking :stable with the ostree-image-signed transport (I
 "${ENGINE}" tag "${LOCAL_REPO}:v1" "${LOCAL_REPO}:stable"
 "${ENGINE}" push -q "${LOCAL_REPO}:stable" >/dev/null
 vm systemctl stop alpha-updated.service
+# shellcheck disable=SC2016 # $o and $(…) are expanded in the VM
 vm 'mount -o remount,rw /sysroot && o="$(ostree admin --print-current-dir).origin" &&
-    sed -i "s|^container-image-reference=.*|container-image-reference=ostree-image-signed:docker://'"${VM_REPO}"':stable|" "$o" &&
-    mount -o remount,ro /sysroot'
+    sed -i "s|^container-image-reference=.*|container-image-reference=ostree-image-signed:docker://'"${VM_REPO}"':stable|" "$o"; r=$?;
+    mount -o remount,ro /sysroot 2>/dev/null; exit $r'
 check "origin as on ISO ci.7" test "$(origin)" = "ostree-image-signed:docker://${VM_REPO}:stable"
 out="$(vm bootc upgrade --check 2>&1 || true)"
 check "bug reproduced: bootc refuses the signed transport under the stock policy" \

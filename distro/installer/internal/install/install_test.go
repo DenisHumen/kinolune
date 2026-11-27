@@ -464,7 +464,7 @@ func TestRunFullInstall(t *testing.T) {
 	}
 
 	// SELinux relabel covers what we wrote.
-	sf := s.fake.cmds[20]
+	sf := s.fake.cmds[21]
 	if sf.Name != "setfiles" || sf.Args[2] != dep || !strings.Contains(strings.Join(sf.Args, " "), "etc/shadow") ||
 		sf.Args[len(sf.Args)-1] != filepath.Join(dep, "var") {
 		t.Errorf("setfiles: %s", sf)
