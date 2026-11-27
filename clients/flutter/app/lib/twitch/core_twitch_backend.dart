@@ -288,9 +288,8 @@ class CoreTwitchBackend implements TwitchBackend {
   );
 
   @override
-  Future<List<TwitchChapter>> chapters(String videoId) => _call(
-    () async => _chapters(await _core.chapters(videoId: videoId)),
-  );
+  Future<List<TwitchChapter>> chapters(String videoId) =>
+      _call(() async => _chapters(await _core.chapters(videoId: videoId)));
 
   /// The remote config that decides GQL chapters (TWI-042); null in store
   /// builds and when it could not be opened: only stored chapters.
@@ -302,11 +301,7 @@ class CoreTwitchBackend implements TwitchBackend {
     if (config == null) return chapters(videoId);
     return _call(
       () async => _chapters(
-        await _core.vodChapters(
-          videoId: videoId,
-          login: login,
-          config: config,
-        ),
+        await _core.vodChapters(videoId: videoId, login: login, config: config),
       ),
     );
   }

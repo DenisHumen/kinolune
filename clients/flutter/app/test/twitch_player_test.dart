@@ -612,10 +612,11 @@ void main() {
     expect(backend.gqlChapterRequests, ['9102']);
     // On the scrubber (none at 0:00) and stored for the next opening.
     expect(_markers, findsNWidgets(2));
-    expect(
-      (await backend.chapters('9102')).map((c) => c.gameName),
-      ['Just Chatting', 'Pixel Painter', 'Just Chatting'],
-    );
+    expect((await backend.chapters('9102')).map((c) => c.gameName), [
+      'Just Chatting',
+      'Pixel Painter',
+      'Just Chatting',
+    ]);
     await _close(t);
 
     // Stored GQL chapters are not asked for again.
