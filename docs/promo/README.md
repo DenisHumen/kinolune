@@ -67,3 +67,5 @@
 - Лицензия Poly Haven: <https://polyhaven.com/license>
 - Sketchfab Download API: <https://sketchfab.com/developers/download-api>
 - Сводка правил TikTok по ИИ-меткам: <https://blog.hootsuite.com/ai-disclosure-policy-for-tiktok/>
+
+- [Мир и стиль промо-канала](world-and-style.md) — PS2/PS3-графика, Мегаструктура, ностальгия 2000–2020, каналы RU и EN.
