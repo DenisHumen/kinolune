@@ -62,7 +62,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 482211054;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1128768189;
 
 // Section: executor
 
@@ -25696,6 +25696,73 @@ fn wire__crate__api__twitch__CoreTwitch_users_impl(
         },
     )
 }
+fn wire__crate__api__twitch__CoreTwitch_vod_chapters_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "CoreTwitch_vod_chapters",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreTwitch>,
+            >>::sse_decode(&mut deserializer);
+            let api_video_id = <String>::sse_decode(&mut deserializer);
+            let api_login = <Option<String>>::sse_decode(&mut deserializer);
+            let api_config = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CoreRemoteConfig>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::twitch::TwitchApiError>((move || {
+                    let mut api_that_guard = None;
+                    let mut api_config_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_config,
+                                1,
+                                false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            1 => api_config_guard = Some(api_config.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let api_config_guard = api_config_guard.unwrap();
+                    let output_ok = crate::api::twitch::CoreTwitch::vod_chapters(
+                        &*api_that_guard,
+                        api_video_id,
+                        api_login,
+                        &*api_config_guard,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__anime_db__anime_db_info_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -38484,132 +38551,138 @@ fn pde_ffi_dispatcher_primary_impl(
             data_len,
         ),
         484 => wire__crate__api__twitch__CoreTwitch_users_impl(port, ptr, rust_vec_len, data_len),
-        485 => wire__crate__api__anime_db__anime_db_info_impl(port, ptr, rust_vec_len, data_len),
-        486 => wire__crate__api__anime_db__anime_db_refresh_impl(port, ptr, rust_vec_len, data_len),
-        493 => wire__crate__api__twitch_chat__core_chat_filters_default_impl(
+        485 => wire__crate__api__twitch__CoreTwitch_vod_chapters_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        494 => wire__crate__api__twitch_chat__core_chat_room_modes_default_impl(
+        486 => wire__crate__api__anime_db__anime_db_info_impl(port, ptr, rust_vec_len, data_len),
+        487 => wire__crate__api__anime_db__anime_db_refresh_impl(port, ptr, rust_vec_len, data_len),
+        494 => wire__crate__api__twitch_chat__core_chat_filters_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        495 => wire__crate__api__discovery__core_discovery_config_default_impl(
+        495 => wire__crate__api__twitch_chat__core_chat_room_modes_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        497 => wire__crate__api__jellyfin__core_jellyfin_import_default_impl(
+        496 => wire__crate__api__discovery__core_discovery_config_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        498 => wire__crate__api__library_query__core_library_filter_default_impl(
+        498 => wire__crate__api__jellyfin__core_jellyfin_import_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        499 => wire__crate__api__music__core_music_metadata_update_default_impl(
+        499 => wire__crate__api__library_query__core_library_filter_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        500 => wire__crate__api__subtitle_search__core_open_subtitles_account_default_impl(
+        500 => wire__crate__api__music__core_music_metadata_update_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        501 => wire__crate__api__personal_media__core_personal_filter_default_impl(
+        501 => wire__crate__api__subtitle_search__core_open_subtitles_account_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        502 => wire__crate__api__scrobble__core_scrobble_status_default_impl(
+        502 => wire__crate__api__personal_media__core_personal_filter_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        503 => wire__crate__api__sources__core_source_options_default_impl(
+        503 => wire__crate__api__scrobble__core_scrobble_status_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        506 => wire__crate__api__lyrics__core_track_lyrics_default_impl(
+        504 => wire__crate__api__sources__core_source_options_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        507 => wire__crate__api__trakt__core_trakt_sync_report_default_impl(
+        507 => wire__crate__api__lyrics__core_track_lyrics_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        513 => wire__crate__api__diagnostics__diagnostics_export_report_impl(
+        508 => wire__crate__api__trakt__core_trakt_sync_report_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        517 => wire__crate__api__diagnostics__diagnostics_recent_log_impl(
+        514 => wire__crate__api__diagnostics__diagnostics_export_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        523 => wire__crate__api__dlna__dlna_search_impl(port, ptr, rust_vec_len, data_len),
-        527 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
-        528 => {
+        518 => wire__crate__api__diagnostics__diagnostics_recent_log_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        524 => wire__crate__api__dlna__dlna_search_impl(port, ptr, rust_vec_len, data_len),
+        528 => wire__crate__api__version__init_app_impl(port, ptr, rust_vec_len, data_len),
+        529 => {
             wire__crate__api__library__is_legacy_v0_library_impl(port, ptr, rust_vec_len, data_len)
         }
-        530 => wire__crate__api__lan__lan_search_impl(port, ptr, rust_vec_len, data_len),
-        531 => wire__crate__api__subtitle_search__opensubtitles_account_status_impl(
+        531 => wire__crate__api__lan__lan_search_impl(port, ptr, rust_vec_len, data_len),
+        532 => wire__crate__api__subtitle_search__opensubtitles_account_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        533 => {
+        534 => {
             wire__crate__api__recognition__parse_filename_impl(port, ptr, rust_vec_len, data_len)
         }
-        534 => wire__crate__api__recognition__parse_filename_with_impl(
+        535 => wire__crate__api__recognition__parse_filename_with_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        535 => wire__crate__api__secrets__platform_secret_reply_default_impl(
+        536 => wire__crate__api__secrets__platform_secret_reply_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        536 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
-        537 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
-        538 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
-        539 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
-        540 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
-        541 => {
+        537 => wire__crate__api__secrets__secret_delete_impl(port, ptr, rust_vec_len, data_len),
+        538 => wire__crate__api__secrets__secret_get_impl(port, ptr, rust_vec_len, data_len),
+        539 => wire__crate__api__secrets__secret_set_impl(port, ptr, rust_vec_len, data_len),
+        540 => wire__crate__api__secrets__secrets_close_impl(port, ptr, rust_vec_len, data_len),
+        541 => wire__crate__api__secrets__secrets_info_impl(port, ptr, rust_vec_len, data_len),
+        542 => {
             wire__crate__api__secrets__secrets_open_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        542 => {
+        543 => {
             wire__crate__api__secrets__secrets_open_platform_impl(port, ptr, rust_vec_len, data_len)
         }
-        545 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
-        547 => wire__crate__api__app_update__update_verify_artifact_impl(
+        546 => wire__crate__api__events__tick_stream_impl(port, ptr, rust_vec_len, data_len),
+        548 => wire__crate__api__app_update__update_verify_artifact_impl(
             port,
             ptr,
             rust_vec_len,
@@ -38905,80 +38978,80 @@ fn pde_ffi_dispatcher_sync_impl(
             rust_vec_len,
             data_len,
         ),
-        487 => wire__crate__api__twitch_archive__archive_default_templates_impl(
+        488 => wire__crate__api__twitch_archive__archive_default_templates_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        488 => {
+        489 => {
             wire__crate__api__twitch_archive__archive_name_preview_impl(ptr, rust_vec_len, data_len)
         }
-        489 => wire__crate__api__version__build_capabilities_impl(ptr, rust_vec_len, data_len),
-        490 => wire__crate__api__version__build_flavor_impl(ptr, rust_vec_len, data_len),
-        491 => wire__crate__api__twitch_chat_replay__chat_replay_online_allowed_impl(
+        490 => wire__crate__api__version__build_capabilities_impl(ptr, rust_vec_len, data_len),
+        491 => wire__crate__api__version__build_flavor_impl(ptr, rust_vec_len, data_len),
+        492 => wire__crate__api__twitch_chat_replay__chat_replay_online_allowed_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        492 => {
+        493 => {
             wire__crate__api__twitch_chat__check_chat_word_rule_impl(ptr, rust_vec_len, data_len)
         }
-        496 => wire__crate__api__events__core_events_listen_impl(ptr, rust_vec_len, data_len),
-        504 => wire__crate__api__events__core_stream_close_impl(ptr, rust_vec_len, data_len),
-        505 => wire__crate__api__events__core_stream_next_id_impl(ptr, rust_vec_len, data_len),
-        508 => wire__crate__api__version__core_version_impl(ptr, rust_vec_len, data_len),
-        509 => wire__crate__api__diagnostics__diagnostics_clear_impl(ptr, rust_vec_len, data_len),
-        510 => {
+        497 => wire__crate__api__events__core_events_listen_impl(ptr, rust_vec_len, data_len),
+        505 => wire__crate__api__events__core_stream_close_impl(ptr, rust_vec_len, data_len),
+        506 => wire__crate__api__events__core_stream_next_id_impl(ptr, rust_vec_len, data_len),
+        509 => wire__crate__api__version__core_version_impl(ptr, rust_vec_len, data_len),
+        510 => wire__crate__api__diagnostics__diagnostics_clear_impl(ptr, rust_vec_len, data_len),
+        511 => {
             wire__crate__api__diagnostics__diagnostics_crash_text_impl(ptr, rust_vec_len, data_len)
         }
-        511 => wire__crate__api__diagnostics__diagnostics_crashes_impl(ptr, rust_vec_len, data_len),
-        512 => wire__crate__api__diagnostics__diagnostics_engine_versions_impl(
+        512 => wire__crate__api__diagnostics__diagnostics_crashes_impl(ptr, rust_vec_len, data_len),
+        513 => wire__crate__api__diagnostics__diagnostics_engine_versions_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        514 => {
+        515 => {
             wire__crate__api__diagnostics__diagnostics_issue_url_impl(ptr, rust_vec_len, data_len)
         }
-        515 => wire__crate__api__diagnostics__diagnostics_log_impl(ptr, rust_vec_len, data_len),
-        516 => wire__crate__api__diagnostics__diagnostics_open_impl(ptr, rust_vec_len, data_len),
-        518 => wire__crate__api__diagnostics__diagnostics_record_crash_impl(
+        516 => wire__crate__api__diagnostics__diagnostics_log_impl(ptr, rust_vec_len, data_len),
+        517 => wire__crate__api__diagnostics__diagnostics_open_impl(ptr, rust_vec_len, data_len),
+        519 => wire__crate__api__diagnostics__diagnostics_record_crash_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        519 => wire__crate__api__diagnostics__diagnostics_redact_impl(ptr, rust_vec_len, data_len),
-        520 => {
+        520 => wire__crate__api__diagnostics__diagnostics_redact_impl(ptr, rust_vec_len, data_len),
+        521 => {
             wire__crate__api__diagnostics__diagnostics_set_enabled_impl(ptr, rust_vec_len, data_len)
         }
-        521 => wire__crate__api__diagnostics__diagnostics_status_impl(ptr, rust_vec_len, data_len),
-        522 => {
+        522 => wire__crate__api__diagnostics__diagnostics_status_impl(ptr, rust_vec_len, data_len),
+        523 => {
             wire__crate__api__discovery__discovery_source_kinds_impl(ptr, rust_vec_len, data_len)
         }
-        524 => {
+        525 => {
             wire__crate__api__recognition__filename_parser_version_impl(ptr, rust_vec_len, data_len)
         }
-        525 => wire__crate__api__twitch_chat_replay__find_chat_replay_file_impl(
+        526 => wire__crate__api__twitch_chat_replay__find_chat_replay_file_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        526 => wire__crate__api__live_uploads__guess_upload_impl(ptr, rust_vec_len, data_len),
-        529 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
-        532 => wire__crate__api__subtitle_search__opensubtitles_has_project_key_impl(
+        527 => wire__crate__api__live_uploads__guess_upload_impl(ptr, rust_vec_len, data_len),
+        530 => wire__crate__api__twitch_chat__known_chat_bots_impl(ptr, rust_vec_len, data_len),
+        533 => wire__crate__api__subtitle_search__opensubtitles_has_project_key_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        543 => {
+        544 => {
             wire__crate__api__sources__sources_set_ssh_rsa_allowed_impl(ptr, rust_vec_len, data_len)
         }
-        544 => wire__crate__api__subtitle_search__subdl_has_project_key_impl(
+        545 => wire__crate__api__subtitle_search__subdl_has_project_key_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        546 => {
+        547 => {
             wire__crate__api__twitch_play__twitch_master_variants_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),

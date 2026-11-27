@@ -682,7 +682,35 @@ class FakeTwitchBackend implements TwitchBackend {
 
   @override
   Future<List<TwitchChapter>> chapters(String videoId) async =>
-      allVideos.where((v) => v.id == videoId).firstOrNull?.chapters ?? const [];
+      _storedGqlChapters[videoId] ??
+      allVideos.where((v) => v.id == videoId).firstOrNull?.chapters ??
+      const [];
+
+  /// What "Twitch GQL" answers with for a VOD (TWI-042); empty: GQL
+  /// chapters are off.
+  final Map<String, List<TwitchChapter>> gqlChapters = {};
+
+  /// VOD ids GQL was asked about.
+  final List<String> gqlChapterRequests = [];
+
+  final Map<String, List<TwitchChapter>> _storedGqlChapters = {};
+
+  @override
+  Future<List<TwitchChapter>> vodChapters(
+    String videoId, {
+    String? login,
+  }) async {
+    final stored = await chapters(videoId);
+    if (gqlChapters.isEmpty || stored.any((c) => !c.approximate)) {
+      return stored;
+    }
+    gqlChapterRequests.add(videoId);
+    final found = gqlChapters[videoId];
+    if (found != null && found.isNotEmpty) {
+      _storedGqlChapters[videoId] = found;
+    }
+    return chapters(videoId);
+  }
 
   @override
   Future<List<TwitchVideo>> categoryVideos(String gameId) async => [

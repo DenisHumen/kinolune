@@ -385,6 +385,32 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
     unawaited(_start());
   }
 
+  /// TWI-042: a VOD without chapters (or with only the "≈" one) gets them
+  /// from Twitch GQL when the signed config allows; they are stored and
+  /// shown on the scrubber and in the chapter list once they arrive.
+  Future<void> _fetchVodChapters(String id) async {
+    if (_chapters.any((c) => !c.approximate)) return;
+    try {
+      final found = await _services.twitch.backend.vodChapters(
+        id,
+        login: widget.target.login,
+      );
+      if (!mounted || found.isEmpty || _sameChapters(found, _chapters)) return;
+      setState(() => _chapters = found);
+    } catch (e) {
+      debugPrint('Twitch GQL chapters of $id: $e');
+    }
+  }
+
+  static bool _sameChapters(List<TwitchChapter> a, List<TwitchChapter> b) =>
+      a.length == b.length &&
+      [
+        for (var i = 0; i < a.length; i++)
+          a[i].gameId == b[i].gameId &&
+              a[i].start == b[i].start &&
+              a[i].approximate == b[i].approximate,
+      ].every((same) => same);
+
   Future<void> _start() async {
     final prefs = _services.preferences;
     try {
@@ -415,6 +441,7 @@ class TwitchPlayerScreenState extends State<TwitchPlayerScreen> {
         _quality = q;
         _error = null;
       });
+      if (id != null) unawaited(_fetchVodChapters(id));
     } catch (e) {
       debugPrint('Twitch native playback: $e');
       if (mounted) setState(() => _error = e);

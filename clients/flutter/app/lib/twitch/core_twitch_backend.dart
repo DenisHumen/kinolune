@@ -288,20 +288,35 @@ class CoreTwitchBackend implements TwitchBackend {
   );
 
   @override
-  Future<List<TwitchChapter>> chapters(String videoId) => _call(() async {
-    final chapters = await _core.chapters(videoId: videoId);
-    return [
-      for (final c in chapters)
-        TwitchChapter(
-          gameId: c.gameId,
-          gameName: c.gameName,
-          boxArtUrl: c.boxArtUrl,
-          start: Duration(milliseconds: c.startMs),
-          end: c.endMs == null ? null : Duration(milliseconds: c.endMs!),
-          approximate: c.approximate,
-        ),
-    ];
-  });
+  Future<List<TwitchChapter>> chapters(String videoId) =>
+      _call(() async => _chapters(await _core.chapters(videoId: videoId)));
+
+  /// The remote config that decides GQL chapters (TWI-042); null in store
+  /// builds and when it could not be opened: only stored chapters.
+  core.CoreRemoteConfig? chaptersConfig;
+
+  @override
+  Future<List<TwitchChapter>> vodChapters(String videoId, {String? login}) {
+    final config = chaptersConfig;
+    if (config == null) return chapters(videoId);
+    return _call(
+      () async => _chapters(
+        await _core.vodChapters(videoId: videoId, login: login, config: config),
+      ),
+    );
+  }
+
+  static List<TwitchChapter> _chapters(List<core.CoreTwitchChapter> list) => [
+    for (final c in list)
+      TwitchChapter(
+        gameId: c.gameId,
+        gameName: c.gameName,
+        boxArtUrl: c.boxArtUrl,
+        start: Duration(milliseconds: c.startMs),
+        end: c.endMs == null ? null : Duration(milliseconds: c.endMs!),
+        approximate: c.approximate,
+      ),
+  ];
 
   @override
   Future<List<TwitchVideo>> categoryVideos(String gameId) => _call(

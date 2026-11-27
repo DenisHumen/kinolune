@@ -5,9 +5,10 @@
 
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'remote_config.dart';
 import 'twitch_live.dart';
 
-// These functions are ignored because they are not marked as `pub`: `alert_gate`, `alerts_allowed`, `broadcaster_type`, `call`, `category_of`, `chat_access`, `clip_result`, `db_path`, `db`, `failed`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `remember_categories`, `runtime`, `signed_api`, `signed`, `start_login_with`, `stream_of`, `twitch_code`, `video_of`
+// These functions are ignored because they are not marked as `pub`: `alert_gate`, `alerts_allowed`, `broadcaster_type`, `cached_vod`, `call`, `category_of`, `chat_access`, `clip_result`, `db_path`, `db`, `failed`, `link_vod`, `live_api`, `live_profile`, `model_streamer`, `new`, `non_empty`, `now_ms`, `remember_categories`, `runtime`, `signed_api`, `signed`, `start_login_with`, `store_gql_chapters`, `stream_of`, `twitch_code`, `video_of`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Api`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `with_helix`
@@ -197,6 +198,20 @@ abstract class CoreTwitch implements RustOpaqueInterface {
   Future<List<CoreTwitchUser>> users({
     required List<String> ids,
     required List<String> logins,
+  });
+
+  /// Chapters of a VOD the player opens (TWI-042). In a full build whose
+  /// signed remote config turns `twitch.chapters_gql` on, a VOD without
+  /// chapters (or with only the "≈" fallback) first gets its chapters
+  /// from GQL `moments`, which are stored; then the stored chapters are
+  /// returned as [`Self::chapters`]. No Twitch sign-in needed; a GQL
+  /// failure only means no new chapters. A VOD the cache does not know
+  /// (opened by a link) gets its GQL chapters without storing them.
+  /// `login`: the channel, when the caller knows it.
+  Future<List<CoreTwitchChapter>> vodChapters({
+    required String videoId,
+    String? login,
+    required CoreRemoteConfig config,
   });
 }
 
