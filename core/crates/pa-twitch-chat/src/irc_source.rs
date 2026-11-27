@@ -34,6 +34,13 @@ pub struct IrcConfig {
     /// Reconnect when nothing arrives for this long (Twitch sends `PING`
     /// about every 5 minutes).
     pub idle_timeout: Duration,
+    /// Give up on a connection attempt (TCP, TLS and WebSocket handshake)
+    /// after this long and retry with backoff (BUG-035: a stalled first
+    /// connect left the chat at "Connecting…" for good).
+    pub connect_timeout: Duration,
+    /// Reconnect when Twitch has not welcomed the session (`001`) this
+    /// long after it opened.
+    pub welcome_timeout: Duration,
     /// Give up after this many failed attempts in a row (`None`: never).
     pub max_attempts: Option<u32>,
     /// Events buffered for a slow consumer before the socket is paused.
@@ -49,6 +56,8 @@ impl IrcConfig {
             nick: None,
             backoff: Backoff::default(),
             idle_timeout: Duration::from_secs(6 * 60),
+            connect_timeout: Duration::from_secs(10),
+            welcome_timeout: Duration::from_secs(10),
             max_attempts: None,
             buffer: 4096,
         }
@@ -197,10 +206,17 @@ impl Driver {
     async fn run(self) {
         let mut attempt: u32 = 0;
         loop {
-            let end = match self.connector.connect(&self.config.url).await {
+            let connected = tokio::select! {
+                biased;
+                c = self.connector.connect(&self.config.url) => c.map_err(|e| e.to_string()),
+                () = self.clock.sleep(self.config.connect_timeout) => {
+                    Err("connecting to Twitch chat timed out".to_owned())
+                }
+            };
+            let end = match connected {
                 Ok(conn) => self.session(conn).await,
-                Err(e) => End::Lost {
-                    reason: e.to_string(),
+                Err(reason) => End::Lost {
+                    reason,
                     healthy: false,
                 },
             };
@@ -259,11 +275,21 @@ impl Driver {
         }
         let mut welcomed = false;
         loop {
+            let timeout = if welcomed {
+                self.config.idle_timeout
+            } else {
+                self.config.welcome_timeout
+            };
             let frame = tokio::select! {
                 biased;
                 frame = conn.recv_text() => frame,
-                () = self.clock.sleep(self.config.idle_timeout) => {
-                    return End::Lost { reason: "no data from Twitch (idle timeout)".to_owned(), healthy: welcomed };
+                () = self.clock.sleep(timeout) => {
+                    let reason = if welcomed {
+                        "no data from Twitch (idle timeout)"
+                    } else {
+                        "no welcome from Twitch chat"
+                    };
+                    return End::Lost { reason: reason.to_owned(), healthy: welcomed };
                 }
             };
             let frame = match frame {

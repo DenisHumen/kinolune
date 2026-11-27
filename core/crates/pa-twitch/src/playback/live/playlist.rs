@@ -40,6 +40,9 @@ pub struct Segment {
     pub prefetch: bool,
     /// Part of an ad break (inside an ad `DATERANGE` or titled as an ad).
     pub ad: bool,
+    /// `URI` of the `#EXT-X-MAP` (fMP4/CMAF init segment) in effect for
+    /// this segment, as written; `None` for MPEG-TS segments.
+    pub map: Option<String>,
 }
 
 impl Segment {
@@ -153,6 +156,7 @@ impl MediaPlaylist {
         let mut pdt: Option<i64> = None;
         let mut discontinuity = false;
         let mut next_seq: Option<u64> = None;
+        let mut map: Option<String> = None;
         for line in lines {
             if let Some(v) = line.strip_prefix("#EXT-X-TARGETDURATION:") {
                 out.target_duration = v.trim().parse().unwrap_or(0.0);
@@ -173,6 +177,8 @@ impl MediaPlaylist {
                 out.ended = true;
             } else if let Some(v) = line.strip_prefix("#EXT-X-PLAYLIST-TYPE:") {
                 out.event = v.trim() == "EVENT";
+            } else if let Some(v) = line.strip_prefix("#EXT-X-MAP:") {
+                map = attributes(v).get("URI").cloned();
             } else if let Some(v) = line.strip_prefix("#EXT-X-DATERANGE:") {
                 if let Some(range) = date_range(v) {
                     out.date_ranges.push(range);
@@ -199,6 +205,7 @@ impl MediaPlaylist {
                     discontinuity: false,
                     prefetch: true,
                     ad: false,
+                    map: map.clone(),
                 });
                 next_seq = Some(seq + 1);
             } else if line.starts_with('#') {
@@ -220,6 +227,7 @@ impl MediaPlaylist {
                     discontinuity: std::mem::take(&mut discontinuity),
                     prefetch: false,
                     ad: false,
+                    map: map.clone(),
                 });
                 next_seq = Some(seq + 1);
             }
@@ -539,6 +547,36 @@ a.ts
             out.contains("#EXT-X-MAP:URI=\"http://o/init.mp4\"\n"),
             "{out}"
         );
+        assert_eq!(p.segments[0].map.as_deref(), Some("init.mp4"));
+    }
+
+    /// Twitch since 2026-11: fMP4/CMAF segments without an extension, an
+    /// init segment per discontinuity (the stitched ad has its own).
+    #[test]
+    fn fmp4_segments_carry_their_init_segment() {
+        let text = "#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-DATERANGE:ID=\"stitched-ad-1\",CLASS=\"twitch-stitched-ad\",START-DATE=\"2026-11-14T12:00:00.000Z\",DURATION=2.000
+#EXT-X-DISCONTINUITY
+#EXT-X-MAP:URI=\"https://edge.example.invalid/v1/segment/AdInit\"
+#EXT-X-PROGRAM-DATE-TIME:2026-11-14T12:00:00.000Z
+#EXTINF:2.000,Amazon|1
+https://edge.example.invalid/v1/segment/Ad0
+#EXT-X-DISCONTINUITY
+#EXT-X-MAP:URI=\"https://edge.example.invalid/v1/segment/LiveInit\"
+#EXT-X-PROGRAM-DATE-TIME:2026-11-14T12:00:02.000Z
+#EXTINF:2.000,live
+https://edge.example.invalid/v1/segment/Live1
+#EXT-X-TWITCH-PREFETCH:https://edge.example.invalid/v1/segment/Live2
+";
+        let p = MediaPlaylist::parse(text).unwrap();
+        let maps: Vec<_> = p.segments.iter().map(|s| s.map.as_deref()).collect();
+        let ad_init = Some("https://edge.example.invalid/v1/segment/AdInit");
+        let live_init = Some("https://edge.example.invalid/v1/segment/LiveInit");
+        assert_eq!(maps, [ad_init, live_init, live_init]);
+        assert!(p.segments[0].ad && !p.segments[1].ad);
     }
 
     #[test]
