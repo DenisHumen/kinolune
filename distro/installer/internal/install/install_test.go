@@ -29,14 +29,26 @@ type fakeRunner struct {
 	root    string
 	cmds    []Cmd
 	missing map[string]bool
-	failOn  string // command name that fails
+	failOn  string // command name that fails ("probe": the payload probe)
 	binds   map[string]string
+	// payload is /usr/share/alpha/version of the payload image; "" means
+	// an image built with the project key (ALPHA_SIGNATURE_POLICY=enforce).
+	payload string
 }
 
 func (f *fakeRunner) LookPath(name string) bool { return !f.missing[name] }
 
 func (f *fakeRunner) Run(_ context.Context, c Cmd) ([]byte, error) {
 	f.cmds = append(f.cmds, c)
+	if c.Name == "podman" && len(c.Args) > 4 && c.Args[3] == "--entrypoint" {
+		if f.failOn == "probe" {
+			return nil, errors.New("no such image")
+		}
+		if f.payload == "" {
+			return []byte("ALPHA_OS_VERSION=45.1\nALPHA_IMAGE_REPO=ghcr.io/denishumen/alpha-os\nALPHA_SIGNATURE_POLICY=enforce\n"), nil
+		}
+		return []byte(f.payload), nil
+	}
 	if c.Name == f.failOn {
 		return nil, errors.New("boom")
 	}
@@ -335,13 +347,17 @@ func TestRunFullInstall(t *testing.T) {
 		names = append(names, c.Name)
 	}
 	got := strings.Join(names, " ")
-	want := "wipefs sfdisk udevadm wipefs mkfs.vfat wipefs mkfs.ext4 wipefs mkfs.btrfs mount mount mount podman " +
+	want := "podman wipefs sfdisk udevadm wipefs mkfs.vfat wipefs mkfs.ext4 wipefs mkfs.btrfs mount mount mount podman " +
 		"blkid blkid blkid btrfs cp mount chpasswd setfiles umount umount umount umount sync"
 	if got != want {
 		t.Errorf("command order:\n got %s\nwant %s", got, want)
 	}
 
-	bootc := s.fake.cmds[12]
+	probe := s.fake.cmds[0].String()
+	if probe != "podman run --rm --pull=never --entrypoint cat ghcr.io/denishumen/alpha-os:stable /usr/share/alpha/version" {
+		t.Errorf("payload probe: %s", probe)
+	}
+	bootc := s.fake.cmds[13]
 	line := bootc.String()
 	for _, w := range []string{"--pull=never", "--target-imgref ghcr.io/denishumen/alpha-os:stable",
 		"--enforce-container-sigpolicy", "--skip-finalize", "--karg console=ttyS0,115200", "--root-ssh-authorized-keys"} {
@@ -542,6 +558,49 @@ func TestRunBootcFailureUnmounts(t *testing.T) {
 	last := s.fake.cmds[len(s.fake.cmds)-1]
 	if last.Name != "sync" {
 		t.Errorf("target not unmounted after a failure, last command %s", last)
+	}
+}
+
+// BUG-031: an image built without the project key keeps the stock policy
+// (insecureAcceptAnything); bootc refuses the signed transport under it, so
+// the device must track the plain registry transport or it never updates.
+func TestRunPayloadWithoutSignaturePolicy(t *testing.T) {
+	s := newSetup(t, "04-qemu-ci", qemuAnswers)
+	s.fake.payload = "ALPHA_OS_VERSION=45.1\nALPHA_SIGNATURE_POLICY=off\n"
+	if err := s.in.Run(context.Background()); err != nil {
+		t.Fatalf("%v\n%s", err, s.log)
+	}
+	for _, c := range s.fake.cmds {
+		if strings.Contains(c.String(), "bootc install") && strings.Contains(c.String(), "sigpolicy") {
+			t.Errorf("signature policy enforced for an unsigned payload: %s", c)
+		}
+	}
+	if !strings.Contains(s.log.String(), "no signature policy yet") {
+		t.Errorf("no warning in the log:\n%s", s.log)
+	}
+	var info InstallInfo
+	data, _ := os.ReadFile(filepath.Join(s.in.Root, "@var/lib/alpha/install.json"))
+	if err := json.Unmarshal(data, &info); err != nil || info.Image.SignaturePolicyEnforce {
+		t.Errorf("install.json: %v %s", err, data)
+	}
+}
+
+func TestRunPayloadPolicyUnknownTouchesNothing(t *testing.T) {
+	for name, c := range map[string]struct{ payload, failOn, want string }{
+		"no policy line": {"ALPHA_OS_VERSION=45.1\n", "", "unknown ALPHA_SIGNATURE_POLICY"},
+		"probe fails":    {"", "probe", "reading /usr/share/alpha/version"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := newSetup(t, "04-qemu-ci", qemuAnswers)
+			s.fake.payload, s.fake.failOn = c.payload, c.failOn
+			err := s.in.Run(context.Background())
+			if err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("got %v, want %q", err, c.want)
+			}
+			if len(s.fake.cmds) != 1 {
+				t.Errorf("ran %d commands after a failed probe", len(s.fake.cmds))
+			}
+		})
 	}
 }
 

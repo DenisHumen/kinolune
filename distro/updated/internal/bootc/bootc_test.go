@@ -114,6 +114,13 @@ func TestClientArgs(t *testing.T) {
 	if strings.Join(r.calls, "|") != strings.Join(want, "|") {
 		t.Errorf("calls = %q\nwant  %q", r.calls, want)
 	}
+	signed := &recorder{}
+	if err := (Client{R: signed, EnforceSignaturePolicy: true}).Switch(ctx, "ghcr.io/o/alpha-os:beta"); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(signed.calls, "|"); got != "switch --enforce-container-sigpolicy ghcr.io/o/alpha-os:beta" {
+		t.Errorf("signed switch = %q", got)
+	}
 	if err := c.Switch(ctx, "--transport=dir"); err == nil {
 		t.Error("an option must not pass as an image reference")
 	}

@@ -17,7 +17,12 @@
 #   6. a new image is pushed under the same tag and `bootc upgrade --check` sees it;
 #   7. DIST-010: alpha-updated applies it (read-only snapshot of @var first), the new
 #      version changes /var, the OS rolls back, and /var is back to the snapshot before
-#      it is mounted; the replaced /var is kept.
+#      it is mounted; the replaced /var is kept;
+#   8. BUG-031: the image has no signature policy (no project key yet), so the installer
+#      chose the plain registry transport; a device of ISO 0.0.0-ci.7 (ostree-image-signed
+#      origin under the stock policy) cannot check for updates; `bootc switch` to the same
+#      tag fixes it; then alpha-updated's check, `bootc upgrade --check`, `bootc upgrade`
+#      + reboot -> new version, `bootc rollback` + reboot -> old version.
 #
 # Requirements: docker (or rootful podman) with --privileged, qemu-system-x86_64, OVMF,
 # /dev/kvm, ssh, python3, ~10 GB free in distro/.work. Takes ~20 minutes.
@@ -169,8 +174,8 @@ json.dump({
     # QEMU user networking, set statically: SSH works only if the connection is applied.
     "network": {"mode": "static", "address": "10.0.2.15/24", "gateway": "10.0.2.2",
                 "dns": ["10.0.2.3"]},
-    "image": {"source": "containers-storage:" + ref, "target": ref,
-              "enforce_signature_policy": False},
+    # enforce_signature_policy unset: the installer follows the payload (BUG-031).
+    "image": {"source": "containers-storage:" + ref, "target": ref},
     "root_ssh_authorized_keys": [pub],
     "kernel_args": ["console=ttyS0,115200"],
     "language": "uk",
@@ -208,6 +213,10 @@ vm systemctl is-system-running --wait >/dev/null || true
 status="$(vm bootc status --format=json | tee "${W}/status-installed.json")"
 img="$(python3 -c 'import json,sys; i=json.load(sys.stdin)["status"]["booted"]["image"]["image"]; print(i["transport"], i["image"])' <<< "${status}")"
 check "booted image tracks the registry (${img})" test "${img}" = "registry ${VM_REPO}:dev"
+# shellcheck disable=SC2016 # expanded in the VM
+origin() { vm 'cat "$(ostree admin --print-current-dir).origin"' | sed -n 's/^container-image-reference=//p'; }
+check "unsigned payload: plain registry transport, not ostree-image-signed (BUG-031)" \
+    test "$(origin)" = "ostree-unverified-registry:${VM_REPO}:dev"
 check "hostname" test "$(vm hostname)" = kinolune-test
 check "/ is btrfs" test "$(vm findmnt -no FSTYPE /sysroot)" = btrfs
 check "/var is the @var subvolume" grep -q "subvol=/@var" <<< "$(vm findmnt -no OPTIONS /var)"
@@ -329,4 +338,55 @@ check "agent status shows the restore" python3 -c \
     'import json,sys; v=json.load(sys.stdin)["var_snapshots"]; assert v["last_restore"]["version"]=="0.0.1-install.2", v' \
     <<< "$(api http://localhost/v1/status)"
 check "no failed units after the restore" test -z "$(vm systemctl --failed --no-legend --plain | grep -v '^$' || true)"
+
+# --- 8. BUG-031: updates of a device installed from ISO 0.0.0-ci.7 ----------------------
+# That ISO always passed --enforce-container-sigpolicy, so the origin says
+# ostree-image-signed while the image keeps the stock policy (no project key yet).
+log "Step 8: a device tracking :stable with the ostree-image-signed transport (ISO ci.7)"
+"${ENGINE}" tag "${LOCAL_REPO}:v1" "${LOCAL_REPO}:stable"
+"${ENGINE}" push -q "${LOCAL_REPO}:stable" >/dev/null
+vm systemctl stop alpha-updated.service
+vm 'mount -o remount,rw /sysroot && o="$(ostree admin --print-current-dir).origin" &&
+    sed -i "s|^container-image-reference=.*|container-image-reference=ostree-image-signed:docker://'"${VM_REPO}"':stable|" "$o" &&
+    mount -o remount,ro /sysroot'
+check "origin as on ISO ci.7" test "$(origin)" = "ostree-image-signed:docker://${VM_REPO}:stable"
+out="$(vm bootc upgrade --check 2>&1 || true)"
+check "bug reproduced: bootc refuses the signed transport under the stock policy" \
+    grep -q insecureAcceptAnything <<< "${out}"
+log "Step 8: the fix for such devices: bootc switch to the same tag"
+vm bootc switch "${VM_REPO}:stable"
+BOOT="$(boot_id)"; vm systemctl reboot || true; wait_reboot "${BOOT}"
+check "after the switch: v1, plain registry transport, :stable" \
+    test "$(version) $(origin)" = "0.0.1-install.1 ostree-unverified-registry:${VM_REPO}:stable"
+
+log "Step 8: publish v2 as :stable; alpha-updated (admin API) sees it"
+"${ENGINE}" tag "${LOCAL_REPO}:v2" "${LOCAL_REPO}:stable"
+"${ENGINE}" push -q "${LOCAL_REPO}:stable" >/dev/null
+checked=
+for _ in $(seq 1 30); do
+    if api -X POST http://localhost/v1/update/check > "${W}/api-check.json" 2>&1; then checked=1; break; fi
+    sleep 10   # 409 while the scheduler's own check runs
+done
+[[ -n "${checked}" ]] || die "alpha-updated refused the check: $(cat "${W}/api-check.json")"
+for _ in $(seq 1 60); do
+    api http://localhost/v1/update > "${W}/api-update.json"
+    python3 -c 'import json,sys; u=json.load(open(sys.argv[1])); sys.exit(0 if u.get("available") and not u.get("operation") else 1)' \
+        "${W}/api-update.json" && break
+    sleep 5
+done
+check "alpha-updated reports an available update" python3 -c \
+    'import json,sys; u=json.load(open(sys.argv[1])); assert u.get("available") and not u.get("last_error"), u' "${W}/api-update.json"
+vm systemctl stop alpha-updated.service   # bootc is driven by hand below
+
+log "Step 8: bootc upgrade --check, upgrade, reboot"
+vm bootc upgrade --check 2>&1 | tee "${W}/upgrade-check-stable.txt"
+vm bootc upgrade 2>&1 | tail -5
+BOOT="$(boot_id)"; vm systemctl reboot || true; wait_reboot "${BOOT}"
+check "bootc upgrade: v2 booted, still tracking :stable" \
+    test "$(version) $(origin)" = "0.0.1-install.2 ostree-unverified-registry:${VM_REPO}:stable"
+log "Step 8: bootc rollback, reboot"
+vm systemctl stop alpha-updated.service
+vm bootc rollback
+BOOT="$(boot_id)"; vm systemctl reboot || true; wait_reboot "${BOOT}"
+check "bootc rollback: v1 booted again" test "$(version)" = 0.0.1-install.1
 log "ALL CHECKS PASSED"
