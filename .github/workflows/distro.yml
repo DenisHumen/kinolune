@@ -223,6 +223,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Copy by digest inside the registry: the floating tag gets exactly the signed manifest.
+          # Own auth file: `sudo podman login` above left a root-owned auth.json in
+          # $XDG_RUNTIME_DIR/containers that the runner user cannot read.
+          export REGISTRY_AUTH_FILE="$RUNNER_TEMP/skopeo-auth.json"
           printf '%s' "$GH_TOKEN" | skopeo login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           skopeo copy --all --preserve-digests \
             "docker://$IMAGE_REPO@$DIGEST" "docker://$IMAGE_REPO:$FLOATING"
