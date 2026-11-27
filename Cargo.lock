@@ -3002,7 +3002,7 @@ name = "pa-cloud"
 version = "0.1.0"
 dependencies = [
  "aes",
- "base64 0.22.1",
+ "base64 0.23.1",
  "ctr",
  "getrandom 0.4.3",
  "num-bigint 0.4.8",
@@ -3325,7 +3325,7 @@ dependencies = [
 name = "pa-remote-config"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "blake2",
  "ed25519-dalek",
  "getrandom 0.4.3",
@@ -3399,7 +3399,7 @@ name = "pa-server"
 version = "0.1.0"
 dependencies = [
  "axum",
- "base64 0.22.1",
+ "base64 0.23.1",
  "ed25519-dalek",
  "futures-util",
  "getrandom 0.4.3",
@@ -3509,7 +3509,7 @@ dependencies = [
 name = "pa-sync"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "crypto_secretbox",
  "futures-util",
  "getrandom 0.4.3",
@@ -3653,7 +3653,7 @@ dependencies = [
 name = "pa-update"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "blake2",
  "ed25519-dalek",
  "getrandom 0.4.3",
