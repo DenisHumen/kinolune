@@ -320,8 +320,9 @@ fn offline_helix() -> (HelixClient, Arc<FixtureTransport>) {
     (helix, transport)
 }
 
-/// TWI-008: chapters from GQL behind the config flag, without and with the
-/// `VideoMetadata` hash, and the fallback with GQL off.
+/// TWI-008, TWI-042: chapters from GQL behind the config flag, without and
+/// with the `VideoMetadata` hash (then a VOD without moments still gets its
+/// category), and the fallback with GQL off.
 #[tokio::test]
 #[ignore = "real Twitch; PA_TWITCH_LIVE_TEST=1 and env values"]
 async fn real_vod_chapters() {
@@ -351,11 +352,11 @@ async fn real_vod_chapters() {
     ] {
         let gql = ChaptersGql::resolve_for(&cfg, &ctx(), Flavor::Full);
         assert!(gql.is_on());
-        let (helix, offline) = offline_helix();
+        // As the player asks (TWI-042): GQL only, no Helix, so a fresh
+        // archive without moments does not reach for the fallback.
         let resolved = ChapterResolver::new(gql, transport())
-            .resolve(&helix, request)
-            .await
-            .unwrap();
+            .resolve_without_helix(request)
+            .await;
         eprintln!("GQL {name}: failure={:?}", resolved.gql_failure);
         for c in resolved.chapters.iter().flatten() {
             eprintln!(
@@ -368,7 +369,9 @@ async fn real_vod_chapters() {
             );
         }
         assert_eq!(resolved.gql_failure, None);
-        assert!(offline.requests().is_empty(), "no Helix call");
+        if name == "with VideoMetadata" {
+            assert!(resolved.chapters.is_some(), "at least the VOD's category");
+        }
     }
     // GQL off: only the fallback, which needs Helix and a fresh archive.
     let (helix, offline) = offline_helix();
