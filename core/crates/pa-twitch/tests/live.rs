@@ -438,6 +438,10 @@ mod fmp4 {
         assert_eq!(proxy.report(0.0, 1.0).totals.ad_segments, 1);
         // A second reading keeps the same init segment ids.
         let (_, _, again) = get(&client, &url).await;
-        assert!(String::from_utf8(again).unwrap().contains("URI=\"m/1.mp4\""));
+        assert!(
+            String::from_utf8(again)
+                .unwrap()
+                .contains("URI=\"m/1.mp4\"")
+        );
     }
 }

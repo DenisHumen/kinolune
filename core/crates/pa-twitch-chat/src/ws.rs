@@ -51,6 +51,11 @@ mod live {
 
     /// Largest frame accepted; Twitch chat frames are a few KiB.
     const MAX_MESSAGE: usize = 1 << 20;
+    /// TCP, TLS and the WebSocket handshake together (BUG-035: without a
+    /// limit a stalled handshake never ended).
+    const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(20);
+    /// One TCP connect to one resolved address.
+    const ADDRESS_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 
     /// `wss://` connector: TCP, rustls (ring, TLS 1.2/1.3, webpki roots),
     /// then the WebSocket handshake.
@@ -87,38 +92,60 @@ mod live {
             url: &'a str,
         ) -> BoxFuture<'a, Result<Box<dyn WsConnection>, ChatError>> {
             Box::pin(async move {
-                let request = url
-                    .into_client_request()
-                    .map_err(|e| ChatError::Connect(e.to_string()))?;
-                let uri = request.uri();
-                if uri.scheme_str() != Some("wss") {
-                    return Err(ChatError::Connect("only wss:// is allowed".to_owned()));
-                }
-                let host = uri
-                    .host()
-                    .ok_or_else(|| ChatError::Connect("URL without host".to_owned()))?
-                    .to_owned();
-                let port = uri.port_u16().unwrap_or(443);
-                let tcp = TcpStream::connect((host.as_str(), port))
+                tokio::time::timeout(CONNECT_TIMEOUT, self.open(url))
                     .await
-                    .map_err(|e| ChatError::Connect(e.to_string()))?;
-                let _ = tcp.set_nodelay(true);
-                let name =
-                    ServerName::try_from(host).map_err(|e| ChatError::Connect(e.to_string()))?;
-                let tls = TlsConnector::from(self.tls.clone())
-                    .connect(name, tcp)
-                    .await
-                    .map_err(|e| ChatError::Connect(e.to_string()))?;
-                let mut config = WebSocketConfig::default();
-                config.max_message_size = Some(MAX_MESSAGE);
-                config.max_frame_size = Some(MAX_MESSAGE);
-                let (ws, _) =
-                    tokio_tungstenite::client_async_with_config(request, tls, Some(config))
-                        .await
-                        .map_err(|e| ChatError::Connect(e.to_string()))?;
-                Ok(Box::new(Conn { ws }) as Box<dyn WsConnection>)
+                    .unwrap_or_else(|_| Err(ChatError::Connect("connection timed out".to_owned())))
             })
         }
+    }
+
+    impl TungsteniteConnector {
+        async fn open(&self, url: &str) -> Result<Box<dyn WsConnection>, ChatError> {
+            let request = url
+                .into_client_request()
+                .map_err(|e| ChatError::Connect(e.to_string()))?;
+            let uri = request.uri();
+            if uri.scheme_str() != Some("wss") {
+                return Err(ChatError::Connect("only wss:// is allowed".to_owned()));
+            }
+            let host = uri
+                .host()
+                .ok_or_else(|| ChatError::Connect("URL without host".to_owned()))?
+                .to_owned();
+            let port = uri.port_u16().unwrap_or(443);
+            let tcp = tcp_connect(&host, port).await?;
+            let _ = tcp.set_nodelay(true);
+            let name = ServerName::try_from(host).map_err(|e| ChatError::Connect(e.to_string()))?;
+            let tls = TlsConnector::from(self.tls.clone())
+                .connect(name, tcp)
+                .await
+                .map_err(|e| ChatError::Connect(e.to_string()))?;
+            let mut config = WebSocketConfig::default();
+            config.max_message_size = Some(MAX_MESSAGE);
+            config.max_frame_size = Some(MAX_MESSAGE);
+            let (ws, _) = tokio_tungstenite::client_async_with_config(request, tls, Some(config))
+                .await
+                .map_err(|e| ChatError::Connect(e.to_string()))?;
+            Ok(Box::new(Conn { ws }) as Box<dyn WsConnection>)
+        }
+    }
+
+    /// Tries each address of `host` with its own short timeout, so one
+    /// unreachable address (e.g. a broken IPv6 route) does not use up the
+    /// whole attempt.
+    async fn tcp_connect(host: &str, port: u16) -> Result<TcpStream, ChatError> {
+        let addrs = tokio::net::lookup_host((host, port))
+            .await
+            .map_err(|e| ChatError::Connect(e.to_string()))?;
+        let mut last = "no address".to_owned();
+        for addr in addrs {
+            match tokio::time::timeout(ADDRESS_TIMEOUT, TcpStream::connect(addr)).await {
+                Ok(Ok(tcp)) => return Ok(tcp),
+                Ok(Err(e)) => last = e.to_string(),
+                Err(_) => last = format!("{addr}: timed out"),
+            }
+        }
+        Err(ChatError::Connect(last))
     }
 
     struct Conn {

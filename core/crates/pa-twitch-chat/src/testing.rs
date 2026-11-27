@@ -22,6 +22,15 @@ pub enum ScriptEnd {
     Hang,
 }
 
+/// One queued `connect`.
+#[derive(Debug)]
+enum Next {
+    Open(Script),
+    Fail(String),
+    /// The handshake never completes (a stalled TCP/TLS connect).
+    Stall,
+}
+
 /// Frames one connection delivers.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Script {
@@ -51,7 +60,7 @@ impl Script {
 
 #[derive(Debug, Default)]
 struct Shared {
-    scripts: VecDeque<Result<Script, String>>,
+    scripts: VecDeque<Next>,
     urls: Vec<String>,
     sent: Vec<(usize, String)>,
 }
@@ -71,13 +80,21 @@ impl ScriptedConnector {
 
     /// Queues a connection.
     pub fn push(&self, script: Script) -> &Self {
-        self.lock().scripts.push_back(Ok(script));
+        self.lock().scripts.push_back(Next::Open(script));
+        self
+    }
+
+    /// Queues a connection attempt that never completes.
+    pub fn push_stalled_connect(&self) -> &Self {
+        self.lock().scripts.push_back(Next::Stall);
         self
     }
 
     /// Queues a failed connection attempt.
     pub fn push_connect_error(&self, message: &str) -> &Self {
-        self.lock().scripts.push_back(Err(message.to_owned()));
+        self.lock()
+            .scripts
+            .push_back(Next::Fail(message.to_owned()));
         self
     }
 
@@ -107,13 +124,14 @@ impl WsConnector for ScriptedConnector {
         let next = shared.scripts.pop_front();
         drop(shared);
         let result = match next {
-            Some(Ok(script)) => Ok(Box::new(ScriptedConnection {
+            Some(Next::Stall) => return Box::pin(std::future::pending()),
+            Some(Next::Open(script)) => Ok(Box::new(ScriptedConnection {
                 index,
                 frames: script.frames.into(),
                 end: script.end,
                 shared: self.shared.clone(),
             }) as Box<dyn WsConnection>),
-            Some(Err(message)) => Err(ChatError::Connect(message)),
+            Some(Next::Fail(message)) => Err(ChatError::Connect(message)),
             None => Err(ChatError::Connect(
                 "no scripted connection left (tests never use the network)".to_owned(),
             )),

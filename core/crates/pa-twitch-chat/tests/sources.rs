@@ -160,6 +160,62 @@ async fn irc_reconnect_command_moves_without_backoff() {
     assert_eq!(joins, [0, 1]);
 }
 
+/// BUG-035: the first connect stalls (TCP/TLS handshake that never ends),
+/// the second session opens but Twitch never welcomes it; both are given
+/// up after their timeouts and the third connection joins the channel.
+#[tokio::test]
+async fn irc_slow_first_connect_and_missing_welcome_are_retried() {
+    let connector = ScriptedConnector::new();
+    connector.push_stalled_connect();
+    connector.push(Script::hanging([
+        ":tmi.twitch.tv CAP * ACK :twitch.tv/tags twitch.tv/commands\r\n",
+    ]));
+    connector.push(Script::hanging([
+        ":tmi.twitch.tv 001 justinfan48213 :Welcome, GLHF!\r\n",
+        ":justinfan48213!justinfan48213@justinfan48213.tmi.twitch.tv JOIN #kinolune_demo\r\n",
+        "@id=first-1;room-id=100000001;tmi-sent-ts=1794650020000 :pixel_otter!pixel_otter@pixel_otter.tmi.twitch.tv PRIVMSG #kinolune_demo :hello\r\n",
+    ]));
+    let clock = Arc::new(ManualClock::at_unix(START));
+    let mut config = irc_config(0);
+    config.max_attempts = None;
+    let source = IrcChatSource::spawn(config, Arc::new(connector.clone()), clock).unwrap();
+
+    let mut events = Vec::new();
+    while !events.iter().any(|e| matches!(e, ChatEvent::Message(_))) {
+        events.push(source.next_event().await.expect("source ended"));
+    }
+    let st = statuses(&events);
+    assert_eq!(
+        st[0],
+        SourceStatus::Reconnecting {
+            attempt: 1,
+            delay: Duration::from_secs(1),
+            reason: "connecting to Twitch chat timed out".to_owned(),
+        }
+    );
+    assert_eq!(
+        st[1],
+        SourceStatus::Reconnecting {
+            attempt: 2,
+            delay: Duration::from_secs(2),
+            reason: "no welcome from Twitch chat".to_owned(),
+        }
+    );
+    assert_eq!(st[2], SourceStatus::Connected);
+    assert!(matches!(&st[3], SourceStatus::Joined(c) if c.login == "kinolune_demo"));
+    assert_eq!(message_ids(&events), ["first-1"]);
+    source.close();
+    // Only the welcomed session (the third connect) joined. (The manual
+    // clock ends its idle wait at once, so more connects may follow.)
+    let joins: Vec<usize> = connector
+        .sent()
+        .into_iter()
+        .filter(|(_, s)| s.starts_with("JOIN"))
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(joins, [2]);
+}
+
 #[tokio::test]
 async fn irc_backoff_grows_exponentially_until_max_attempts() {
     let connector = ScriptedConnector::new();
