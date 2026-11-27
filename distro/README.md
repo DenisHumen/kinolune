@@ -114,8 +114,20 @@ distro/tests/vm-install.sh                  # ~20 минут: установка
 Workflow `.github/workflows/distro.yml`:
 
 - **PR** (в том числе из форков) — только сборка, токен read-only, без секретов: `podman build` → `bootc-base-imagectl rechunk` (стабильные слои, обновление качает только изменённое) → `bootc container lint` → SBOM (syft, SPDX JSON, артефакт workflow) → `tests/signature-policy.sh`.
-- **push в `main`** — то же, плюс push `ghcr.io/denishumen/alpha-os:<ver>` (`<ver>` = `45.YYYYMMDD.<run>`), подпись cosign по digest, SBOM как attestation, затем `:nightly` переносится на тот же digest. **Тег `os-vX.Y.Z`** — публикует `:X.Y.Z`.
-- **promote** (ручной запуск, окружение `release`): проверяет подпись версии публичным ключом и переносит `:beta` или `:stable` на её digest.
+- **push в `main`** с изменениями в `distro/**` или в самом workflow (BUG-031: раньше этого триггера не было, и после первой ручной публикации новые версии не выходили) — то же, плюс push `ghcr.io/denishumen/alpha-os:<ver>` (`<ver>` = `45.YYYYMMDD.<run>`), подпись cosign по digest и SBOM как attestation (если есть секрет `COSIGN_PRIVATE_KEY`), затем `:nightly` переносится на тот же digest. Ручной запуск на `main` (`promote: none`) делает то же. **Тег `os-vX.Y.Z`** — публикует `:X.Y.Z` (без `:nightly`). Из PR ничего не публикуется.
+- **promote** (ручной запуск, окружение `release`): переносит `:beta` или `:stable` на digest уже опубликованной версии. Если `distro/keys/alpha-os.pub` закоммичен, сначала проверяет подпись этим ключом; пока ключа нет — переносит неподписанную версию с предупреждением в журнале.
+
+### Имя образа: пока `alpha-os`
+
+Образ остаётся `ghcr.io/denishumen/alpha-os`: его уже отслеживают установленные системы (ISO до `0.0.0-ci.7` включительно), и одна и та же ссылка записана в установщике (`answers.DefaultImageRepo`, `build-iso.sh`), в Containerfile (`ALPHA_IMAGE_REPO`), в CI (`IMAGE_REPO`) и в политике подписи. Переименование в `kinolune-os` — отдельно, в BUG-034: сначала публиковать оба имени, затем обновление ОС само делает `bootc switch` на новое имя.
+
+### Транспорт обновлений на устройстве
+
+bootc хранит в origin развёртывания, как проверять обновления: `ostree-image-signed:` (по `containers-policy.json`) или `ostree-unverified-registry:`. Со **стоковой** политикой (`default: insecureAcceptAnything`) bootc отказывается работать с подписанным транспортом: `containers-policy.json specifies a default of insecureAcceptAnything; refusing usage` — `bootc upgrade` и `alpha-updated` получают эту ошибку всегда (проверено в QEMU, BUG-031).
+
+- Установщик (если в файле ответов не задано `image.enforce_signature_policy`) читает `/usr/share/alpha/version` образа-полезной нагрузки: `ALPHA_SIGNATURE_POLICY=enforce` → `--enforce-container-sigpolicy`, `off` → обычный транспорт реестра. Пока ключа нет, устройства ставятся с `ostree-unverified-registry:` и обновляются.
+- `alpha-updated` при смене канала (`bootc switch`) добавляет `--enforce-container-sigpolicy`, только если загруженный образ собран с политикой (`enforce`), — иначе смена канала выключила бы проверку подписи на подписанном устройстве.
+- **Переход на подписи позже.** Когда владелец закоммитит ключ, образы станут `enforce`, но origin уже установленных устройств останется неподписанным. После обновления до такого образа на устройстве один раз: `sudo bootc switch --enforce-container-sigpolicy ghcr.io/denishumen/alpha-os:stable` (или `:beta`) и перезагрузка; дальше `bootc` и `alpha-updated` проверяют подпись. Автоматизировать этот шаг в `alpha-updated` — вместе с DIST-012.
 
 Подпись — cosign v2 **с ключом** (не keyless, 05 §4.2 п.4): подпись лежит рядом с образом как `<repo>:sha256-<digest>.sig`, этот формат проверяет containers/image, а значит и bootc.
 
@@ -144,6 +156,21 @@ Workflow `.github/workflows/distro.yml`:
 4. PR: `cosign.pub` → `distro/keys/alpha-os.pub`. С этого коммита образы собираются с `enforce`, а CI сверяет подпись этим ключом.
 5. После первой публикации: пакет `alpha-os` в GHCR сделать **public** (иначе устройства не скачают образ) и связать с репозиторием.
 6. Позже — перенос ключа в KMS (`cosign --key gcpkms://…`/`awskms://…`) и ротация: новый образ сначала поставляет оба ключа.
+
+Шаги 1–4 можно сделать и после первой публикации: пока ключа нет, образы публикуются без подписи (см. «Транспорт обновлений на устройстве»).
+
+### Шаги владельца: публикация и каналы
+
+1. **Новая версия.** Достаточно влить PR с изменениями в `distro/**`: workflow `distro` на `main` публикует `:<ver>` и переносит `:nightly`. Вручную: Actions → distro → Run workflow, ветка `main`, `promote: none`. Номер версии — в сводке запуска («Pushed …:<ver>»).
+2. **Проверка.** `skopeo inspect docker://ghcr.io/denishumen/alpha-os:<ver>` без входа (анонимно) показывает образ; с ключом — `cosign verify --key distro/keys/alpha-os.pub ghcr.io/denishumen/alpha-os:<ver>`.
+3. **Promote.** Actions → distro → Run workflow, ветка `main`, `promote: beta` (или `stable`), `version: <ver>`. Запуск ждёт одобрения в окружении `release`. Обычно: сначала `beta`, через несколько дней та же версия — в `stable`.
+4. **Откат канала.** Тот же promote с предыдущей версией: тег переносится назад, устройства, которые ещё не обновились, остаются на ней.
+
+### Как обновляется установленная система
+
+- **Админка**: `https://<имя>.local` → «Обновления» → «Проверить» → «Установить сейчас» (через `alpha-updated`; перед перезагрузкой — снапшот `/var`). Автоматически — в окне обслуживания, если включено.
+- **Консоль** (SSH или локально): `sudo bootc upgrade --check` → `sudo bootc upgrade` → `sudo systemctl reboot`. Откат на предыдущую версию: `sudo bootc rollback` и перезагрузка. Текущее состояние: `sudo bootc status`.
+- **Системы с ISO `0.0.0-ci.7` и раньше** отслеживают `ostree-image-signed:docker://ghcr.io/denishumen/alpha-os:stable` и со стоковой политикой не могут даже проверить обновления. Один раз, когда в реестре появится `:stable`: `sudo bootc switch ghcr.io/denishumen/alpha-os:stable` (без флагов — это переключает на обычный транспорт и сразу скачивает текущую `:stable`), затем `sudo systemctl reboot`. Дальше — как выше.
 
 ## Ограничения прототипа
 

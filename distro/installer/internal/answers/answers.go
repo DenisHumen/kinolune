@@ -101,8 +101,12 @@ type Image struct {
 	Target string `json:"target,omitempty"`
 	// Channel is stable (default) or beta; used to build the default Target.
 	Channel string `json:"channel,omitempty"`
-	// EnforceSignaturePolicy passes --enforce-container-sigpolicy. Default
-	// true; only unsigned test images (local VM tests) turn it off.
+	// EnforceSignaturePolicy passes --enforce-container-sigpolicy. Unset
+	// (default): the installer follows the payload image — enforce when it
+	// ships our signature policy (ALPHA_SIGNATURE_POLICY=enforce in
+	// /usr/share/alpha/version), otherwise not, because bootc refuses
+	// signed transports under the stock insecureAcceptAnything policy and
+	// the device could never update (BUG-031).
 	EnforceSignaturePolicy *bool `json:"enforce_signature_policy,omitempty"`
 	// Runner is how bootc is started: podman (default: the payload image runs
 	// `bootc install` in a privileged container, the upstream-documented way)
@@ -110,8 +114,13 @@ type Image struct {
 	Runner string `json:"runner,omitempty"`
 }
 
-// Enforce reports whether the signature policy must be enforced.
+// Enforce reports whether the signature policy must be enforced. Before the
+// installer has resolved an unset value (SignaturePolicyAuto) it answers true.
 func (i Image) Enforce() bool { return i.EnforceSignaturePolicy == nil || *i.EnforceSignaturePolicy }
+
+// SignaturePolicyAuto reports that the answer file leaves the choice to the
+// payload image.
+func (i Image) SignaturePolicyAuto() bool { return i.EnforceSignaturePolicy == nil }
 
 // SourceRef is Source without the containers-storage: transport.
 func (i Image) SourceRef() string { return strings.TrimPrefix(i.Source, transportContainer) }

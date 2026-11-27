@@ -179,6 +179,12 @@ func (h *Host) Available() *ImageStatus {
 // Client wraps the bootc operations used by alpha-updated.
 type Client struct {
 	R Runner
+	// EnforceSignaturePolicy adds --enforce-container-sigpolicy to `switch`:
+	// without it bootc writes the unverified transport into the origin and
+	// a channel change would turn signature checks off. Set it only when the
+	// booted image ships our policy (ALPHA_SIGNATURE_POLICY=enforce): under
+	// the stock policy bootc refuses the signed transport (BUG-031).
+	EnforceSignaturePolicy bool
 }
 
 // Status runs `bootc status --format=json`.
@@ -222,7 +228,11 @@ func (c Client) Switch(ctx context.Context, image string) error {
 	if image == "" || strings.HasPrefix(image, "-") {
 		return fmt.Errorf("bootc switch: bad image reference %q", image)
 	}
-	_, err := c.R.Run(ctx, "switch", image)
+	args := []string{"switch"}
+	if c.EnforceSignaturePolicy {
+		args = append(args, "--enforce-container-sigpolicy")
+	}
+	_, err := c.R.Run(ctx, append(args, image)...)
 	return err
 }
 

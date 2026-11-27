@@ -8,7 +8,7 @@
 //     data partition (btrfs) on the rest;
 //  2. `bootc install to-filesystem` from the offline payload in
 //     containers-storage, tracking the registry (--target-imgref) and
-//     enforcing the signature policy;
+//     enforcing the signature policy when the payload ships it;
 //  3. /var moved into the btrfs subvolume @var (mounted from fstab);
 //  4. hostname, the admin user (yescrypt, wheel), a NetworkManager
 //     connection and /var/lib/alpha/install.json.
@@ -130,7 +130,7 @@ func (in *Installer) run(ctx context.Context, name string, args ...string) ([]by
 func (in *Installer) Required() []string {
 	req := []string{"wipefs", "sfdisk", "udevadm", "mkfs.vfat", "mkfs.ext4", "mkfs.btrfs", "btrfs",
 		"mount", "umount", "blkid", "cp", "sync"}
-	if in.Answers.Image.Runner == answers.RunnerPodman {
+	if in.Answers.Image.Runner == answers.RunnerPodman || in.Answers.Image.SignaturePolicyAuto() {
 		req = append(req, "podman")
 	} else {
 		req = append(req, "bootc")
@@ -161,6 +161,11 @@ func (in *Installer) Run(ctx context.Context) (err error) {
 		}
 	}()
 
+	// Before anything is written: a wrong answer here leaves a device that
+	// can never update (BUG-031).
+	if err := in.resolveSignaturePolicy(ctx); err != nil {
+		return err
+	}
 	if err := in.partition(ctx); err != nil {
 		return fmt.Errorf("partitioning %s: %w", in.Disk.Path, err)
 	}
@@ -369,6 +374,47 @@ func (in *Installer) bootcInstall(ctx context.Context) error {
 	_, err := in.Runner.Run(ctx, c)
 	m.close(err == nil)
 	return err
+}
+
+// PayloadVersionFile is the build record of the OS image (distro/Containerfile).
+const PayloadVersionFile = "/usr/share/alpha/version"
+
+// resolveSignaturePolicy decides --enforce-container-sigpolicy when the
+// answer file leaves it unset. bootc stores it in the origin as the
+// ostree-image-signed transport, and every later `bootc upgrade` then refuses
+// to run under the stock policy (default insecureAcceptAnything). So enforce
+// exactly when the payload ships our policy (ALPHA_SIGNATURE_POLICY=enforce,
+// the project key is committed); an image built without the key gets the
+// plain registry transport. Devices move to the signed transport later with
+// `bootc switch --enforce-container-sigpolicy` (distro/README.md).
+func (in *Installer) resolveSignaturePolicy(ctx context.Context) error {
+	img := &in.Answers.Image
+	if !img.SignaturePolicyAuto() {
+		return nil
+	}
+	out, err := in.run(ctx, "podman", "run", "--rm", "--pull=never", "--entrypoint", "cat",
+		img.SourceRef(), PayloadVersionFile)
+	if err != nil {
+		return fmt.Errorf("reading %s of the payload %s: %w", PayloadVersionFile, img.SourceRef(), err)
+	}
+	policy := ""
+	for _, line := range strings.Split(string(out), "\n") {
+		if v, ok := strings.CutPrefix(strings.TrimSpace(line), "ALPHA_SIGNATURE_POLICY="); ok {
+			policy = v
+		}
+	}
+	var enforce bool
+	switch policy {
+	case "enforce":
+		enforce = true
+	case "off":
+		in.step("The payload has no signature policy yet (no project key): updates are not signature-checked")
+	default:
+		return fmt.Errorf("payload %s: unknown ALPHA_SIGNATURE_POLICY %q in %s; set image.enforce_signature_policy",
+			img.SourceRef(), policy, PayloadVersionFile)
+	}
+	img.EnforceSignaturePolicy = &enforce
+	return nil
 }
 
 // waitDevice waits until udev has created a partition node.
