@@ -62,7 +62,6 @@ import 'dart:convert';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
-
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 /// Main entrypoint of the Rust API
@@ -51957,8 +51956,9 @@ class CoreTwitchImpl extends RustOpaque implements CoreTwitch {
   /// chapters (or with only the "≈" fallback) first gets its chapters
   /// from GQL `moments`, which are stored; then the stored chapters are
   /// returned as [`Self::chapters`]. No Twitch sign-in needed; a GQL
-  /// failure only means no new chapters. `login`: the channel, when the
-  /// caller knows it.
+  /// failure only means no new chapters. A VOD the cache does not know
+  /// (opened by a link) gets its GQL chapters without storing them.
+  /// `login`: the channel, when the caller knows it.
   Future<List<CoreTwitchChapter>> vodChapters({
     required String videoId,
     String? login,
