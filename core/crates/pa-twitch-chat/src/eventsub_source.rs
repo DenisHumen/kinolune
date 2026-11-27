@@ -44,6 +44,10 @@ pub struct EventSubConfig {
     pub default_keepalive: Duration,
     /// How long to wait for `session_welcome` after connecting.
     pub welcome_timeout: Duration,
+    /// How long to wait for Helix to answer one subscription request
+    /// (BUG-036: a stalled request must not keep the chat silently
+    /// "connecting").
+    pub subscribe_timeout: Duration,
     /// Give up after this many failed attempts in a row (`None`: never).
     pub max_attempts: Option<u32>,
     /// Events buffered for a slow consumer.
@@ -64,6 +68,7 @@ impl EventSubConfig {
             keepalive_grace: Duration::from_secs(5),
             default_keepalive: Duration::from_secs(10),
             welcome_timeout: Duration::from_secs(10),
+            subscribe_timeout: Duration::from_secs(15),
             max_attempts: None,
             buffer: 4096,
         }
@@ -314,10 +319,24 @@ impl Driver {
                     ]),
                     session_id: session_id.to_owned(),
                 };
-                match self.api.subscribe(request).await {
+                let answer = tokio::select! {
+                    biased;
+                    a = self.api.subscribe(request) => a,
+                    () = self.clock.sleep(self.config.subscribe_timeout) => Err(ChatError::Api(
+                        format!("no answer from Twitch to the {kind} subscription"),
+                    )),
+                };
+                match answer {
                     Ok(_) => {}
                     Err(ChatError::Unauthorized) => {
                         return Err(End::Fatal("Twitch sign-in is no longer valid".to_owned()));
+                    }
+                    // Missing scope or a channel that refuses this user:
+                    // retrying cannot help, signing in again may.
+                    Err(ChatError::Forbidden(reason)) if *kind == SUB_CHAT_MESSAGE => {
+                        return Err(End::Fatal(format!(
+                            "Twitch does not allow reading this chat: {reason}"
+                        )));
                     }
                     // Without chat messages the session is useless; retry.
                     Err(e) if *kind == SUB_CHAT_MESSAGE => {

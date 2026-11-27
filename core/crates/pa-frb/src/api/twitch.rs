@@ -473,8 +473,18 @@ fn non_empty(s: &str) -> Option<String> {
     (!s.is_empty()).then(|| s.to_owned())
 }
 
+/// The runtime of [`CoreTwitch`]. Multi-threaded on purpose (BUG-036):
+/// reqwest keeps idle keep-alive connections in its pool, and the task
+/// that drives each one lives on the runtime that opened it. On a
+/// current-thread runtime that task stops between `block_on` calls, so
+/// the signed-in chat, which reuses the same Helix client from its own
+/// runtimes (channel emotes, EventSub subscriptions), waited on a pooled
+/// connection that nobody drove until the 30 s timeout, on every request.
+/// One worker keeps those tasks running.
 fn runtime() -> TwitchResult<tokio::runtime::Runtime> {
-    tokio::runtime::Builder::new_current_thread()
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(1)
+        .thread_name("pa-twitch")
         .enable_all()
         .build()
         .map_err(|e| TwitchApiError::new(TwitchErrorKind::Storage, e.to_string()))
@@ -1553,6 +1563,87 @@ mod tests {
         let helix = tw::HelixClient::new(config, transport);
         helix.set_access_token(tw::AccessToken::new("not-a-real-token"));
         CoreTwitch::with_helix(conn, Some(Arc::new(helix))).unwrap()
+    }
+
+    /// Keep-alive HTTP server on loopback: answers every request on the
+    /// same connection with an empty Helix list.
+    fn keep_alive_server() -> String {
+        use std::io::{BufRead, BufReader, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(stream) = stream else { return };
+                std::thread::spawn(move || {
+                    let mut reader = BufReader::new(stream.try_clone().unwrap());
+                    let mut out = stream;
+                    loop {
+                        let mut line = String::new();
+                        loop {
+                            line.clear();
+                            if reader.read_line(&mut line).unwrap_or(0) == 0 {
+                                return;
+                            }
+                            if line == "\r\n" {
+                                break;
+                            }
+                        }
+                        let body = r#"{"data":[]}"#;
+                        let answer = format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
+                            body.len()
+                        );
+                        if out.write_all(answer.as_bytes()).is_err() {
+                            return;
+                        }
+                    }
+                });
+            }
+        });
+        format!("http://{addr}/helix")
+    }
+
+    /// BUG-036: the signed-in chat calls Helix from its own runtimes
+    /// through the client `CoreTwitch` already used. The pooled
+    /// keep-alive connection must stay usable there; on the old
+    /// current-thread runtime the request waited for the transport
+    /// timeout instead.
+    #[test]
+    fn helix_connection_pooled_by_core_twitch_works_from_another_runtime() {
+        let mut config =
+            tw::HelixConfig::new(tw::ClientId::new("testclientid0000000000000000000").unwrap());
+        config.base_url = keep_alive_server();
+        let transport = tw::ReqwestTransport::new(Duration::from_secs(5)).unwrap();
+        let helix = Arc::new(tw::HelixClient::new(config, Arc::new(transport)));
+        helix.set_access_token(tw::AccessToken::new("not-a-real-token"));
+        let twitch =
+            CoreTwitch::with_helix(pa_library::open_in_memory().unwrap(), Some(helix.clone()))
+                .unwrap();
+        assert!(
+            twitch
+                .users(vec![], vec!["pixelheron".into()])
+                .unwrap()
+                .is_empty()
+        );
+
+        // As `channel_assets` and the chat session do: another runtime.
+        let other = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let started = std::time::Instant::now();
+        let users = other.block_on(async {
+            tokio::time::timeout(
+                Duration::from_secs(3),
+                helix.get_users(&[], &["pixelheron"]),
+            )
+            .await
+        });
+        assert!(
+            matches!(users, Ok(Ok(ref u)) if u.is_empty()),
+            "request on the pooled connection stalled: {users:?}"
+        );
+        assert!(started.elapsed() < Duration::from_secs(3));
     }
 
     #[test]

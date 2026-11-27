@@ -32,6 +32,10 @@ pub enum ChatError {
     /// Helix refused the call.
     #[error("Twitch API error: {0}")]
     Api(String),
+    /// Helix answered `403`: the sign-in lacks a scope or the channel
+    /// refuses this user; retrying does not help.
+    #[error("Twitch refused: {0}")]
+    Forbidden(String),
     /// Arguments Twitch would reject.
     #[error("invalid chat request: {0}")]
     InvalidArgument(&'static str),
@@ -47,6 +51,10 @@ impl From<pa_twitch::Error> for ChatError {
                 ChatError::Unauthorized
             }
             pa_twitch::Error::InvalidArgument(m) => ChatError::InvalidArgument(m),
+            pa_twitch::Error::Api {
+                status: 403,
+                message,
+            } => ChatError::Forbidden(message),
             other => ChatError::Api(other.to_string()),
         }
     }
