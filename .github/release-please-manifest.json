@@ -1,7 +1,7 @@
 {
   "clients/flutter/app": "0.1.0-alpha.22",
   "core": "0.1.0-alpha.0",
-  "server": "0.1.0-alpha.0",
+  "server": "0.1.0-alpha.1",
   "clients/apple/TVApp": "0.1.0-alpha.0",
   "distro": "0.1.0-alpha.0"
 }
