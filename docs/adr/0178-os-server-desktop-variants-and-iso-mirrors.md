@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: MPL-2.0 -->
-# ADR-NNNN. Kinolune OS: варианты Server и Desktop/TV, раздача ISO и зеркала
+# ADR-0178. Kinolune OS: варианты Server и Desktop/TV, раздача ISO и зеркала
 
 - Статус: **принят как направление** (решение владельца 2026-11-27; детали — в задачах при реализации)
 - Дата: 2026-11-27
