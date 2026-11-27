@@ -223,7 +223,10 @@ async fn real_vod_through_the_proxy() {
     if !playlist.ended {
         eprintln!("the VOD is still being recorded: no end of the playlist");
     }
-    assert!(!playlist.segments.is_empty(), "segments in the VOD playlist");
+    assert!(
+        !playlist.segments.is_empty(),
+        "segments in the VOD playlist"
+    );
     let base = &url[..url.rfind('/').unwrap() + 1];
     let n_seg = playlist.segments.len();
     for i in [0, n_seg / 2, n_seg - 1] {

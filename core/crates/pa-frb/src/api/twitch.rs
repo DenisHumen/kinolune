@@ -1372,14 +1372,14 @@ impl CoreTwitch {
             (video, stored)
         };
         let now = now_ms();
-        let resolved = self
-            .rt
-            .block_on(resolver.resolve_without_helix(tw::chapters::VodChaptersRequest {
+        let resolved = self.rt.block_on(resolver.resolve_without_helix(
+            tw::chapters::VodChaptersRequest {
                 video: &video,
                 timeline: None,
                 stored,
                 now_ms: now,
-            }));
+            },
+        ));
         if let Some(code) = resolved.gql_failure {
             eprintln!("pa-twitch: GQL chapters of {video_id}: {code}");
         }
@@ -1818,8 +1818,8 @@ mod tests {
         transport.push_fixture(include_str!(
             "../../../pa-twitch/tests/fixtures/chapters/gql_moments.json"
         ));
-        let resolver = ChapterResolver::new(gql, transport.clone())
-            .with_gql_endpoint("https://gql.test/gql");
+        let resolver =
+            ChapterResolver::new(gql, transport.clone()).with_gql_endpoint("https://gql.test/gql");
         assert!(t.store_gql_chapters("9001", None, &resolver).unwrap());
         let sent = transport.requests();
         assert_eq!(sent.len(), 1);
