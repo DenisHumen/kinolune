@@ -178,6 +178,13 @@ impl ChatSource for IrcChatSource {
     }
 }
 
+/// `NOTICE` texts Twitch sends before the welcome when it rejects
+/// `PASS`/`NICK`; it then closes the socket, and retrying the same login
+/// would only loop.
+fn is_login_failure(text: &str) -> bool {
+    text.contains("Login authentication failed") || text.contains("Improperly formatted auth")
+}
+
 /// How a session ended.
 enum End {
     /// The consumer dropped the source.
@@ -187,6 +194,8 @@ enum End {
     /// Lost; reconnect with backoff. `healthy` = the session got as far as
     /// the welcome, so the attempt counter restarts.
     Lost { reason: String, healthy: bool },
+    /// Twitch rejected the login: stop with a visible reason (BUG-036).
+    Fatal(String),
 }
 
 struct Driver {
@@ -222,6 +231,12 @@ impl Driver {
             };
             let (delay, reason) = match end {
                 End::ConsumerGone => return,
+                End::Fatal(reason) => {
+                    let _ = self
+                        .emit(ChatEvent::Status(SourceStatus::Stopped { reason }))
+                        .await;
+                    return;
+                }
                 End::Reconnect => {
                     attempt = 1;
                     (Duration::ZERO, "server asked to reconnect".to_owned())
@@ -304,6 +319,11 @@ impl Driver {
             };
             for msg in parse_frame(&frame) {
                 match interpret(&msg, &self.nick) {
+                    IrcInput::Event(ChatEvent::Notice { text, .. })
+                        if !welcomed && is_login_failure(&text) =>
+                    {
+                        return End::Fatal(format!("Twitch chat rejected the login: {text}"));
+                    }
                     IrcInput::Event(event) => {
                         if !self.emit(event).await {
                             return End::ConsumerGone;

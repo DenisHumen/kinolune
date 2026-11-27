@@ -8,11 +8,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use pa_twitch::testing::{FixtureTransport, ManualClock};
-use pa_twitch::{AccessToken, ClientId, HelixClient, HelixConfig};
+use pa_twitch::{
+    AccessToken, BoxFuture, ClientId, EventSubSubscription, EventSubSubscriptionRequest,
+    HelixClient, HelixConfig, SendChatMessage, SentChatMessage,
+};
 use pa_twitch_chat::testing::{Script, ScriptedConnector};
 use pa_twitch_chat::{
-    Backoff, ChatError, ChatEvent, ChatSource, EventSubChatSource, EventSubConfig, IrcChatSource,
-    IrcConfig, SourceKind, SourceStatus,
+    Backoff, ChatApi, ChatError, ChatEvent, ChatSource, EventSubChatSource, EventSubConfig,
+    IrcChatSource, IrcConfig, SourceKind, SourceStatus,
 };
 
 const START: u64 = 1_800_000_000;
@@ -544,4 +547,110 @@ async fn eventsub_sends_through_helix() {
         Err(ChatError::InvalidArgument(_))
     ));
     assert_eq!(h.transport.requests().len(), 2);
+}
+
+// ----- BUG-036: sign-in failures are visible ---------------------------------
+
+#[tokio::test]
+async fn irc_login_failure_notice_stops_with_the_reason() {
+    let connector = ScriptedConnector::new();
+    connector.push(Script::closing([
+        ":tmi.twitch.tv NOTICE * :Login authentication failed\r\n",
+    ]));
+    connector.push(Script::closing([
+        ":tmi.twitch.tv NOTICE * :Login authentication failed\r\n",
+    ]));
+    let clock = Arc::new(ManualClock::at_unix(START));
+    let source = IrcChatSource::spawn(irc_config(5), Arc::new(connector.clone()), clock).unwrap();
+    let st = statuses(&drain(&source).await);
+    assert!(
+        matches!(
+            st.as_slice(),
+            [SourceStatus::Stopped { reason }] if reason.contains("Login authentication failed")
+        ),
+        "no silent retries: {st:?}"
+    );
+    assert_eq!(connector.urls().len(), 1, "the same login is not retried");
+}
+
+#[tokio::test]
+async fn irc_badly_formatted_auth_notice_stops_too() {
+    let connector = ScriptedConnector::new();
+    connector.push(Script::hanging([
+        ":tmi.twitch.tv NOTICE * :Improperly formatted auth\r\n",
+    ]));
+    let clock = Arc::new(ManualClock::at_unix(START));
+    let source = IrcChatSource::spawn(irc_config(5), Arc::new(connector.clone()), clock).unwrap();
+    let st = statuses(&drain(&source).await);
+    assert!(
+        matches!(
+            st.as_slice(),
+            [SourceStatus::Stopped { reason }] if reason.contains("Improperly formatted auth")
+        ),
+        "{st:?}"
+    );
+}
+
+/// Helix that never answers (the BUG-036 stall).
+struct StalledApi;
+
+impl ChatApi for StalledApi {
+    fn subscribe(
+        &self,
+        _request: EventSubSubscriptionRequest,
+    ) -> BoxFuture<'_, Result<EventSubSubscription, ChatError>> {
+        Box::pin(std::future::pending())
+    }
+
+    fn send(&self, _message: SendChatMessage) -> BoxFuture<'_, Result<SentChatMessage, ChatError>> {
+        Box::pin(std::future::pending())
+    }
+}
+
+#[tokio::test]
+async fn eventsub_stalled_subscription_is_a_visible_reconnect() {
+    let h = es_harness();
+    h.connector.push(Script::hanging([es!("welcome")]));
+    h.connector.push(Script::hanging([es!("welcome")]));
+    let mut config = EventSubConfig::new("300000001", ["100000001"]);
+    config.url = ES_URL.to_owned();
+    config.backoff = backoff();
+    config.max_attempts = Some(1);
+    let source = EventSubChatSource::spawn(
+        config,
+        Arc::new(StalledApi),
+        Arc::new(h.connector.clone()),
+        h.clock.clone(),
+    )
+    .unwrap();
+    let st = statuses(&drain(&source).await);
+    assert_eq!(
+        st[0],
+        SourceStatus::Reconnecting {
+            attempt: 1,
+            delay: Duration::from_secs(1),
+            reason:
+                "Twitch API error: no answer from Twitch to the channel.chat.message subscription"
+                    .to_owned(),
+        }
+    );
+    assert!(matches!(st.last(), Some(SourceStatus::Stopped { .. })));
+}
+
+#[tokio::test]
+async fn eventsub_forbidden_chat_subscription_stops_with_the_reason() {
+    let h = es_harness();
+    h.transport.push_fixture(helix!("subscription_forbidden"));
+    h.connector.push(Script::hanging([es!("welcome")]));
+    let source = h.spawn(5);
+    let st = statuses(&drain(&source).await);
+    assert!(
+        matches!(
+            st.as_slice(),
+            [SourceStatus::Stopped { reason }]
+                if reason.starts_with("Twitch does not allow reading this chat")
+        ),
+        "{st:?}"
+    );
+    assert_eq!(h.connector.urls().len(), 1, "a 403 is not retried");
 }
