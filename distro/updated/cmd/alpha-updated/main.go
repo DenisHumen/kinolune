@@ -100,7 +100,9 @@ func run() error {
 		cfg.VarSnap = &lockedVarSnap{m: &varsnap.Manager{Keep: *varKeep, Log: log}}
 		cfg.BootHealthy = bootComplete
 	}
-	a := agent.New(cfg, bootc.Client{R: bootc.ExecRunner{Path: *bootcPath}}, veto, rebooter)
+	bc := bootc.Client{R: bootc.ExecRunner{Path: *bootcPath},
+		EnforceSignaturePolicy: ver["ALPHA_SIGNATURE_POLICY"] == "enforce"}
+	a := agent.New(cfg, bc, veto, rebooter)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

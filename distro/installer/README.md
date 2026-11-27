@@ -71,7 +71,7 @@ JSON, неизвестные поля — ошибка, все ошибки по
 | `image.channel` | | `stable` | `stable` или `beta` |
 | `image.target` | | `ghcr.io/denishumen/alpha-os:<channel>` | что отслеживает `bootc upgrade`; только реестр, не локальный путь |
 | `image.source` | | `containers-storage:<target>` | офлайн-образ в хранилище live-системы |
-| `image.enforce_signature_policy` | | `true` | `false` — только для неподписанных тестовых образов |
+| `image.enforce_signature_policy` | | по образу | не задано: `true`, если образ собран с ключом проекта (`ALPHA_SIGNATURE_POLICY=enforce` в `/usr/share/alpha/version`), иначе `false` — со стоковой политикой bootc отказывается работать с подписанным транспортом и система не обновится (BUG-031); `false` — неподписанные тестовые образы |
 | `image.runner` | | `podman` | `podman` или `host` |
 | `root_ssh_authorized_keys` | | — | ключи для root (CI, опытные пользователи) |
 | `kernel_args` | | — | дополнительные аргументы ядра |

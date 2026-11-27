@@ -4,7 +4,8 @@
 #
 # Security model:
 #  - pull_request (forks included): build and tests only, read-only token, no secrets;
-#  - push to main, os-v* tags, manual run: push + sign, `packages: write` in that job only;
+#  - push to main (changes in distro/), os-v* tags, manual run on main: push :<ver> (+ :nightly
+#    from main), sign when the COSIGN_PRIVATE_KEY secret exists; `packages: write` in that job only;
 #  - promote (manual, environment `release`): move :beta / :stable to a signed version.
 name: distro
 
@@ -17,7 +18,14 @@ on:
       - "distro/**"
       - ".github/workflows/distro.yml"
   push:
+    # main publishes :<ver> and moves :nightly (BUG-031: without this trigger nothing was
+    # published after the first manual run, and installed systems had no updates).
+    # Path filters do not apply to tag pushes: every os-v* tag publishes.
+    branches: [main]
     tags: ["os-v*"]
+    paths:
+      - "distro/**"
+      - ".github/workflows/distro.yml"
   workflow_dispatch:
     inputs:
       promote:
@@ -98,10 +106,10 @@ jobs:
 
   publish:
     name: build, push, sign
-    # Publishing only from main: a manual run on another branch builds nothing.
+    # Publishing only from main and os-v* tags: a manual run on another branch builds nothing.
     if: >-
       github.repository == 'DenisHumen/kinolune' &&
-      github.ref == 'refs/heads/main' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/os-v')) &&
       (github.event_name == 'push' ||
        (github.event_name == 'workflow_dispatch' && inputs.promote == 'none'))
     runs-on: ubuntu-24.04
@@ -261,7 +269,9 @@ jobs:
           if [[ -s distro/keys/alpha-os.pub ]]; then
             cosign verify --key distro/keys/alpha-os.pub "$IMAGE_REPO@$digest" > /dev/null
           else
-            echo "::warning::no public key committed: promoting an unverified image"
+            # Allowed only until the owner commits the key (distro/README.md, owner steps):
+            # such images keep the stock policy, and devices track them unverified.
+            echo "::warning::distro/keys/alpha-os.pub is not committed: promoting an unsigned image"
           fi
           skopeo copy --all --preserve-digests \
             "docker://$IMAGE_REPO@$digest" "docker://$IMAGE_REPO:$CHANNEL"

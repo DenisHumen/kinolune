@@ -53,7 +53,9 @@ func (in *Installer) WritePlan(w io.Writer) error {
 	img := a.Image
 	fmt.Fprintf(w, "\nImage:    %s\n", img.Source)
 	fmt.Fprintf(w, "Updates:  %s (channel %s)\n", img.Target, img.Channel)
-	if img.Enforce() {
+	if img.SignaturePolicyAuto() {
+		fmt.Fprintln(w, "          signature policy enforced if the image ships it (ALPHA_SIGNATURE_POLICY)")
+	} else if img.Enforce() {
 		fmt.Fprintln(w, "          signature policy enforced (--enforce-container-sigpolicy)")
 	} else {
 		fmt.Fprintln(w, "          WARNING: signature policy NOT enforced (test images only)")
