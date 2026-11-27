@@ -117,6 +117,13 @@ abstract interface class TwitchBackend {
   /// Stored chapters of a VOD (TWI-008).
   Future<List<TwitchChapter>> chapters(String videoId);
 
+  /// Chapters of a VOD the native player opens (TWI-042): in a full build
+  /// whose signed remote config allows it (`twitch.chapters_gql`), a VOD
+  /// without chapters (or with only the "≈" one) first gets them from
+  /// Twitch GQL and they are stored; then [chapters]. [login]: the channel,
+  /// when known.
+  Future<List<TwitchChapter>> vodChapters(String videoId, {String? login});
+
   /// Cached VODs with a chapter in category [gameId] (TWI-008).
   Future<List<TwitchVideo>> categoryVideos(String gameId);
 
@@ -218,6 +225,12 @@ class LocalTwitchBackend implements TwitchBackend {
 
   @override
   Future<List<TwitchChapter>> chapters(String videoId) async => const [];
+
+  @override
+  Future<List<TwitchChapter>> vodChapters(
+    String videoId, {
+    String? login,
+  }) async => const [];
 
   @override
   Future<List<TwitchVideo>> categoryVideos(String gameId) async => const [];

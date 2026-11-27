@@ -157,7 +157,9 @@ async fn real_vod_resolve() {
         );
         print_variants(&n);
         assert!(n.master_url.contains("supported_codecs="));
-        assert!(n.playlist.source().is_some_and(|v| v.is_source));
+        // VODs no longer always have a "source" (chunked) variant
+        // (TWI-042): the best video variant is enough.
+        assert!(n.playlist.variants.iter().any(|v| !v.audio_only));
         assert!(n.playlist.audio_only().is_some());
         if codecs == DeviceCodecs::H264_ONLY {
             assert!(
@@ -175,7 +177,9 @@ async fn real_vod_resolve() {
 /// TWI-014: the VOD through the loopback proxy (our FFmpeg has no TLS).
 /// Reads the playlist and the first, middle and last segment through the
 /// proxy, at the lowest video quality; with `PA_TWITCH_PROXY_HOLD_SECS`
-/// keeps serving for a player.
+/// keeps serving for a player. Segments are MPEG-TS or, as Twitch serves
+/// them now, fragmented MP4 (`.mp4`, BUG-035); a VOD that is still being
+/// recorded has a playlist without `#EXT-X-ENDLIST` (TWI-042).
 #[tokio::test]
 #[ignore = "real Twitch; PA_TWITCH_LIVE_TEST=1 and env values"]
 async fn real_vod_through_the_proxy() {
@@ -216,7 +220,10 @@ async fn real_vod_through_the_proxy() {
         playlist.segments.len(),
         playlist.ended
     );
-    assert!(playlist.ended, "a VOD playlist ends");
+    if !playlist.ended {
+        eprintln!("the VOD is still being recorded: no end of the playlist");
+    }
+    assert!(!playlist.segments.is_empty(), "segments in the VOD playlist");
     let base = &url[..url.rfind('/').unwrap() + 1];
     let n_seg = playlist.segments.len();
     for i in [0, n_seg / 2, n_seg - 1] {
@@ -231,7 +238,10 @@ async fn real_vod_through_the_proxy() {
             bytes.len()
         );
         assert_eq!(status, 200, "segment {i} through the proxy");
-        assert_eq!(bytes.first(), Some(&0x47), "MPEG-TS sync byte");
+        assert!(
+            bytes.first() == Some(&0x47) || is_mp4(&bytes),
+            "MPEG-TS sync byte or an MP4 box"
+        );
     }
     if let Some(secs) = std::env::var("PA_TWITCH_PROXY_HOLD_SECS")
         .ok()
@@ -242,6 +252,15 @@ async fn real_vod_through_the_proxy() {
         let t = proxy.report(0.0, 1.0).totals;
         eprintln!("served segments={} bytes={}", t.segments, t.bytes);
     }
+}
+
+/// Whether `bytes` start with an ISO BMFF box of a media segment.
+fn is_mp4(bytes: &[u8]) -> bool {
+    bytes.len() >= 8
+        && matches!(
+            &bytes[4..8],
+            b"ftyp" | b"styp" | b"moof" | b"sidx" | b"emsg" | b"prft"
+        )
 }
 
 /// The VOD as Helix would describe it, from the GQL `VideoMetadata`

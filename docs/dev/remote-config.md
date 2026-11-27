@@ -113,7 +113,19 @@ CARGO_KINOLUNE_FLAVOR=full flutter run -d linux --dart-define=KINOLUNE_FLAVOR=fu
 
 Две оговорки (живая проверка 2026-11-26): `flutter build/run --debug` собирает Rust-ядро в release-профиле, где кода `KINOLUNE_DEBUG_REMOTE_CONFIG` нет — пересоберите `pa-frb` с `CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS=true`; без `--dart-define=KINOLUNE_VERSION=<версия>` локальная сборка сообщает `0.1.0` и попадает под kill-switch для старых сборок (0.1.0–0.1.0), то есть уходит на embed.
 
-В логе: `remote config: DEBUG unsigned copy … (serial 3)`. Live и VOD должны играть в нативном плеере, у VOD должны быть главы.
+В логе: `remote config: DEBUG unsigned copy … (serial 3)`. Live и VOD должны играть в нативном плеере. Главы VOD (TWI-042): у записи с несколькими категориями через секунду-две после старта на полосе перемотки появляются отметки, а в списке глав — категории; запрос к GQL уходит один раз, дальше главы берутся из базы. Если глав нет, в выводе `flutter run` ищите `pa-twitch: GQL chapters of <id>: <код>` (`gql_hash_invalid` — устарел хэш в конфиге).
+
+**Живой тест ядра (без приложения).** Значения client id и хэшей берутся из `remote-config.next.json` в переменные окружения, VOD — любой сегодняшний публичный:
+
+```bash
+cd core
+PA_TWITCH_LIVE_TEST=1 PA_TWITCH_VOD_ID=<id> \
+PA_TWITCH_GQL_CLIENT_ID=… PA_TWITCH_HASH_PLAYBACK_ACCESS_TOKEN=… \
+PA_TWITCH_HASH_CHAPTERS=… PA_TWITCH_HASH_VIDEO_METADATA=… \
+cargo test -p pa-twitch --features pa-flavor/full --test real_twitch -- --ignored --nocapture --test-threads=1
+```
+
+Проверки учитывают, что сейчас отдаёт Twitch: у VOD может не быть варианта «source», сегменты — fMP4 (`.mp4`) или MPEG-TS, у записи, которая ещё идёт, плейлист не закончен.
 
 **Шаги владельца (офлайн, ключ только у владельца):**
 
