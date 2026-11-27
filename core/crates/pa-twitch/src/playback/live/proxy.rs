@@ -5,7 +5,8 @@
 //! `http://127.0.0.1:<port>/<token>/live.m3u8`. For every request the proxy
 //! fetches the Twitch media playlist, renders it with
 //! [`MediaPlaylist::rewrite`] (prefetch segments become ordinary segments
-//! in low-latency mode) and maps each segment to `s/<sequence>.<ext>`.
+//! in low-latency mode) and maps each segment to `s/<sequence>.<ext>`
+//! and each fMP4/CMAF init segment (`#EXT-X-MAP`) to `m/<id>.mp4`.
 //! Segment requests are streamed from Twitch to the player chunk by chunk,
 //! byte for byte: the proxy never drops, replaces, delays or reorders a
 //! segment, ad segments included (06 §2.4).
@@ -36,8 +37,11 @@
 //! LGPL FFmpeg is built without TLS (`tools/ffmpeg`), and usher's media
 //! playlists and segments are HTTPS only. The proxy fetches them with
 //! rustls; a finished playlist keeps every segment reachable for seeking.
+//! The init segments of fMP4 playlists (Twitch since 2026-11, BUG-035) go
+//! through the proxy for the same reason: an `https://` `#EXT-X-MAP` makes
+//! FFmpeg fail with "https protocol not found".
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -68,6 +72,9 @@ pub const DVR_WINDOW_SECS: f64 = 30.0 * 60.0;
 const MAX_ENTRIES: usize = 1024;
 /// Deliveries listed in a report.
 const REPORTED_DELIVERIES: usize = 64;
+/// Init segments (`#EXT-X-MAP`) remembered: one per discontinuity (each
+/// stitched ad has its own).
+const MAX_MAPS: usize = 256;
 
 /// A segment body being downloaded.
 pub trait SegmentBody: Send {
@@ -260,6 +267,8 @@ struct Entry {
     prefetch: bool,
     title: String,
     discontinuity: bool,
+    /// Init segment (`#EXT-X-MAP`, resolved URL) of an fMP4 segment.
+    map: Option<String>,
 }
 
 impl Entry {
@@ -315,6 +324,9 @@ struct State {
     synthetic_t0: Option<i64>,
     /// When the player last asked for the playlist, Unix ms.
     player_playlist_ms: i64,
+    /// Init segments by id (`m/<id>.mp4`) and the id of each URL.
+    maps: BTreeMap<u64, String>,
+    map_ids: HashMap<String, u64>,
 }
 
 impl State {
@@ -336,6 +348,8 @@ impl State {
             ahead: 0.0,
             synthetic_t0: None,
             player_playlist_ms: 0,
+            maps: BTreeMap::new(),
+            map_ids: HashMap::new(),
         }
     }
 
@@ -353,7 +367,12 @@ impl State {
             if !s.prefetch && s.program_date_time.is_none() {
                 edge = start.map(|st| st + secs_to_ms(s.duration)).or(edge);
             }
+            let map = s.map.as_deref().map(|m| resolve_uri(base, m));
+            if let Some(m) = &map {
+                self.map_id(m);
+            }
             let entry = Entry {
+                map,
                 url: resolve_uri(base, &s.uri),
                 start,
                 duration: s.duration,
@@ -412,6 +431,30 @@ impl State {
         }
         let keep = self.ad_breaks.len().saturating_sub(64);
         self.ad_breaks.drain(..keep);
+    }
+
+    /// Id of the init segment at `url` (resolved), assigned on first sight.
+    fn map_id(&mut self, url: &str) -> u64 {
+        if let Some(&id) = self.map_ids.get(url) {
+            return id;
+        }
+        let id = self.maps.last_key_value().map_or(0, |(&k, _)| k + 1);
+        self.maps.insert(id, url.to_owned());
+        self.map_ids.insert(url.to_owned(), id);
+        while self.maps.len() > MAX_MAPS {
+            if let Some((_, old)) = self.maps.pop_first() {
+                self.map_ids.remove(&old);
+            }
+        }
+        id
+    }
+
+    /// Player URI of the init segment at `url` (resolved).
+    fn map_uri(&self, url: &str) -> String {
+        match self.map_ids.get(url) {
+            Some(id) => format!("m/{id}.mp4"),
+            None => url.to_owned(),
+        }
     }
 
     /// Keeps the newest [`DVR_WINDOW_SECS`] (at most [`MAX_ENTRIES`]
@@ -608,8 +651,8 @@ impl State {
         let mut out = parsed.rewrite(
             text,
             self.mode,
-            |s| format!("s/{}{}", s.sequence, extension(&s.uri)),
-            |uri| resolve_uri(url, uri),
+            |s| format!("s/{}{}", s.sequence, extension(&s.uri, s.map.is_some())),
+            |uri| self.map_uri(&resolve_uri(url, uri)),
         );
         if !self.finite
             && let Some(first_up) = parsed.segments.first().map(|s| s.sequence)
@@ -618,6 +661,7 @@ impl State {
             && first < first_up
         {
             let mut prefix = String::new();
+            let mut map: Option<&str> = None;
             for (&seq, e) in self.entries.range(first..first_up) {
                 if let Some((start, end)) = e.start.zip(e.end()) {
                     for (id, (at, line)) in &self.ad_lines {
@@ -630,6 +674,12 @@ impl State {
                 if e.discontinuity {
                     prefix.push_str("#EXT-X-DISCONTINUITY\n");
                 }
+                if let Some(m) = e.map.as_deref()
+                    && map != Some(m)
+                {
+                    map = Some(m);
+                    prefix.push_str(&format!("#EXT-X-MAP:URI=\"{}\"\n", self.map_uri(m)));
+                }
                 if let Some(start) = e.start {
                     prefix.push_str("#EXT-X-PROGRAM-DATE-TIME:");
                     prefix.push_str(&format_date_time(start));
@@ -639,7 +689,7 @@ impl State {
                     "#EXTINF:{:.3},{}\ns/{seq}{}\n",
                     e.duration,
                     e.title,
-                    extension(&e.url)
+                    extension(&e.url, e.map.is_some())
                 ));
             }
             out = with_prefix(&out, first, &prefix);
@@ -821,6 +871,7 @@ fn starts_segment(line: &str) -> bool {
             "#EXT-X-DATERANGE:",
             "#EXT-X-BYTERANGE:",
             "#EXT-X-KEY:",
+            "#EXT-X-MAP:",
             "#EXT-X-PART:",
             "#EXT-X-TWITCH-PREFETCH:",
         ]
@@ -1175,6 +1226,12 @@ async fn route<W: AsyncWrite + Unpin>(ctx: &Ctx, req: &Request, w: &mut W) -> io
             }
         };
     }
+    if let Some(name) = rest.strip_prefix("m/") {
+        let id = name.split('.').next().and_then(|n| n.parse::<u64>().ok());
+        if let Some(id) = id {
+            return init_segment(ctx, id, w).await;
+        }
+    }
     if let Some(name) = rest.strip_prefix("s/") {
         let seq = name.split('.').next().and_then(|n| n.parse::<u64>().ok());
         if let Some(seq) = seq {
@@ -1275,13 +1332,43 @@ async fn follow(ctx: Arc<Ctx>) {
 }
 
 /// `.ts`, `.mp4`, `.m4s`… of a segment URI (the player probes by it).
-fn extension(uri: &str) -> &str {
+/// Without one: `.mp4` for an fMP4 segment (it has an init segment),
+/// `.ts` otherwise (Twitch's `/v1/segment/<id>` URIs have none).
+fn extension(uri: &str, fmp4: bool) -> &str {
     let path = uri.split(['?', '#']).next().unwrap_or(uri);
     let name = path.rsplit('/').next().unwrap_or(path);
     match name.rfind('.') {
         Some(i) if name.len() - i <= 5 => &name[i..],
+        _ if fmp4 => ".mp4",
         _ => ".ts",
     }
+}
+
+/// Largest init segment accepted (Twitch's are about 1 KiB).
+const MAX_INIT_BYTES: usize = 1 << 20;
+
+/// An fMP4 init segment (`#EXT-X-MAP`), fetched whole: it is small and the
+/// player needs all of it before the first media segment.
+async fn init_segment<W: AsyncWrite + Unpin>(ctx: &Ctx, id: u64, w: &mut W) -> io::Result<bool> {
+    let Some(url) = ctx.state().maps.get(&id).cloned() else {
+        return simple(w, 404, "text/plain", b"unknown init segment").await;
+    };
+    let mut body = match ctx.upstream.segment(&url).await {
+        Ok(b) => b,
+        Err(e) => return simple(w, upstream_status(&e), "text/plain", e.code().as_bytes()).await,
+    };
+    let mut bytes = Vec::new();
+    loop {
+        match body.next_chunk().await {
+            Ok(Some(c)) => bytes.extend_from_slice(&c),
+            Ok(None) => break,
+            Err(e) => return simple(w, 502, "text/plain", e.code().as_bytes()).await,
+        }
+        if bytes.len() > MAX_INIT_BYTES {
+            return simple(w, 502, "text/plain", b"init segment too large").await;
+        }
+    }
+    simple(w, 200, "video/mp4", &bytes).await
 }
 
 async fn segment<W: AsyncWrite + Unpin>(ctx: &Ctx, seq: u64, w: &mut W) -> io::Result<bool> {
@@ -1316,11 +1403,18 @@ async fn segment<W: AsyncWrite + Unpin>(ctx: &Ctx, seq: u64, w: &mut W) -> io::R
         trim(&mut st.deliveries, HISTORY);
     }
     let length = body.content_length();
+    let mime = if entry.map.is_some() {
+        "video/mp4"
+    } else {
+        "video/mp2t"
+    };
     let head = match length {
         Some(n) => format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: video/mp2t\r\nContent-Length: {n}\r\nConnection: keep-alive\r\n\r\n"
+            "HTTP/1.1 200 OK\r\nContent-Type: {mime}\r\nContent-Length: {n}\r\nConnection: keep-alive\r\n\r\n"
         ),
-        None => "HTTP/1.1 200 OK\r\nContent-Type: video/mp2t\r\nTransfer-Encoding: chunked\r\nConnection: keep-alive\r\n\r\n".to_owned(),
+        None => format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: {mime}\r\nTransfer-Encoding: chunked\r\nConnection: keep-alive\r\n\r\n"
+        ),
     };
     w.write_all(head.as_bytes()).await?;
     w.flush().await?;
@@ -1461,9 +1555,51 @@ mod tests {
 
     #[test]
     fn extensions() {
-        assert_eq!(extension("a/b/seg1.ts?x=1"), ".ts");
-        assert_eq!(extension("https://h/v1/segment/abc.mp4"), ".mp4");
-        assert_eq!(extension("https://h/v1/segment/CqYF7xyz"), ".ts");
+        assert_eq!(extension("a/b/seg1.ts?x=1", false), ".ts");
+        assert_eq!(extension("https://h/v1/segment/abc.mp4", false), ".mp4");
+        assert_eq!(extension("https://h/v1/segment/CqYF7xyz", false), ".ts");
+        assert_eq!(extension("https://h/v1/segment/CqYF7xyz", true), ".mp4");
+        assert_eq!(extension("https://h/v1/segment/a.m4s", true), ".m4s");
+    }
+
+    /// fMP4 (BUG-035): segments kept for the DVR window after they left
+    /// Twitch's playlist keep their init segment, and every init segment
+    /// is a loopback URI.
+    #[test]
+    fn dvr_prefix_keeps_the_init_segment() {
+        let fmp4 = |first: u64| {
+            let mut text = format!(
+                "#EXTM3U\n#EXT-X-VERSION:6\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:{first}\n#EXT-X-MAP:URI=\"https://e.example.invalid/v1/segment/Init\"\n"
+            );
+            for seq in first..first + 3 {
+                text.push_str(&format!(
+                    "#EXT-X-PROGRAM-DATE-TIME:{}\n#EXTINF:2.000,live\nhttps://e.example.invalid/v1/segment/S{seq}\n",
+                    format_date_time(1_795_000_000_000 + seq as i64 * 2000)
+                ));
+            }
+            text
+        };
+        let url = "https://e.example.invalid/live.m3u8";
+        let mut st = State::new(url.into(), LiveMode::LowLatency);
+        for first in [0, 2] {
+            let text = fmp4(first);
+            let parsed = MediaPlaylist::parse(&text).unwrap();
+            st.register(url, &parsed, &text);
+        }
+        let text = fmp4(2);
+        let out = st.render(url, &MediaPlaylist::parse(&text).unwrap(), &text);
+        assert!(!out.contains("https://"), "{out}");
+        assert!(out.contains("#EXT-X-MEDIA-SEQUENCE:0\n"), "{out}");
+        let again = MediaPlaylist::parse(&out).unwrap();
+        let seqs: Vec<u64> = again.segments.iter().map(|s| s.sequence).collect();
+        assert_eq!(seqs, [0, 1, 2, 3, 4]);
+        assert!(
+            again
+                .segments
+                .iter()
+                .all(|s| s.map.as_deref() == Some("m/0.mp4") && s.uri.ends_with(".mp4")),
+            "{out}"
+        );
     }
 
     fn state_with(text: &str) -> State {

@@ -303,3 +303,141 @@ async fn dvr_window_grows_past_the_twitch_window() {
     assert_eq!(seqs, (1000..=last).collect::<Vec<_>>(), "gap in the window");
     assert!(p.segments.iter().all(|s| s.program_date_time.is_some()));
 }
+
+/// Twitch since 2026-11 (BUG-035): an fMP4/CMAF media playlist with
+/// `https://` init segments (`#EXT-X-MAP`) and segment URIs without an
+/// extension, a stitched ad with its own init segment. Our FFmpeg has no
+/// TLS, so the player must get only loopback URLs: init segments through
+/// `m/<id>.mp4`, segments as `video/mp4`.
+mod fmp4 {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    use pa_twitch::BoxFuture;
+    use pa_twitch::playback::PlaybackError;
+    use pa_twitch::playback::live::{
+        LiveMode, LiveProxy, LiveUpstream, MediaPlaylist, SegmentBody,
+    };
+
+    const EDGE: &str = "https://edge.example.invalid/v1/segment";
+
+    struct Upstream {
+        playlist: String,
+        bodies: HashMap<String, Vec<u8>>,
+    }
+
+    struct Body(Option<Vec<u8>>);
+
+    impl SegmentBody for Body {
+        fn content_length(&self) -> Option<u64> {
+            self.0.as_ref().map(|b| b.len() as u64)
+        }
+
+        fn next_chunk(&mut self) -> BoxFuture<'_, Result<Option<Vec<u8>>, PlaybackError>> {
+            Box::pin(async move { Ok(self.0.take()) })
+        }
+    }
+
+    impl LiveUpstream for Upstream {
+        fn playlist<'a>(&'a self, _url: &'a str) -> BoxFuture<'a, Result<String, PlaybackError>> {
+            Box::pin(async move { Ok(self.playlist.clone()) })
+        }
+
+        fn segment<'a>(
+            &'a self,
+            url: &'a str,
+        ) -> BoxFuture<'a, Result<Box<dyn SegmentBody>, PlaybackError>> {
+            Box::pin(async move {
+                match self.bodies.get(url) {
+                    Some(b) => Ok(Box::new(Body(Some(b.clone()))) as Box<dyn SegmentBody>),
+                    None => Err(PlaybackError::NotFound),
+                }
+            })
+        }
+    }
+
+    fn upstream() -> Upstream {
+        let playlist = format!(
+            "#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-DATERANGE:ID=\"stitched-ad-1\",CLASS=\"twitch-stitched-ad\",START-DATE=\"2026-11-27T08:00:00.000Z\",DURATION=2.000
+#EXT-X-DISCONTINUITY
+#EXT-X-MAP:URI=\"{EDGE}/AdInit\"
+#EXT-X-PROGRAM-DATE-TIME:2026-11-27T08:00:00.000Z
+#EXTINF:2.000,Amazon|1
+{EDGE}/Ad0
+#EXT-X-DISCONTINUITY
+#EXT-X-MAP:URI=\"{EDGE}/LiveInit\"
+#EXT-X-PROGRAM-DATE-TIME:2026-11-27T08:00:02.000Z
+#EXTINF:2.000,live
+{EDGE}/Live1
+#EXT-X-PROGRAM-DATE-TIME:2026-11-27T08:00:04.000Z
+#EXTINF:2.000,live
+{EDGE}/Live2
+#EXT-X-TWITCH-PREFETCH:{EDGE}/Live3
+"
+        );
+        let bodies = ["AdInit", "Ad0", "LiveInit", "Live1", "Live2", "Live3"]
+            .iter()
+            .map(|n| (format!("{EDGE}/{n}"), format!("bytes of {n}").into_bytes()))
+            .collect();
+        Upstream { playlist, bodies }
+    }
+
+    async fn get(client: &reqwest::Client, url: &str) -> (u16, String, Vec<u8>) {
+        let r = client.get(url).send().await.unwrap();
+        let status = r.status().as_u16();
+        let mime = r
+            .headers()
+            .get("content-type")
+            .map(|v| v.to_str().unwrap().to_owned())
+            .unwrap_or_default();
+        (status, mime, r.bytes().await.unwrap().to_vec())
+    }
+
+    #[tokio::test]
+    async fn init_segments_and_fmp4_segments_go_through_the_proxy() {
+        // Installs the rustls crypto provider the test client needs.
+        pa_twitch::playback::live::ReqwestUpstream::new().unwrap();
+        let proxy = LiveProxy::start(
+            Arc::new(upstream()),
+            "https://playlist.example.invalid/v1/playlist/x.m3u8",
+            LiveMode::LowLatency,
+        )
+        .unwrap();
+        let client = reqwest::Client::new();
+        let url = proxy.playlist_url();
+        let base = &url[..url.rfind('/').unwrap() + 1];
+        let (status, _, text) = get(&client, &url).await;
+        assert_eq!(status, 200);
+        let text = String::from_utf8(text).unwrap();
+        assert!(!text.contains("https://"), "upstream URL leaked:\n{text}");
+        let maps: Vec<&str> = text
+            .lines()
+            .filter_map(|l| l.strip_prefix("#EXT-X-MAP:URI=\""))
+            .map(|l| l.trim_end_matches('"'))
+            .collect();
+        assert_eq!(maps, ["m/0.mp4", "m/1.mp4"], "{text}");
+        for (uri, name) in maps.iter().zip(["AdInit", "LiveInit"]) {
+            let (status, mime, body) = get(&client, &format!("{base}{uri}")).await;
+            assert_eq!((status, mime.as_str()), (200, "video/mp4"));
+            assert_eq!(body, format!("bytes of {name}").into_bytes());
+        }
+        let playlist = MediaPlaylist::parse(&text).unwrap();
+        let names = ["Ad0", "Live1", "Live2", "Live3"];
+        assert_eq!(playlist.segments.len(), names.len());
+        for (s, name) in playlist.segments.iter().zip(names) {
+            assert!(s.uri.ends_with(".mp4"), "{}", s.uri);
+            let (status, mime, body) = get(&client, &format!("{base}{}", s.uri)).await;
+            assert_eq!((status, mime.as_str()), (200, "video/mp4"));
+            assert_eq!(body, format!("bytes of {name}").into_bytes());
+        }
+        // The ad is labelled as before and played in full.
+        assert_eq!(proxy.report(0.0, 1.0).totals.ad_segments, 1);
+        // A second reading keeps the same init segment ids.
+        let (_, _, again) = get(&client, &url).await;
+        assert!(String::from_utf8(again).unwrap().contains("URI=\"m/1.mp4\""));
+    }
+}
