@@ -263,6 +263,10 @@ Future<void> main(List<String> args) async {
         twitchNativeSource = source;
         if (config != null) twitchReplay = coreTwitchReplay(config);
         twitchConfig = config;
+        // TWI-042: VOD chapters from GQL when the config allows.
+        if (twitchBackend case final CoreTwitchBackend backend) {
+          backend.chaptersConfig = config;
+        }
         twitchNative = source != null;
         twitchNativeKilled = killed;
       }

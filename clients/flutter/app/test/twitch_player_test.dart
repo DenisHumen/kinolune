@@ -583,6 +583,49 @@ void main() {
     await _close(t);
   });
 
+  testWidgets('VOD with only the ≈ chapter gets GQL chapters (TWI-042)', (
+    t,
+  ) async {
+    setSurface(t, _desktop);
+    final h = await _harness();
+    final backend = h.services.twitch.backend as FakeTwitchBackend;
+    backend.gqlChapters['9102'] = const [
+      TwitchChapter(
+        gameId: '1',
+        gameName: 'Just Chatting',
+        start: Duration.zero,
+        end: Duration(minutes: 20),
+      ),
+      TwitchChapter(
+        gameId: '2',
+        gameName: 'Pixel Painter',
+        start: Duration(minutes: 20),
+        end: Duration(minutes: 90),
+      ),
+      TwitchChapter(
+        gameId: '1',
+        gameName: 'Just Chatting',
+        start: Duration(minutes: 90),
+      ),
+    ];
+    await _play(t, h, const TwitchPlayTarget.vod('9102', login: 'lunapixel'));
+    expect(backend.gqlChapterRequests, ['9102']);
+    // On the scrubber (none at 0:00) and stored for the next opening.
+    expect(_markers, findsNWidgets(2));
+    expect((await backend.chapters('9102')).map((c) => c.gameName), [
+      'Just Chatting',
+      'Pixel Painter',
+      'Just Chatting',
+    ]);
+    await _close(t);
+
+    // Stored GQL chapters are not asked for again.
+    await _play(t, h, const TwitchPlayTarget.vod('9102', login: 'lunapixel'));
+    expect(backend.gqlChapterRequests, ['9102']);
+    expect(_markers, findsNWidgets(2));
+    await _close(t);
+  });
+
   group('live', () {
     testWidgets('latency, ad badge, go live, latency mode, chat beside', (
       t,

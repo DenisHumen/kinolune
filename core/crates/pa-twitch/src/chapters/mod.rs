@@ -948,31 +948,11 @@ impl ChapterResolver {
         request: VodChaptersRequest<'_>,
     ) -> Result<ResolvedChapters, ChaptersError> {
         let video = request.video;
-        let mut out = ResolvedChapters::default();
-        if let Some(timeline) = request.timeline
-            && video.stream_id.as_deref() == Some(timeline.stream_id.as_str())
+        let mut out = self.resolve_without_helix(request).await;
+        if out.chapters.is_some()
+            || request.stored.is_some()
+            || !fallback_allowed(video, request.now_ms)
         {
-            let chapters = timeline.vod_chapters(vod_duration_ms(video));
-            if !chapters.is_empty() {
-                out.chapters = Some(chapters);
-                return Ok(out);
-            }
-        }
-        if request.stored.is_some_and(|s| !s.is_approximate()) {
-            return Ok(out);
-        }
-        #[cfg(pa_twitch_native)]
-        if let ChaptersGql::On(settings) = &self.gql {
-            match gql::fetch_chapters(&*self.transport, &self.gql_url, settings, video).await {
-                Ok(chapters) if !chapters.is_empty() => {
-                    out.chapters = Some(chapters);
-                    return Ok(out);
-                }
-                Ok(_) => {}
-                Err(e) => out.gql_failure = Some(e.code()),
-            }
-        }
-        if request.stored.is_some() || !fallback_allowed(video, request.now_ms) {
             return Ok(out);
         }
         let channels = helix.get_channels(&[video.user_id.as_str()]).await?;
@@ -981,6 +961,36 @@ impl ChapterResolver {
             .find_map(|c| fallback_chapter(video, c))
             .map(|c| vec![c]);
         Ok(out)
+    }
+
+    /// [`ChapterResolver::resolve`] without the fallback, so without Helix:
+    /// our timeline, else what is stored, else GQL `moments`. The player
+    /// asks this when it opens a VOD (TWI-042): GQL needs no Twitch
+    /// sign-in.
+    pub async fn resolve_without_helix(&self, request: VodChaptersRequest<'_>) -> ResolvedChapters {
+        let video = request.video;
+        let mut out = ResolvedChapters::default();
+        if let Some(timeline) = request.timeline
+            && video.stream_id.as_deref() == Some(timeline.stream_id.as_str())
+        {
+            let chapters = timeline.vod_chapters(vod_duration_ms(video));
+            if !chapters.is_empty() {
+                out.chapters = Some(chapters);
+                return out;
+            }
+        }
+        if request.stored.is_some_and(|s| !s.is_approximate()) {
+            return out;
+        }
+        #[cfg(pa_twitch_native)]
+        if let ChaptersGql::On(settings) = &self.gql {
+            match gql::fetch_chapters(&*self.transport, &self.gql_url, settings, video).await {
+                Ok(chapters) if !chapters.is_empty() => out.chapters = Some(chapters),
+                Ok(_) => {}
+                Err(e) => out.gql_failure = Some(e.code()),
+            }
+        }
+        out
     }
 }
 

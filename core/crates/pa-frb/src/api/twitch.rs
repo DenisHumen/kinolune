@@ -34,6 +34,8 @@ use pa_model::{BroadcasterType, MediaKey, MediaKind, VideoType};
 use pa_twitch as tw;
 use pa_twitch::chapters::store as chapter_store;
 
+use super::remote_config::CoreRemoteConfig;
+
 /// The library profile (one profile until profiles land, as `pa-catalog`).
 const PROFILE: i64 = 1;
 
@@ -538,6 +540,68 @@ fn category_of(c: &tw::Category) -> CoreTwitchCategory {
         game_id: c.id.clone(),
         name: c.name.clone(),
         box_art_url: non_empty(&c.box_art_url),
+    }
+}
+
+/// A cached VOD as Helix describes it, for the chapter resolver: id,
+/// owner, kind and length (GQL asks by id and login).
+fn cached_vod(
+    conn: &Connection,
+    video_id: &str,
+    login: Option<String>,
+) -> TwitchResult<Option<tw::Video>> {
+    let Some(v) = lt::video(conn, video_id)? else {
+        return Ok(None);
+    };
+    let user_login = match login.filter(|l| !l.is_empty()) {
+        Some(l) => l,
+        None => lt::streamer(conn, &v.user_id)?.map_or_else(String::new, |s| s.login),
+    };
+    Ok(Some(tw::Video {
+        id: v.video_id,
+        stream_id: v.stream_id,
+        user_id: v.user_id,
+        user_login,
+        user_name: String::new(),
+        title: v.title,
+        description: String::new(),
+        created_at: String::new(),
+        published_at: String::new(),
+        url: String::new(),
+        thumbnail_url: v.thumbnail_url.unwrap_or_default(),
+        viewable: String::new(),
+        view_count: v.view_count,
+        language: String::new(),
+        kind: match v.video_type {
+            VideoType::Archive => tw::VideoType::Archive,
+            VideoType::Highlight => tw::VideoType::Highlight,
+            VideoType::Upload => tw::VideoType::Upload,
+        },
+        duration: format!("{}s", v.duration_ms / 1000),
+        muted_segments: Vec::new(),
+    }))
+}
+
+/// A VOD known only by id (and maybe login): GQL gives the length.
+fn link_vod(video_id: &str, user_login: String) -> tw::Video {
+    tw::Video {
+        id: video_id.to_owned(),
+        stream_id: None,
+        user_id: String::new(),
+        user_login,
+        user_name: String::new(),
+        title: String::new(),
+        description: String::new(),
+        created_at: String::new(),
+        published_at: String::new(),
+        url: String::new(),
+        thumbnail_url: String::new(),
+        viewable: String::new(),
+        view_count: 0,
+        language: String::new(),
+        kind: tw::VideoType::Archive,
+        duration: String::new(),
+        muted_segments: Vec::new(),
     }
 }
 
@@ -1281,6 +1345,99 @@ impl CoreTwitch {
         Ok(out)
     }
 
+    /// Chapters of a VOD the player opens (TWI-042). In a full build whose
+    /// signed remote config turns `twitch.chapters_gql` on, a VOD without
+    /// chapters (or with only the "≈" fallback) first gets its chapters
+    /// from GQL `moments`, which are stored; then the stored chapters are
+    /// returned as [`Self::chapters`]. No Twitch sign-in needed; a GQL
+    /// failure only means no new chapters. A VOD the cache does not know
+    /// (opened by a link) gets its GQL chapters without storing them.
+    /// `login`: the channel, when the caller knows it.
+    pub fn vod_chapters(
+        &self,
+        video_id: String,
+        login: Option<String>,
+        config: &CoreRemoteConfig,
+    ) -> TwitchResult<Vec<CoreTwitchChapter>> {
+        #[cfg(pa_twitch_native)]
+        {
+            let (cfg, ctx) = config.config_and_context();
+            let gql = tw::chapters::ChaptersGql::resolve(&cfg, &ctx);
+            if gql.is_on() {
+                let transport = tw::ReqwestTransport::new(Duration::from_secs(15))
+                    .map_err(|e| TwitchApiError::new(TwitchErrorKind::Network, e.to_string()))?;
+                let resolver = tw::chapters::ChapterResolver::new(gql, Arc::new(transport));
+                if let Some(unstored) = self.store_gql_chapters(&video_id, login, &resolver)? {
+                    return Ok(unstored);
+                }
+            }
+        }
+        #[cfg(not(pa_twitch_native))]
+        let _ = (login, config);
+        self.chapters(video_id)
+    }
+
+    /// Asks `resolver` for the chapters of a VOD. A cached VOD gets them
+    /// stored (`None`: read the stored ones); a VOD the cache does not know
+    /// (opened by a link without a Twitch sign-in) cannot be stored, so its
+    /// chapters are returned as they are.
+    #[cfg_attr(not(pa_twitch_native), allow(dead_code))]
+    fn store_gql_chapters(
+        &self,
+        video_id: &str,
+        login: Option<String>,
+        resolver: &tw::chapters::ChapterResolver,
+    ) -> TwitchResult<Option<Vec<CoreTwitchChapter>>> {
+        let (video, stored, cached) = {
+            let conn = self.db();
+            let stored = chapter_store::stored_source(&conn, video_id)?;
+            if stored.is_some_and(|s| !s.is_approximate()) {
+                return Ok(None);
+            }
+            match cached_vod(&conn, video_id, login.clone())? {
+                Some(video) => (video, stored, true),
+                None => (link_vod(video_id, login.unwrap_or_default()), None, false),
+            }
+        };
+        let now = now_ms();
+        let resolved = self.rt.block_on(resolver.resolve_without_helix(
+            tw::chapters::VodChaptersRequest {
+                video: &video,
+                timeline: None,
+                stored,
+                now_ms: now,
+            },
+        ));
+        if let Some(code) = resolved.gql_failure {
+            eprintln!("pa-twitch: GQL chapters of {video_id}: {code}");
+        }
+        let Some(chapters) = &resolved.chapters else {
+            return Ok(None);
+        };
+        if !cached {
+            return Ok(Some(
+                chapters
+                    .iter()
+                    .map(|c| CoreTwitchChapter {
+                        game_id: c.game.id.clone(),
+                        game_name: non_empty(&c.game.name),
+                        box_art_url: c.game.box_art_url.clone(),
+                        start_ms: signed(c.start_ms),
+                        end_ms: c.end_ms.map(signed),
+                        approximate: c.source.is_approximate(),
+                    })
+                    .collect(),
+            ));
+        }
+        chapter_store::store_chapters(
+            &mut self.db(),
+            &lt::SegmentOwner::Video(video_id.to_owned()),
+            chapters,
+            now,
+        )?;
+        Ok(None)
+    }
+
     /// Full-text search of the cache: streamers, VODs, categories.
     pub fn search_cached(
         &self,
@@ -1671,6 +1828,85 @@ mod tests {
                 .unwrap_err()
                 .kind,
             TwitchErrorKind::Invalid
+        );
+    }
+
+    /// TWI-042: opening a cached VOD asks GQL `moments` once (recorded
+    /// answer shape, made-up ids), stores the chapters and returns them;
+    /// stored GQL chapters are never asked for again.
+    #[cfg(pa_twitch_native)]
+    #[test]
+    fn opening_a_vod_stores_gql_chapters() {
+        use pa_twitch::chapters::{ChapterResolver, ChaptersGql};
+        use pa_twitch::playback::Flavor;
+
+        let helix = Arc::new(FixtureTransport::new());
+        helix.push_fixture(USERS).push_fixture(VIDEOS);
+        let t = core(helix);
+        t.users(vec![], vec!["pixelheron".into()]).unwrap();
+        t.channel_videos("7001".into(), "archive".into(), 20)
+            .unwrap();
+        assert!(t.chapters("9001".into()).unwrap().is_empty());
+
+        let config = pa_remote_config::RemoteConfig::parse(include_bytes!(
+            "../../../pa-twitch/tests/fixtures/chapters/remote-config-chapters.json"
+        ))
+        .unwrap();
+        let ctx = pa_remote_config::ClientContext {
+            app_version: "0.1.0".into(),
+            platform: "linux".into(),
+        };
+        let gql = ChaptersGql::resolve_for(&config, &ctx, Flavor::Full);
+        let transport = Arc::new(FixtureTransport::new());
+        transport.push_fixture(include_str!(
+            "../../../pa-twitch/tests/fixtures/chapters/gql_moments.json"
+        ));
+        let resolver =
+            ChapterResolver::new(gql, transport.clone()).with_gql_endpoint("https://gql.test/gql");
+        assert_eq!(t.store_gql_chapters("9001", None, &resolver).unwrap(), None);
+        let sent = transport.requests();
+        assert_eq!(sent.len(), 1);
+        let body = String::from_utf8_lossy(sent[0].body.as_deref().unwrap_or_default());
+        assert!(body.contains("\"videoID\":\"9001\""), "{body}");
+
+        let ch = t.chapters("9001".into()).unwrap();
+        assert_eq!(ch.len(), 2);
+        assert_eq!(ch[0].game_name.as_deref(), Some("Moonlit Farm"));
+        assert_eq!((ch[0].start_ms, ch[0].end_ms), (0, Some(2_700_000)));
+        assert_eq!(ch[1].game_name.as_deref(), Some("Pixel Dungeon"));
+        assert_eq!(ch[1].start_ms, 2_700_000);
+        assert!(ch.iter().all(|c| !c.approximate));
+        // Stored GQL chapters: no second request (the transport has none).
+        assert_eq!(t.store_gql_chapters("9001", None, &resolver).unwrap(), None);
+        assert_eq!(transport.requests().len(), 1);
+        // A VOD opened by a link, unknown to the cache: shown, not stored.
+        transport.push_fixture(include_str!(
+            "../../../pa-twitch/tests/fixtures/chapters/gql_moments.json"
+        ));
+        let shown = t
+            .store_gql_chapters("9002", Some("pixelheron".into()), &resolver)
+            .unwrap()
+            .unwrap();
+        assert_eq!(shown.len(), 2);
+        assert_eq!(shown[1].game_name.as_deref(), Some("Pixel Dungeon"));
+        assert!(t.chapters("9002".into()).unwrap().is_empty());
+    }
+
+    /// TWI-042: with the built-in config (GQL off) and in store builds the
+    /// player gets the stored chapters without any network.
+    #[test]
+    fn vod_chapters_without_gql_are_the_stored_ones() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = CoreRemoteConfig::open(
+            dir.path().to_string_lossy().into_owned(),
+            "0.1.0".into(),
+            "linux".into(),
+        );
+        let t = CoreTwitch::with_helix(pa_library::open_in_memory().unwrap(), None).unwrap();
+        assert!(
+            t.vod_chapters("9001".into(), Some("pixelheron".into()), &config)
+                .unwrap()
+                .is_empty()
         );
     }
 
