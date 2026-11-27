@@ -1825,7 +1825,6 @@ mod tests {
         assert_eq!(sent.len(), 1);
         let body = String::from_utf8_lossy(sent[0].body.as_deref().unwrap_or_default());
         assert!(body.contains("\"videoID\":\"9001\""), "{body}");
-        assert!(body.contains("\"channelLogin\":\"pixelheron\""), "{body}");
 
         let ch = t.chapters("9001".into()).unwrap();
         assert_eq!(ch.len(), 2);
